@@ -1,0 +1,13 @@
+{
+  "scripts": {
+    "Backend": "cd Backend && npm run dev",
+    "Frontend": "cd fund_rasing && npm run dev",
+    "dev": "concurrently \"npm run Backend\" \"npm run Frontend\""
+  },
+  "devDependencies": {
+    "tailwindcss": "^3.4.17"
+  },
+  "dependencies": {
+    "concurrently": "^9.1.2"
+  }
+}
