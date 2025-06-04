@@ -1,39 +1,66 @@
 import { Router } from "express";
-import stripe from "stripe";
+import { requireAuth, requireRole } from "../middleware/auth.js";
 import Donation from "../Models/Donation.js";
 import Campaign from "../Models/Campaign.js";
-import verifyToken from "../middleware/auth.js";
+
 const router = Router();
-const stripeClient = new stripe(process.env.STRIPE_SECRET_KEY);
 
-router.post("/:campaignId", verifyToken, async (req, res) => {
+router.get("/me", requireAuth, requireRole("donor"), async (req, res) => {
   try {
-    const { amount, paymentMethodId } = req.body;
-    // Create a PaymentIntent
-    const paymentIntent = await stripeClient.paymentIntents.create({
-      amount: Math.round(amount * 100), // in cents
-      currency: "usd",
-      payment_method: paymentMethodId,
-      confirm: true,
-    });
+    const donations = await Donation.find({ donorEmail: req.user.email })
+      .populate("campaign", "title imageURL")
+      .sort({ createdAt: -1 });
 
-    // Record donation in DB
-    const donation = new Donation({
-      campaign: req.params.campaignId,
+    return res.json(donations);
+  } catch (err) {
+    console.error("Get My Donations Error:", err);
+    return res
+      .status(500)
+      .json({ message: "Failed to fetch donation history." });
+  }
+});
+/**
+ * POST /api/donations
+ * Protected: Only "donor" can call.
+ * Body: { campaign: "<campaignId>", amount: Number, method: String }
+ * Creates a new Donation and increments the Campaign’s raised amount.
+ */
+router.post("/", requireAuth, requireRole("donor"), async (req, res) => {
+  try {
+    const { campaign: campaignId, amount, method } = req.body;
+
+    // Validate input
+    if (!campaignId || !amount || !method) {
+      return res.status(400).json({ message: "All fields are required." });
+    }
+    if (amount <= 0) {
+      return res.status(400).json({ message: "Amount must be positive." });
+    }
+
+    // 1) Ensure the campaign exists
+    const campaign = await Campaign.findById(campaignId);
+    if (!campaign) {
+      return res.status(404).json({ message: "Campaign not found." });
+    }
+
+    // 2) Create the Donation
+    const donation = await Donation.create({
+      campaign: campaignId,
       donorEmail: req.user.email,
       amount,
-      method: "stripe",
-    });
-    await donation.save();
-
-    // Update campaign raised amount
-    await Campaign.findByIdAndUpdate(req.params.campaignId, {
-      $inc: { raised: amount },
+      method,
     });
 
-    res.json({ success: true, paymentIntent });
+    // 3) Increment the campaign's raised amount
+    campaign.raised = (campaign.raised || 0) + amount;
+    await campaign.save();
+
+    // 4) Return the newly created donation (populated with campaign title)
+    await donation.populate("campaign", "title");
+    return res.status(201).json(donation);
   } catch (err) {
-    res.status(400).json({ message: "Donation failed", error: err.message });
+    console.error("Create Donation Error:", err);
+    return res.status(500).json({ message: "Failed to create donation." });
   }
 });
 

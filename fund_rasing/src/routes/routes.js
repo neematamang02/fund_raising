@@ -1,10 +1,16 @@
 const ROUTES = {
   HOME: "/",
-  Login_Page: "/Loginpg",
-  Register_page: "/Registerpg",
-  Donate_page: "/Donate",
-  Create_campaignpg: "Createcampaign",
-  About_page: "About",
+  LOGIN: "/login",
+  REGISTER: "/register",
+  DONATE: "/donate",
+  DONATE_DETAIL: "/donate/:campaignId",
+  MY_DONATIONS: "/my-donations",
+  APPLY_ORGANIZER: "/apply-organizer",
+  MY_CAMPAIGNS: "/my-campaigns",
+  CREATE_CAMPAIGN: "/campaign/new",
+  ADMIN_APPLICATIONS: "/admin/applications",
+  ABOUT: "/about",
+  DASHBOARD: "/dashboard",
 };
 
 export default ROUTES;

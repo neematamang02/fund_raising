@@ -1,27 +1,29 @@
+import React from "react";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
-import Navigationbar from "@/components/Navigationbar";
-import routesConfig from "./routes/routesConfig";
-import { UserRoleProvider } from "./Context/UserRoleContext";
-import Footer from "./components/Footer";
+import { AuthProvider } from "./Context/AuthContext";
+import Navigationbar from "./components/Navigationbar";
 
-function App() {
+import Footer from "./components/Footer";
+import routesConfig from "./routes/routesConfig.jsx";
+import { Toaster } from "./components/ui/sonner";
+
+export default function App() {
   return (
-    <>
-      <UserRoleProvider>
-        <Router>
-          <Navigationbar />
-          <main className="flex-grow-1 bg-[#F9FAFB]">
-            <Routes>
-              {routesConfig.map(({ path, Component }) => (
-                <Route key={path} path={path} element={<Component />} />
-              ))}
-            </Routes>
-          </main>
-          <Footer />
-        </Router>
-      </UserRoleProvider>
-    </>
+    <Router>
+      <AuthProvider>
+        <Navigationbar />
+
+        <main className="bg-[#F9FAFB] min-h-screen">
+          <Toaster position="top-right" />
+          <Routes>
+            {routesConfig.map(({ path, Component }) => (
+              <Route key={path} path={path} element={<Component />} />
+            ))}
+          </Routes>
+        </main>
+
+        <Footer />
+      </AuthProvider>
+    </Router>
   );
 }
-
-export default App;
