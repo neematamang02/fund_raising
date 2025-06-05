@@ -11,6 +11,7 @@
     "@paypal/checkout-server-sdk": "^1.0.3",
     "@paypal/paypal-server-sdk": "^1.1.0",
     "@paypal/react-paypal-js": "^8.8.3",
-    "concurrently": "^9.1.2"
+    "concurrently": "^9.1.2",
+    "nodemailer": "^7.0.3"
   }
 }

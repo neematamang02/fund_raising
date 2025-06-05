@@ -11,7 +11,7 @@ import applicationRoutes from "./Routes/applications.js";
 import organizerRouter from "./Routes/organizer.js";
 
 dotenv.config();
-connectDB;
+connectDB();
 const app = express();
 app.use(cors({ origin: "http://localhost:5173" }));
 app.use(express.json());

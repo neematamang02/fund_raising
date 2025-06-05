@@ -22,7 +22,7 @@ import ToggleRole from "./ToggleRole";
 import { Badge } from "./ui/badge";
 import { toast } from "sonner";
 
-// --- Shadcn imports for Dialog + Button
+// Shadcn UI Dialog
 import {
   Dialog,
   DialogTrigger,
@@ -40,7 +40,6 @@ export default function NavigationBar() {
   const { user, logout } = useContext(AuthContext);
   const router = useNavigate();
 
-  // When "Yes, log out" is clicked inside the Dialog:
   const confirmLogout = () => {
     logout();
     router(ROUTES.HOME);
@@ -54,9 +53,11 @@ export default function NavigationBar() {
     setOpen(false);
   };
 
+  // Dynamically build navigation links
   const navLinks = [
     { name: "Home", path: ROUTES.HOME, icon: Home2 },
     { name: "About Us", path: ROUTES.ABOUT, icon: InfoCircle },
+    { name: "Donate", path: ROUTES.DONATE, icon: Heart },
     ...(user?.role === "admin"
       ? [
           {
@@ -67,8 +68,8 @@ export default function NavigationBar() {
         ]
       : user?.role === "organizer"
       ? [{ name: "My Campaigns", path: ROUTES.MY_CAMPAIGNS, icon: Heart }]
-      : [
-          { name: "Donate", path: ROUTES.DONATE, icon: Heart },
+      : user
+      ? [
           {
             name: "My Donations",
             path: ROUTES.MY_DONATIONS,
@@ -79,7 +80,8 @@ export default function NavigationBar() {
             path: ROUTES.APPLY_ORGANIZER,
             icon: UserEdit,
           },
-        ]),
+        ]
+      : []),
   ];
 
   return (
@@ -151,22 +153,16 @@ export default function NavigationBar() {
                       {user.name}
                     </FundraisingButton>
 
-                    {/* --- Wrap Logout in a DialogTrigger --- */}
                     <Dialog
                       open={logoutDialogOpen}
                       onOpenChange={setLogoutDialogOpen}
                     >
                       <DialogTrigger asChild>
-                        <FundraisingButton
-                          variant="destructive"
-                          size="default"
-                          // Instead of onClick, the DialogTrigger will open the Dialog
-                        >
+                        <FundraisingButton variant="destructive" size="default">
                           <LogoutIcon size={18} variant="Broken" />
                           Logout
                         </FundraisingButton>
                       </DialogTrigger>
-
                       <DialogContent>
                         <DialogHeader>
                           <DialogTitle>Confirm Logout</DialogTitle>
@@ -296,7 +292,6 @@ export default function NavigationBar() {
                       {user.name}
                     </FundraisingButton>
 
-                    {/* --- Mobile “Logout” also opens the same Dialog --- */}
                     <Dialog
                       open={logoutDialogOpen}
                       onOpenChange={setLogoutDialogOpen}
@@ -343,9 +338,8 @@ export default function NavigationBar() {
         )}
       </nav>
 
-      {/* If the mobile “Logout” trigger was clicked, this same DialogContent will render */}
+      {/* Shared Logout Dialog (desktop + mobile) */}
       <Dialog open={logoutDialogOpen} onOpenChange={setLogoutDialogOpen}>
-        {/* We already rendered the DialogTrigger inside the nav; this ensures the Content is available */}
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Confirm Logout</DialogTitle>

@@ -12,6 +12,8 @@ import Dashboard from "@/Pages/Dashboard";
 import CreateCampaign from "@/Pages/Campagincreation/CreateCampaign";
 import { CampaignList } from "@/Pages/CampaignList";
 import MyCampaigns from "@/Pages/MyCampaigns";
+import ForgotPasswordPage from "@/Pages/Authentication/ForgotPasswordPage";
+import ResetPasswordPage from "@/Pages/Authentication/ResetPasswordPage";
 
 const routesConfig = [
   // Public pages
@@ -19,6 +21,8 @@ const routesConfig = [
   { path: ROUTES.LOGIN, Component: LoginPage },
   { path: ROUTES.REGISTER, Component: RegisterPage },
   { path: ROUTES.ABOUT, Component: About },
+  { path: ROUTES.FORGOT_PASSWORD, Component: ForgotPasswordPage },
+  { path: ROUTES.RESET_PASSWORD, Component: ResetPasswordPage },
   {
     path: ROUTES.DONATE, // "/donate"
     Component: CampaignList,

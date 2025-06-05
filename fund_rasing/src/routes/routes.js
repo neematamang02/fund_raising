@@ -11,6 +11,8 @@ const ROUTES = {
   ADMIN_APPLICATIONS: "/admin/applications",
   ABOUT: "/about",
   DASHBOARD: "/dashboard",
+  FORGOT_PASSWORD: "/forgot-password",
+  RESET_PASSWORD: "/reset-password",
 };
 
 export default ROUTES;
