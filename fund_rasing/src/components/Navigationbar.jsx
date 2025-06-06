@@ -18,7 +18,6 @@ import { AuthContext } from "@/context/AuthContext";
 import ROUTES from "@/routes/routes";
 import { Link, useNavigate } from "react-router-dom";
 import { FundraisingButton } from "./ui/fundraising-button";
-import ToggleRole from "./ToggleRole";
 import { Badge } from "./ui/badge";
 import { toast } from "sonner";
 
@@ -33,6 +32,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import ToggleRole from "./ToggleRole";
 
 export default function NavigationBar() {
   const [open, setOpen] = useState(false);
@@ -87,8 +87,8 @@ export default function NavigationBar() {
   return (
     <>
       <nav className="bg-gradient-to-r from-indigo-900 via-blue-800 to-purple-900 text-white shadow-xl sticky top-0 w-full z-50 backdrop-blur-sm">
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between h-16 items-center">
+        <div className="w-[100vw] px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between h-20 w-full items-center">
             {/* Logo */}
             <Link
               to={ROUTES.HOME}
@@ -266,11 +266,13 @@ export default function NavigationBar() {
                 </div>
               )}
 
-              <div className="px-4 py-2">
+              <div className="py-2">
                 {user?.role === "admin" ? (
-                  <Badge className="bg-gradient-to-r from-red-500 to-pink-500 text-white font-medium px-4 py-1 shadow-md">
-                    Admin
-                  </Badge>
+                  <div className="px-4">
+                    <Badge className="bg-gradient-to-r from-red-500 to-pink-500 text-white font-medium px-4 py-1 shadow-md">
+                      Admin
+                    </Badge>
+                  </div>
                 ) : (
                   <ToggleRole mobile />
                 )}

@@ -1,24 +1,26 @@
 import { useContext, useState } from "react";
-import { Toggle } from "@/components/ui/toggle";
+import { Switch } from "@/components/ui/switch";
 import { AuthContext } from "@/context/AuthContext";
 import { toast } from "sonner";
-import { UserEdit, Heart } from "iconsax-reactjs";
+import { Loader2 } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { Heart, User } from "iconsax-reactjs";
 
 export default function ToggleRole({ mobile = false }) {
   const { user, switchRole } = useContext(AuthContext);
   const [loading, setLoading] = useState(false);
 
-  // If not logged in, don't show toggle
+  // If not logged in, don't show switch
   if (!user) return null;
 
   const isOrganizer = user.role === "organizer";
 
-  const onToggle = async () => {
+  const onToggle = async (checked) => {
     setLoading(true);
-    const desiredRole = isOrganizer ? "donor" : "organizer";
+    const desiredRole = checked ? "organizer" : "donor";
     const ok = await switchRole(desiredRole);
     if (!ok) {
-      toast(
+      toast.error(
         "You are not verified as organizer. If you want to be an organizer, apply for organizer."
       );
     }
@@ -26,33 +28,96 @@ export default function ToggleRole({ mobile = false }) {
   };
 
   return (
-    <div className={mobile ? "px-4 py-2" : "px-3 py-2"}>
-      <Toggle
-        pressed={isOrganizer}
-        onPressedChange={onToggle}
-        disabled={loading}
-        aria-label="Toggle between donor and organizer"
-        className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-all duration-300 ${
-          isOrganizer
-            ? "bg-gradient-to-r from-purple-600/80 to-indigo-600/80 text-white shadow-md shadow-purple-500/20 hover:shadow-lg hover:shadow-purple-500/30"
-            : "bg-gradient-to-r from-orange-500/80 to-amber-500/80 text-white shadow-md shadow-orange-500/20 hover:shadow-lg hover:shadow-orange-500/30"
-        } hover:scale-105`}
+    <div
+      className={cn(
+        "flex items-center gap-3 p-3 rounded-xl bg-white/10 backdrop-blur-sm border border-white/20",
+        mobile ? "mx-4 my-2" : ""
+      )}
+    >
+      {/* Donor Label */}
+      <div
+        className={cn(
+          "flex items-center gap-2 transition-all duration-300",
+          !isOrganizer ? "text-white scale-105" : "text-white/60 scale-95"
+        )}
       >
-        {isOrganizer ? (
-          <>
-            <UserEdit size={18} variant="Broken" className="text-purple-200" />
-            <span className="text-sm font-medium">Organizer</span>
-          </>
-        ) : (
-          <>
-            <Heart size={18} variant="Broken" className="text-amber-200" />
-            <span className="text-sm font-medium">Donor</span>
-          </>
-        )}
+        <Heart
+          variant="Broken"
+          size={mobile ? 20 : 18}
+          className={cn(
+            "transition-all duration-300",
+            !isOrganizer ? "text-amber-300 fill-amber-300/20" : "text-white/40"
+          )}
+        />
+        <span
+          className={cn(
+            "text-sm font-medium transition-all duration-300",
+            mobile ? "text-base" : ""
+          )}
+        >
+          Donor
+        </span>
+      </div>
+
+      {/* Switch Component */}
+      <div className="relative">
+        <Switch
+          checked={isOrganizer}
+          onCheckedChange={onToggle}
+          disabled={loading}
+          className={cn(
+            "cursor-pointer data-[state=checked]:bg-gradient-to-r data-[state=checked]:from-purple-500 data-[state=checked]:to-indigo-500",
+            "data-[state=unchecked]:bg-gradient-to-r data-[state=unchecked]:from-orange-500 data-[state=unchecked]:to-amber-500",
+            "border-0 shadow-lg transition-all duration-300",
+            "data-[state=checked]:shadow-purple-500/30 data-[state=unchecked]:shadow-amber-500/30",
+            mobile ? "scale-110" : ""
+          )}
+        />
+
+        {/* Loading Spinner Overlay */}
         {loading && (
-          <div className="ml-1 w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+          <div className="absolute inset-0 flex items-center justify-center">
+            <Loader2 className="w-3 h-3 text-white animate-spin" />
+          </div>
         )}
-      </Toggle>
+      </div>
+
+      {/* Organizer Label */}
+      <div
+        className={cn(
+          "flex items-center gap-2 transition-all duration-300",
+          isOrganizer ? "text-white scale-105" : "text-white/60 scale-95"
+        )}
+      >
+        <User
+          variant="Broken"
+          size={mobile ? 20 : 18}
+          className={cn(
+            "transition-all duration-300",
+            isOrganizer ? "text-purple-300" : "text-white/40"
+          )}
+        />
+        <span
+          className={cn(
+            "text-sm font-medium transition-all duration-300",
+            mobile ? "text-base" : ""
+          )}
+        >
+          Organizer
+        </span>
+      </div>
+
+      {/* Role Status Indicator */}
+      <div
+        className={cn(
+          "ml-2 px-2 py-1 rounded-full text-xs font-medium transition-all duration-300",
+          isOrganizer
+            ? "bg-purple-500/20 text-purple-200 border border-purple-400/30"
+            : "bg-amber-500/20 text-amber-200 border border-amber-400/30"
+        )}
+      >
+        {loading ? "Switching..." : isOrganizer ? "Active" : "Active"}
+      </div>
     </div>
   );
 }

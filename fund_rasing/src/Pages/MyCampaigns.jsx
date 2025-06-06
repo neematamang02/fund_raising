@@ -902,10 +902,6 @@ export default function MyCampaigns() {
 
         {/* Donor List Modal */}
         <Dialog open={!!showDonorsFor} onOpenChange={closeDonorModal}>
-          {/* 
-    • inline-block + w-auto → allow width to be determined by child (the table)
-    • max-w-[95vw] → prevents it from overflow beyond viewport
-  */}
           <DialogContent className="inline-block w-auto max-w-[95vw] bg-white shadow-lg rounded-lg">
             <DialogHeader>
               <DialogTitle className="text-2xl font-semibold text-indigo-800">
@@ -937,7 +933,7 @@ export default function MyCampaigns() {
                   No donors yet for this campaign.
                 </p>
               ) : (
-                <div className="overflow-x-auto overflow-y-auto max-h-[24rem]">
+                <div className="overflow-x-auto overflow-y-auto max-h-[24rem] ">
                   <table className="w-auto table-fixed divide-y divide-gray-300">
                     <thead className="bg-indigo-100">
                       <tr>
