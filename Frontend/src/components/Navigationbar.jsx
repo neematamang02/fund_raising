@@ -20,6 +20,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { FundraisingButton } from "./ui/fundraising-button";
 import { Badge } from "./ui/badge";
 import { toast } from "sonner";
+import ToggleRole from "./ToggleRole";
 
 // Shadcn UI Dialog
 import {
@@ -129,7 +130,9 @@ export default function NavigationBar() {
                   <Badge className="bg-gradient-to-r from-red-500 to-pink-500 text-white font-medium px-4 py-1 shadow-md shadow-red-500/20">
                     Admin
                   </Badge>
-                ) : null}
+                ) : (
+                  <ToggleRole />
+                )}
               </div>
 
               {/* Auth Buttons */}
@@ -260,7 +263,9 @@ export default function NavigationBar() {
                       Admin
                     </Badge>
                   </div>
-                ) : null}
+                ) : (
+                  <ToggleRole mobile />
+                )}
               </div>
 
               <div className="border-t border-white/10 pt-4 mt-4 px-4 space-y-2">

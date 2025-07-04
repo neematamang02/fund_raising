@@ -16,7 +16,7 @@ export default function App() {
         <ScrollToTop />
 
         <main className="bg-[#F9FAFB] min-h-screen">
-          <Toaster position="top-right" />
+          <Toaster position="bottom-right" />
           <Routes>
             {routesConfig.map(({ path, Component }) => (
               <Route key={path} path={path} element={<Component />} />

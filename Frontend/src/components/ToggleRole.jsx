@@ -108,16 +108,7 @@ export default function ToggleRole({ mobile = false }) {
       </div>
 
       {/* Role Status Indicator */}
-      <div
-        className={cn(
-          "ml-2 px-2 py-1 rounded-full text-xs font-medium transition-all duration-300",
-          isOrganizer
-            ? "bg-purple-500/20 text-purple-200 border border-purple-400/30"
-            : "bg-amber-500/20 text-amber-200 border border-amber-400/30"
-        )}
-      >
-        {loading ? "Switching..." : isOrganizer ? "Active" : "Active"}
-      </div>
+      {/* Removed status indicator as per request */}
     </div>
   );
 }
