@@ -32,7 +32,6 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import ToggleRole from "./ToggleRole";
 
 export default function NavigationBar() {
   const [open, setOpen] = useState(false);
@@ -100,17 +99,12 @@ export default function NavigationBar() {
 
             {/* Desktop Menu */}
             <div className="hidden lg:flex lg:items-center lg:space-x-1">
-              {navLinks.map(({ name, path, icon: Icon }) => (
+              {navLinks.map(({ name, path }) => (
                 <Link
                   key={path}
                   to={path}
                   className="flex items-center gap-2 px-4 py-2 rounded-xl hover:bg-white/15 transition-all duration-300 hover:scale-105 group text-sm font-medium"
                 >
-                  <Icon
-                    size={18}
-                    variant="Broken"
-                    className="text-amber-300 group-hover:text-white transition-colors duration-300"
-                  />
                   <span className="text-white/90 group-hover:text-white">
                     {name}
                   </span>
@@ -135,9 +129,7 @@ export default function NavigationBar() {
                   <Badge className="bg-gradient-to-r from-red-500 to-pink-500 text-white font-medium px-4 py-1 shadow-md shadow-red-500/20">
                     Admin
                   </Badge>
-                ) : (
-                  <ToggleRole />
-                )}
+                ) : null}
               </div>
 
               {/* Auth Buttons */}
@@ -231,18 +223,13 @@ export default function NavigationBar() {
         {open && (
           <div className="lg:hidden bg-gradient-to-b from-indigo-900/95 to-purple-900/95 backdrop-blur-md border-t border-white/10 animate-fadeIn">
             <div className="px-4 py-4 space-y-2">
-              {navLinks.map(({ name, path, icon: Icon }) => (
+              {navLinks.map(({ name, path }) => (
                 <Link
                   key={path}
                   to={path}
                   onClick={() => setOpen(false)}
                   className="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-white/15 transition-all duration-300 group text-sm font-medium"
                 >
-                  <Icon
-                    size={20}
-                    variant="Broken"
-                    className="text-amber-300 group-hover:text-white transition-colors duration-300"
-                  />
                   <span className="text-white/90 group-hover:text-white">
                     {name}
                   </span>
@@ -273,9 +260,7 @@ export default function NavigationBar() {
                       Admin
                     </Badge>
                   </div>
-                ) : (
-                  <ToggleRole mobile />
-                )}
+                ) : null}
               </div>
 
               <div className="border-t border-white/10 pt-4 mt-4 px-4 space-y-2">

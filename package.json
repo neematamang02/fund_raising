@@ -1,7 +1,7 @@
 {
   "scripts": {
     "Backend": "cd Backend && npm run dev",
-    "Frontend": "cd fund_rasing && npm run dev",
+    "Frontend": "cd Frontend && npm run dev",
     "dev": "concurrently \"npm run Backend\" \"npm run Frontend\""
   },
   "devDependencies": {
