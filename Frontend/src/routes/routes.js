@@ -13,6 +13,7 @@ const ROUTES = {
   DASHBOARD: "/dashboard",
   FORGOT_PASSWORD: "/forgot-password",
   RESET_PASSWORD: "/reset-password",
+  OTP_VERIFICATION: "/otp-verification",
 };
 
 export default ROUTES;

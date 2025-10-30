@@ -51,6 +51,7 @@ export default function RegisterPage() {
   const navigate = useNavigate();
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
+  const [email, setEmail] = useState("");
 
   const form = useForm({
     resolver: zodResolver(registerSchema),
@@ -75,14 +76,25 @@ export default function RegisterPage() {
       }
       return res.json();
     },
-    onSuccess: () => {
+    onSuccess: (data, variables) => {
       toast.success(
-        "Account created successfully! Please sign in to continue. 🎉"
+        "Otp send to your email"
       );
-      navigate(ROUTES.LOGIN, { replace: true });
+      setEmail(variables.email);
+      try {
+        sessionStorage.setItem(
+          "registrationData",
+          JSON.stringify({
+            name: variables.name,
+            email: variables.email,
+            password: variables.password,
+          })
+        );
+      } catch {}
+      navigate(ROUTES.OTP_VERIFICATION, { replace: true });
     },
     onError: (error) => {
-      toast.error(error.message || "Registration failed");
+      toast.error(error.message || "Failed to send OTP");
     },
   });
 

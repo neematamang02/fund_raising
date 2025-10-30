@@ -512,6 +512,176 @@ export default function AdminApplications() {
                     </div>
                   </div>
 
+                  {/* Verification Documents */}
+                  <div className="space-y-3">
+                    <h4 className="font-semibold text-gray-900 flex items-center gap-2">
+                      <FileText className="h-4 w-4 text-indigo-600" />
+                      Verification Documents
+                    </h4>
+
+                    {app.documents ? (
+                      <div className="grid gap-4 md:grid-cols-3">
+                        {/* Government ID */}
+                        {app.documents.governmentId?.url && (
+                          <div className="border rounded-lg p-3 bg-gray-50">
+                            <div className="text-sm font-medium text-gray-700 mb-2">Government ID</div>
+                            {/\.(png|jpe?g|gif|webp)$/i.test(app.documents.governmentId.url) ? (
+                              <a href={app.documents.governmentId.url} target="_blank" rel="noopener noreferrer">
+                                <img
+                                  src={app.documents.governmentId.url}
+                                  alt="Government ID"
+                                  className="w-full h-40 object-cover rounded"
+                                />
+                              </a>
+                            ) : (
+                              <a
+                                href={app.documents.governmentId.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-blue-600 hover:underline break-all"
+                              >
+                                View file
+                              </a>
+                            )}
+                          </div>
+                        )}
+
+                        {/* Selfie with ID */}
+                        {app.documents.selfieWithId?.url && (
+                          <div className="border rounded-lg p-3 bg-gray-50">
+                            <div className="text-sm font-medium text-gray-700 mb-2">Selfie with ID</div>
+                            {/\.(png|jpe?g|gif|webp)$/i.test(app.documents.selfieWithId.url) ? (
+                              <a href={app.documents.selfieWithId.url} target="_blank" rel="noopener noreferrer">
+                                <img
+                                  src={app.documents.selfieWithId.url}
+                                  alt="Selfie with ID"
+                                  className="w-full h-40 object-cover rounded"
+                                />
+                              </a>
+                            ) : (
+                              <a
+                                href={app.documents.selfieWithId.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-blue-600 hover:underline break-all"
+                              >
+                                View file
+                              </a>
+                            )}
+                          </div>
+                        )}
+
+                        {/* Registration Certificate */}
+                        {app.documents.registrationCertificate?.url && (
+                          <div className="border rounded-lg p-3 bg-gray-50">
+                            <div className="text-sm font-medium text-gray-700 mb-2">Registration Certificate</div>
+                            {/\.(png|jpe?g|gif|webp)$/i.test(app.documents.registrationCertificate.url) ? (
+                              <a href={app.documents.registrationCertificate.url} target="_blank" rel="noopener noreferrer">
+                                <img
+                                  src={app.documents.registrationCertificate.url}
+                                  alt="Registration Certificate"
+                                  className="w-full h-40 object-cover rounded"
+                                />
+                              </a>
+                            ) : (
+                              <a
+                                href={app.documents.registrationCertificate.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-blue-600 hover:underline break-all"
+                              >
+                                View file
+                              </a>
+                            )}
+                          </div>
+                        )}
+
+                        {/* Tax ID */}
+                        {app.documents.taxId?.url && (
+                          <div className="border rounded-lg p-3 bg-gray-50">
+                            <div className="text-sm font-medium text-gray-700 mb-2">Tax ID / EIN</div>
+                            {/\.(png|jpe?g|gif|webp)$/i.test(app.documents.taxId.url) ? (
+                              <a href={app.documents.taxId.url} target="_blank" rel="noopener noreferrer">
+                                <img
+                                  src={app.documents.taxId.url}
+                                  alt="Tax ID"
+                                  className="w-full h-40 object-cover rounded"
+                                />
+                              </a>
+                            ) : (
+                              <a
+                                href={app.documents.taxId.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-blue-600 hover:underline break-all"
+                              >
+                                View file
+                              </a>
+                            )}
+                          </div>
+                        )}
+
+                        {/* Address Proof */}
+                        {app.documents.addressProof?.url && (
+                          <div className="border rounded-lg p-3 bg-gray-50">
+                            <div className="text-sm font-medium text-gray-700 mb-2">Address Proof</div>
+                            {/\.(png|jpe?g|gif|webp)$/i.test(app.documents.addressProof.url) ? (
+                              <a href={app.documents.addressProof.url} target="_blank" rel="noopener noreferrer">
+                                <img
+                                  src={app.documents.addressProof.url}
+                                  alt="Address Proof"
+                                  className="w-full h-40 object-cover rounded"
+                                />
+                              </a>
+                            ) : (
+                              <a
+                                href={app.documents.addressProof.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-blue-600 hover:underline break-all"
+                              >
+                                View file
+                              </a>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="text-sm text-gray-600">No documents uploaded.</div>
+                    )}
+
+                    {/* Additional Documents */}
+                    {app.documents?.additionalDocuments?.length > 0 && (
+                      <div className="space-y-2">
+                        <div className="text-sm font-medium text-gray-700">Additional Documents</div>
+                        <div className="grid gap-3 md:grid-cols-3">
+                          {app.documents.additionalDocuments.map((doc, idx) => (
+                            <div key={idx} className="border rounded-lg p-3 bg-gray-50">
+                              {/\.(png|jpe?g|gif|webp)$/i.test(doc.url) ? (
+                                <a href={doc.url} target="_blank" rel="noopener noreferrer">
+                                  <img
+                                    src={doc.url}
+                                    alt={doc.name || `Additional Document ${idx + 1}`}
+                                    className="w-full h-40 object-cover rounded"
+                                  />
+                                </a>
+                              ) : (
+                                <a
+                                  href={doc.url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-blue-600 hover:underline break-all text-sm"
+                                >
+                                  {doc.name || doc.url}
+                                </a>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
                   {/* Rejection/Revocation Reason */}
                   {(app.status === "rejected" || app.status === "revoked") &&
                     app.rejectionReason && (

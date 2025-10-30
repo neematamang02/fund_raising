@@ -471,6 +471,7 @@ import { requireAuth } from "../middleware/auth.js";
 import OrganizerApplication from "../Models/OrganizerApplication.js";
 import crypto from "crypto";
 import nodemailer from "nodemailer";
+import Otp from "../Models/Otp.js";
 
 const router = Router();
 
@@ -494,11 +495,59 @@ router.post("/register", async (req, res) => {
     if (existing) {
       return res.status(409).json({ message: "Email already in use." });
     }
-    const passwordHash = await bcrypt.hash(password, 12);
-    const user = await User.create({ name, email, passwordHash });
-    return res.status(201).json({ id: user._id, email: user.email });
+    const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
+    const expiresAt = new Date(Date.now() + 3 * 60 * 1000);
+
+    await Otp.findOneAndUpdate(
+      { email, purpose: "register" },
+      { email, otpCode, purpose: "register", expiresAt, isUsed: false },
+      { upsert: true, new: true }
+    );
+
+    await transporter.sendMail({
+      to: email,
+      from: process.env.EMAIL_USER,
+      subject: "OTP code for registration",
+      html: `<p>Your OTP code is ${otpCode}</p>
+      <p>This code will expire in 3 minutes.</p>
+      `,
+    });
+    return res.status(200).json({ message: "OTP sent to your email. Please verify to complete registration." });
   } catch (err) {
     console.error("Register Error:", err);
+    return res.status(500).json({ message: "Server error." });
+  }
+});
+
+router.post("/verify-otp", async (req, res) => {
+  try {
+    const { name, email, password, otp } = req.body;
+    if (!name || !email || !password || !otp) {
+      return res.status(400).json({ message: "All fields are required." });
+    }
+
+    const otprecord = await Otp.findOne({ email, otpCode: otp, purpose: "register", isUsed: false });
+    if (!otprecord) {
+      return res.status(400).json({ message: "Invalid or expired OTP." });
+    }
+    if (otprecord.expiresAt && otprecord.expiresAt < new Date()) {
+      return res.status(400).json({ message: "OTP expired. Please register again." });
+    }
+
+    const existing = await User.findOne({ email });
+    if (existing) {
+      return res.status(409).json({ message: "Email already in use." });
+    }
+
+    otprecord.isUsed = true;
+    await otprecord.save();
+
+    const passwordHash = await bcrypt.hash(password, 12);
+    const user = await User.create({ name, email, passwordHash });
+
+    return res.status(201).json({ id: user._id, email: user.email });
+  } catch (err) {
+    console.error("Verify OTP Error:", err);
     return res.status(500).json({ message: "Server error." });
   }
 });
@@ -533,13 +582,14 @@ router.post("/login", async (req, res) => {
 // ——— 3) GET CURRENT USER ———
 router.get("/me", requireAuth, async (req, res) => {
   try {
-    const user = await User.findById(req.user.userId).select("name email role");
+    const user = await User.findById(req.user.userId).select("name email role isOrganizerApproved");
     if (!user) return res.status(404).json({ message: "User not found." });
     return res.json({
       userId: user._id.toString(),
       name: user.name,
       email: user.email,
       role: user.role,
+      isOrganizerApproved: user.isOrganizerApproved,
     });
   } catch (err) {
     console.error("Get Me Error:", err);

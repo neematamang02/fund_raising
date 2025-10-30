@@ -14,6 +14,7 @@ import { CampaignList } from "@/Pages/CampaignList";
 import MyCampaigns from "@/Pages/MyCampaigns";
 import ForgotPasswordPage from "@/Pages/Authentication/ForgotPasswordPage";
 import ResetPasswordPage from "@/Pages/Authentication/ResetPasswordPage";
+import Otpverification from "@/Pages/Authentication/Otpverification";
 
 const routesConfig = [
   // Public pages
@@ -23,6 +24,7 @@ const routesConfig = [
   { path: ROUTES.ABOUT, Component: About },
   { path: ROUTES.FORGOT_PASSWORD, Component: ForgotPasswordPage },
   { path: ROUTES.RESET_PASSWORD, Component: ResetPasswordPage },
+  { path: ROUTES.OTP_VERIFICATION, Component: Otpverification },
   {
     path: ROUTES.DONATE, // "/donate"
     Component: CampaignList,

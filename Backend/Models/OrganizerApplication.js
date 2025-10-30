@@ -23,11 +23,89 @@ const OrganizerApplicationSchema = new mongoose.Schema(
       trim: true,
     },
 
-    // Current status of the application: "pending", "approved", or "rejected"
+    // Additional contact information
+    contactEmail: {
+      type: String,
+      trim: true,
+    },
+
+    phoneNumber: {
+      type: String,
+      trim: true,
+    },
+
+    website: {
+      type: String,
+      trim: true,
+    },
+
+    // Organization details
+    organizationType: {
+      type: String,
+      enum: ["nonprofit", "charity", "individual", "business", "other"],
+      default: "other",
+    },
+
+    // Verification Documents (NEW)
+    documents: {
+      // Identity Verification
+      governmentId: {
+        url: String,
+        publicId: String, // Cloudinary public ID for deletion
+        uploadedAt: Date,
+      },
+      selfieWithId: {
+        url: String,
+        publicId: String,
+        uploadedAt: Date,
+      },
+
+      // Organization Verification
+      registrationCertificate: {
+        url: String,
+        publicId: String,
+        uploadedAt: Date,
+      },
+      taxId: {
+        url: String,
+        publicId: String,
+        uploadedAt: Date,
+      },
+
+      // Address Proof
+      addressProof: {
+        url: String,
+        publicId: String,
+        uploadedAt: Date,
+      },
+
+      // Supporting Documents (optional)
+      additionalDocuments: [
+        {
+          name: String,
+          url: String,
+          publicId: String,
+          uploadedAt: Date,
+        },
+      ],
+    },
+
+    // Document verification status
+    documentsVerified: {
+      type: Boolean,
+      default: false,
+    },
+
+    // Current status of the application
+    // "draft" = incomplete (not yet visible to admin)
+    // "pending" = submitted with documents (visible to admin)
+    // "approved" = admin approved
+    // "rejected" = admin rejected
+    // "revoked" = admin revoked after approval
     status: {
       type: String,
-      enum: ["pending", "approved", "rejected", "revoked"],
-      default: "pending",
+      enum: ["draft", "pending", "approved", "rejected", "revoked"],
+      default: "draft",
       required: true,
     },
 
@@ -49,13 +127,19 @@ const OrganizerApplicationSchema = new mongoose.Schema(
       trim: true,
       default: null,
     },
+
+    // Admin notes during review
+    adminNotes: {
+      type: String,
+      trim: true,
+    },
   },
   {
     timestamps: true, // Automatically adds createdAt and updatedAt
   }
 );
 
-const OrganizerApplication = mongoose.model(
+const OrganizerApplication = mongoose.model(  
   "OrganizerApplication",
   OrganizerApplicationSchema
 );
