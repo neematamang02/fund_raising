@@ -159,7 +159,7 @@ export default function CreateCampaign() {
 
       if (res.ok) {
         toast.success("Campaign created successfully! 🎉");
-        navigate(ROUTES.HOME);
+        navigate(ROUTES.MY_CAMPAIGNS);
       } else {
         const errorData = await res.json().catch(() => ({}));
         toast.error(errorData.message || "Failed to create campaign");
