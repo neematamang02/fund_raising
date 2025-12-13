@@ -172,6 +172,9 @@ export default function AdminApplications() {
 
   // Filter applications based on search and status
   const filteredApplications = applications.filter((app) => {
+    // Skip applications with missing user data
+    if (!app.user) return false;
+
     const matchesSearch =
       app.user.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       app.user.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -432,12 +435,12 @@ export default function AdminApplications() {
                   <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                     <div>
                       <CardTitle className="text-xl text-gray-900 mb-2">
-                        {app.user.name || app.user.email}
+                        {app.user?.name || app.user?.email || "Unknown User"}
                       </CardTitle>
                       <div className="flex items-center gap-2 text-gray-600">
                         <Users className="h-4 w-4" />
                         <span className="font-medium">
-                          {app.organizationName}
+                          {app.organizationName || "N/A"}
                         </span>
                       </div>
                     </div>
@@ -462,7 +465,7 @@ export default function AdminApplications() {
                       <div className="space-y-2 text-sm">
                         <div className="flex items-center gap-2">
                           <Mail className="h-3 w-3 text-gray-400" />
-                          <span>{app.contactEmail || app.user.email}</span>
+                          <span>{app.contactEmail || app.user?.email || "N/A"}</span>
                         </div>
                         {app.phoneNumber && (
                           <div className="flex items-center gap-2">

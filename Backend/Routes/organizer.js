@@ -2,7 +2,7 @@ import { Router } from "express";
 import { requireAuth } from "../middleware/auth.js";
 import OrganizerApplication from "../Models/OrganizerApplication.js";
 import User from "../Models/User.js";
-import { upload } from "../config/cloudinary.js";
+import { upload } from "../config/s3.js";
 
 const router = Router();
 
@@ -120,40 +120,40 @@ router.post(
       
       if (req.files.governmentId) {
         documents["documents.governmentId"] = {
-          url: req.files.governmentId[0].path,
-          publicId: req.files.governmentId[0].filename,
+          url: req.files.governmentId[0].location,
+          key: req.files.governmentId[0].key,
           uploadedAt: new Date(),
         };
       }
       
       if (req.files.selfieWithId) {
         documents["documents.selfieWithId"] = {
-          url: req.files.selfieWithId[0].path,
-          publicId: req.files.selfieWithId[0].filename,
+          url: req.files.selfieWithId[0].location,
+          key: req.files.selfieWithId[0].key,
           uploadedAt: new Date(),
         };
       }
       
       if (req.files.registrationCertificate) {
         documents["documents.registrationCertificate"] = {
-          url: req.files.registrationCertificate[0].path,
-          publicId: req.files.registrationCertificate[0].filename,
+          url: req.files.registrationCertificate[0].location,
+          key: req.files.registrationCertificate[0].key,
           uploadedAt: new Date(),
         };
       }
       
       if (req.files.taxId) {
         documents["documents.taxId"] = {
-          url: req.files.taxId[0].path,
-          publicId: req.files.taxId[0].filename,
+          url: req.files.taxId[0].location,
+          key: req.files.taxId[0].key,
           uploadedAt: new Date(),
         };
       }
       
       if (req.files.addressProof) {
         documents["documents.addressProof"] = {
-          url: req.files.addressProof[0].path,
-          publicId: req.files.addressProof[0].filename,
+          url: req.files.addressProof[0].location,
+          key: req.files.addressProof[0].key,
           uploadedAt: new Date(),
         };
       }
@@ -162,8 +162,8 @@ router.post(
       if (req.files.additionalDocuments) {
         const additionalDocs = req.files.additionalDocuments.map((file) => ({
           name: file.originalname,
-          url: file.path,
-          publicId: file.filename,
+          url: file.location,
+          key: file.key,
           uploadedAt: new Date(),
         }));
         documents["documents.additionalDocuments"] = additionalDocs;
