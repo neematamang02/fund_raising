@@ -9,6 +9,10 @@ import { useMutation } from "@tanstack/react-query";
 import axios from "axios";
 import { useState } from "react";
 
+const API_BASE_URL = import.meta.env.VITE_BACKEND_URL 
+  ? `${import.meta.env.VITE_BACKEND_URL}/api` 
+  : "/api";
+
 const schema = z
   .object({
     password: z.string().min(6, "Password must be at least 6 characters."),
@@ -36,7 +40,7 @@ export default function ResetPasswordPage() {
   const mutation = useMutation({
     mutationFn: async (data) => {
       const res = await axios.post(
-        `${import.meta.env.VITE_BACKEND_URL}/api/auth/reset-password`,
+        `${API_BASE_URL}/auth/reset-password`,
         { token, password: data.password }
       );
       return res.data;

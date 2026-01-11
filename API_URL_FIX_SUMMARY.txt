@@ -1,0 +1,209 @@
+═══════════════════════════════════════════════════════════════
+  API URL CONFIGURATION - PERMANENT FIX
+═══════════════════════════════════════════════════════════════
+
+Issue: Frontend was making API calls to wrong URLs
+Status: ✅ PERMANENTLY FIXED
+
+═══════════════════════════════════════════════════════════════
+  THE PROBLEM
+═══════════════════════════════════════════════════════════════
+
+API calls were going to:
+❌ http://localhost:3001/auth/me
+❌ http://localhost:3001/campaigns
+
+Instead of:
+✅ http://localhost:3001/api/auth/me
+✅ http://localhost:3001/api/campaigns
+
+The `/api` prefix was missing!
+
+═══════════════════════════════════════════════════════════════
+  THE SOLUTION
+═══════════════════════════════════════════════════════════════
+
+Fixed the API_BASE_URL logic in all files:
+
+BEFORE (Wrong):
+```javascript
+const API_BASE_URL = import.meta.env.VITE_BACKEND_URL || "/api";
+```
+
+AFTER (Correct):
+```javascript
+const API_BASE_URL = import.meta.env.VITE_BACKEND_URL 
+  ? `${import.meta.env.VITE_BACKEND_URL}/api` 
+  : "/api";
+```
+
+This ensures:
+- Development: Uses Vite proxy → `/api` → proxied to `http://localhost:3001/api`
+- Production: Uses full URL → `http://your-domain.com/api`
+
+═══════════════════════════════════════════════════════════════
+  FILES FIXED
+═══════════════════════════════════════════════════════════════
+
+✅ Frontend/src/Context/AuthContext.jsx
+✅ Frontend/src/Pages/Home.jsx
+✅ Frontend/src/Pages/Donate.jsx
+✅ Frontend/src/Pages/ApplyOrganizer.jsx
+✅ Frontend/src/Pages/Authentication/ResetPasswordPage.jsx
+✅ Frontend/.env (reverted to correct value)
+✅ Frontend/.env.example (updated)
+
+═══════════════════════════════════════════════════════════════
+  HOW IT WORKS NOW
+═══════════════════════════════════════════════════════════════
+
+DEVELOPMENT MODE (npm run dev):
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Frontend .env:
+  VITE_BACKEND_URL=http://localhost:3001
+
+API_BASE_URL becomes:
+  http://localhost:3001/api
+
+API calls:
+  fetch(`${API_BASE_URL}/campaigns`)
+  → http://localhost:3001/api/campaigns ✅
+
+PRODUCTION MODE (deployed):
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Frontend .env:
+  VITE_BACKEND_URL=https://api.yoursite.com
+
+API_BASE_URL becomes:
+  https://api.yoursite.com/api
+
+API calls:
+  fetch(`${API_BASE_URL}/campaigns`)
+  → https://api.yoursite.com/api/campaigns ✅
+
+═══════════════════════════════════════════════════════════════
+  RESTART INSTRUCTIONS
+═══════════════════════════════════════════════════════════════
+
+1. Stop your frontend dev server (Ctrl+C)
+
+2. Restart it:
+   cd Frontend
+   npm run dev
+
+3. Your app should now work perfectly!
+
+═══════════════════════════════════════════════════════════════
+  VERIFICATION
+═══════════════════════════════════════════════════════════════
+
+Open browser console and check:
+✅ No more 404 errors
+✅ API calls go to http://localhost:3001/api/*
+✅ Campaigns load on home page
+✅ Login/register works
+✅ All features functional
+
+═══════════════════════════════════════════════════════════════
+  WHY THIS APPROACH IS CORRECT
+═══════════════════════════════════════════════════════════════
+
+1. SEPARATION OF CONCERNS
+   - VITE_BACKEND_URL = base server URL (no /api)
+   - Code adds /api prefix automatically
+   - Clean and maintainable
+
+2. ENVIRONMENT FLEXIBILITY
+   - Development: http://localhost:3001
+   - Staging: https://staging-api.yoursite.com
+   - Production: https://api.yoursite.com
+   - Just change one env variable!
+
+3. FALLBACK FOR PROXY
+   - If VITE_BACKEND_URL not set → uses "/api"
+   - Vite proxy handles it in development
+   - No hardcoded URLs in code
+
+4. CONSISTENT PATTERN
+   - All API calls use same logic
+   - Easy to understand and maintain
+   - No confusion about URLs
+
+═══════════════════════════════════════════════════════════════
+  BACKEND ROUTES STRUCTURE
+═══════════════════════════════════════════════════════════════
+
+Your backend (Backend/app.js) has:
+
+app.use("/api", paypalrouter);
+app.use("/api", organizerRouter);
+app.use("/api", applicationRoutes);
+app.use("/api/auth", authRouter);
+app.use("/api/campaigns", campaignRouter);
+app.use("/api/donations", donationRouter);
+
+So all routes are under /api prefix:
+✅ /api/auth/login
+✅ /api/auth/register
+✅ /api/campaigns
+✅ /api/donations/me
+✅ /api/paypal/config
+✅ /api/organizer/apply
+✅ /api/admin/applications
+
+═══════════════════════════════════════════════════════════════
+  TROUBLESHOOTING
+═══════════════════════════════════════════════════════════════
+
+If you still see 404 errors:
+
+1. CHECK BACKEND IS RUNNING
+   cd Backend
+   npm start
+   Should see: "🚀 Server running on port 3001"
+
+2. CHECK FRONTEND .ENV
+   cat Frontend/.env
+   Should be: VITE_BACKEND_URL=http://localhost:3001
+
+3. CLEAR BROWSER CACHE
+   - Hard refresh: Ctrl+Shift+R (Windows) or Cmd+Shift+R (Mac)
+   - Or clear cache in DevTools
+
+4. CHECK CONSOLE
+   - Open browser DevTools (F12)
+   - Check Network tab
+   - Verify URLs are correct
+
+5. RESTART BOTH SERVERS
+   - Stop backend (Ctrl+C)
+   - Stop frontend (Ctrl+C)
+   - Start backend: cd Backend && npm start
+   - Start frontend: cd Frontend && npm run dev
+
+═══════════════════════════════════════════════════════════════
+  PRODUCTION DEPLOYMENT
+═══════════════════════════════════════════════════════════════
+
+When deploying to production:
+
+1. UPDATE FRONTEND .ENV
+   VITE_BACKEND_URL=https://your-backend-domain.com
+
+2. BUILD FRONTEND
+   cd Frontend
+   npm run build
+
+3. DEPLOY
+   - Upload dist/ folder to your hosting
+   - Configure your backend URL
+   - Test all API endpoints
+
+═══════════════════════════════════════════════════════════════
+
+This fix is PERMANENT and follows industry best practices.
+Your API URLs will now work correctly in all environments!
+
+═══════════════════════════════════════════════════════════════

@@ -3,6 +3,12 @@ import { requireAuth } from "../middleware/auth.js";
 import OrganizerApplication from "../Models/OrganizerApplication.js";
 import User from "../Models/User.js";
 import { upload } from "../config/s3.js";
+import {
+  sendApplicationSubmittedEmail,
+  sendApplicationApprovedEmail,
+  sendApplicationRejectedEmail,
+  sendOrganizerRevokedEmail,
+} from "../services/emailService.js";
 
 const router = Router();
 
@@ -173,11 +179,19 @@ router.post(
       // This makes it visible to admin for review
       documents["status"] = "pending"; // ← NOW the application is sent to admin!
       
-      await OrganizerApplication.findByIdAndUpdate(
+      const updatedApplication = await OrganizerApplication.findByIdAndUpdate(
         applicationId,
         { $set: documents },
         { new: true }
-      );
+      ).populate("user", "name email");
+
+      // 6) Send email notification to user
+      try {
+        await sendApplicationSubmittedEmail(updatedApplication.user, updatedApplication);
+      } catch (emailError) {
+        console.error("Failed to send application submitted email:", emailError);
+        // Don't fail the request if email fails
+      }
 
       return res.json({ 
         message: "Documents uploaded successfully! Your application is now pending admin review.",
@@ -259,6 +273,14 @@ router.patch(
         await userToApprove.save();
       }
 
+      // 3) Send approval email notification
+      try {
+        await sendApplicationApprovedEmail(userToApprove, application);
+      } catch (emailError) {
+        console.error("Failed to send approval email:", emailError);
+        // Don't fail the request if email fails
+      }
+
       return res.json({ message: "Application approved." });
     } catch (err) {
       console.error("Approve Application Error:", err);
@@ -298,6 +320,21 @@ router.patch(
       application.reviewedAt = new Date();
       application.rejectionReason = rejectionReason?.trim() || null;
       await application.save();
+
+      // Send rejection email notification
+      try {
+        const userToNotify = await User.findById(application.user);
+        if (userToNotify) {
+          await sendApplicationRejectedEmail(
+            userToNotify,
+            application,
+            application.rejectionReason
+          );
+        }
+      } catch (emailError) {
+        console.error("Failed to send rejection email:", emailError);
+        // Don't fail the request if email fails
+      }
 
       return res.json({ message: "Application rejected." });
     } catch (err) {
@@ -348,6 +385,20 @@ router.patch(
         userToRevoke.role = "donor";
         userToRevoke.isOrganizerApproved = false;
         await userToRevoke.save();
+      }
+
+      // Send revocation email notification
+      try {
+        if (userToRevoke) {
+          await sendOrganizerRevokedEmail(
+            userToRevoke,
+            application,
+            application.rejectionReason
+          );
+        }
+      } catch (emailError) {
+        console.error("Failed to send revocation email:", emailError);
+        // Don't fail the request if email fails
       }
 
       return res.json({ message: "Organizer role revoked." });

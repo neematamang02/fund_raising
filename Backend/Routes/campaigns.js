@@ -177,19 +177,42 @@ import Campaign from "../Models/Campaign.js";
 const router = Router();
 
 /**
- * GET /api/campaigns?owner=<userId>
+ * GET /api/campaigns?owner=<userId>&page=1&limit=10
  */
 router.get("/", async (req, res) => {
   try {
     const filter = {};
     if (req.query.owner) {
+      if (!mongoose.isValidObjectId(req.query.owner)) {
+        return res.status(400).json({ message: "Invalid owner ID." });
+      }
       filter.owner = req.query.owner;
     }
-    const campaigns = await Campaign.find(filter).populate(
-      "owner",
-      "name email"
-    );
-    return res.json(campaigns);
+    
+    // Pagination
+    const page = parseInt(req.query.page) || 1;
+    const limit = Math.min(parseInt(req.query.limit) || 20, 100); // Max 100 per page
+    const skip = (page - 1) * limit;
+    
+    const [campaigns, total] = await Promise.all([
+      Campaign.find(filter)
+        .populate("owner", "name email")
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .lean(),
+      Campaign.countDocuments(filter),
+    ]);
+    
+    return res.json({
+      campaigns,
+      pagination: {
+        page,
+        limit,
+        total,
+        pages: Math.ceil(total / limit),
+      },
+    });
   } catch (err) {
     console.error("Fetch Campaigns Error:", err);
     return res.status(500).json({ message: "Could not fetch campaigns." });

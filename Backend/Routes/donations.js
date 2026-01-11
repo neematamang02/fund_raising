@@ -7,11 +7,30 @@ const router = Router();
 
 router.get("/me", requireAuth, requireRole("donor"), async (req, res) => {
   try {
-    const donations = await Donation.find({ donorEmail: req.user.email })
-      .populate("campaign", "title imageURL")
-      .sort({ createdAt: -1 });
+    // Pagination
+    const page = parseInt(req.query.page) || 1;
+    const limit = Math.min(parseInt(req.query.limit) || 20, 100);
+    const skip = (page - 1) * limit;
+    
+    const [donations, total] = await Promise.all([
+      Donation.find({ donorEmail: req.user.email })
+        .populate("campaign", "title imageURL")
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .lean(),
+      Donation.countDocuments({ donorEmail: req.user.email }),
+    ]);
 
-    return res.json(donations);
+    return res.json({
+      donations,
+      pagination: {
+        page,
+        limit,
+        total,
+        pages: Math.ceil(total / limit),
+      },
+    });
   } catch (err) {
     console.error("Get My Donations Error:", err);
     return res

@@ -7,6 +7,7 @@ const OrganizerApplicationSchema = new mongoose.Schema(
       type: mongoose.Types.ObjectId,
       ref: "User",
       required: true,
+      index: true,
     },
 
     // The name of the organization or group
@@ -107,6 +108,7 @@ const OrganizerApplicationSchema = new mongoose.Schema(
       enum: ["draft", "pending", "approved", "rejected", "revoked"],
       default: "draft",
       required: true,
+      index: true,
     },
 
     // Reference to the admin (User) who reviewed this application (set when approved/rejected)
@@ -138,6 +140,10 @@ const OrganizerApplicationSchema = new mongoose.Schema(
     timestamps: true, // Automatically adds createdAt and updatedAt
   }
 );
+
+// Indexes for performance
+OrganizerApplicationSchema.index({ user: 1, status: 1 });
+OrganizerApplicationSchema.index({ status: 1, createdAt: -1 });
 
 const OrganizerApplication = mongoose.model(  
   "OrganizerApplication",

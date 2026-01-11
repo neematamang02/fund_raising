@@ -1,6 +1,10 @@
 import React, { createContext, useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 
+const API_BASE_URL = import.meta.env.VITE_BACKEND_URL 
+  ? `${import.meta.env.VITE_BACKEND_URL}/api` 
+  : "/api";
+
 export const AuthContext = createContext({
   user: null,
   token: null,
@@ -32,7 +36,7 @@ export function AuthProvider({ children }) {
   // Fetch current user using stored token
   const fetchCurrentUser = async (jwt) => {
     try {
-      const res = await fetch("/api/auth/me", {
+      const res = await fetch(`${API_BASE_URL}/auth/me`, {
         headers: { Authorization: `Bearer ${jwt}` },
       });
       if (!res.ok) throw new Error();
@@ -63,7 +67,7 @@ export function AuthProvider({ children }) {
   // The old login(email, password) can remain if you still need it elsewhere:
   const login = async (email, password) => {
     try {
-      const res = await fetch("/api/auth/login", {
+      const res = await fetch(`${API_BASE_URL}/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),
@@ -79,10 +83,11 @@ export function AuthProvider({ children }) {
       return false;
     }
   };
+  
   const switchRole = async (newRole) => {
     if (!token) return false;
     try {
-      const res = await fetch("/api/auth/switch-role", {
+      const res = await fetch(`${API_BASE_URL}/auth/switch-role`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",

@@ -15,6 +15,10 @@ import {
 import { Link } from "react-router-dom";
 import { FundraisingButton } from "@/components/ui/fundraising-button";
 
+const API_BASE_URL = import.meta.env.VITE_BACKEND_URL 
+  ? `${import.meta.env.VITE_BACKEND_URL}/api` 
+  : "/api";
+
 export default function Home() {
   const [campaigns, setCampaigns] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -23,12 +27,14 @@ export default function Home() {
   useEffect(() => {
     const fetchCampaigns = async () => {
       try {
-        const response = await fetch("/api/campaigns");
+        const response = await fetch(`${API_BASE_URL}/campaigns?limit=3`);
         if (!response.ok) {
           throw new Error("Failed to fetch campaigns");
         }
         const data = await response.json();
-        setCampaigns(data.slice(0, 3));
+        // Handle both old format (array) and new format (object with campaigns array)
+        const campaignsArray = Array.isArray(data) ? data : data.campaigns || [];
+        setCampaigns(campaignsArray.slice(0, 3));
       } catch (err) {
         setError(err instanceof Error ? err.message : "An error occurred");
       } finally {

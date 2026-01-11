@@ -8,6 +8,31 @@ import { paypalClient } from "../services/paypalClient.js";
 const router = express.Router();
 
 // ───────────────────────────────────────────────────────────────
+// 0) Get PayPal Configuration (Client ID)
+// ───────────────────────────────────────────────────────────────
+// GET /api/paypal/config
+// Returns: { clientId }
+// Public endpoint - no auth required
+router.get("/paypal/config", (req, res) => {
+  try {
+    const clientId = process.env.PAYPAL_CLIENT_ID;
+    
+    if (!clientId) {
+      return res.status(500).json({ 
+        error: "PayPal configuration not found on server" 
+      });
+    }
+    
+    return res.json({ clientId });
+  } catch (err) {
+    console.error("PayPal Config Error:", err);
+    return res.status(500).json({ 
+      error: "Could not fetch PayPal configuration" 
+    });
+  }
+});
+
+// ───────────────────────────────────────────────────────────────
 // 1) Create PayPal Order
 // ───────────────────────────────────────────────────────────────
 // POST /api/paypal/create-order

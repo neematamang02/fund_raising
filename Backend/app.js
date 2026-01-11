@@ -13,8 +13,29 @@ import organizerRouter from "./Routes/organizer.js";
 dotenv.config();
 connectDB();
 const app = express();
-app.use(cors({ origin: "http://localhost:5173" }));
-app.use(express.json());
+
+// CORS configuration
+const allowedOrigins = [
+  "http://localhost:5173",
+  "http://localhost:3000",
+  process.env.FRONTEND_URL,
+].filter(Boolean);
+
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error("Not allowed by CORS"));
+      }
+    },
+    credentials: true,
+  })
+);
+
+app.use(express.json({ limit: "10mb" }));
+app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 
 app.use("/api", paypalrouter);
 app.use("/api", organizerRouter);

@@ -8,6 +8,7 @@ const UserSchema = new mongoose.Schema(
       unique: true,
       lowercase: true,
       trim: true,
+      index: true,
     },
     passwordHash: {
       type: String,
@@ -18,6 +19,7 @@ const UserSchema = new mongoose.Schema(
       enum: ["donor", "organizer", "admin"],
       default: "donor",
       required: true,
+      index: true,
     },
     isOrganizerApproved: {
       type: Boolean,
@@ -26,13 +28,18 @@ const UserSchema = new mongoose.Schema(
     name: {
       type: String,
       required: true,
+      trim: true,
     },
     resetToken: String,
     resetTokenExpiry: Date,
-    // other fields as needed (e.g. avatar, etc.)
   },
   { timestamps: true }
 );
+
+// Indexes for performance
+UserSchema.index({ email: 1 });
+UserSchema.index({ role: 1 });
+UserSchema.index({ resetToken: 1 });
 
 const User = mongoose.model("User", UserSchema);
 export default User;

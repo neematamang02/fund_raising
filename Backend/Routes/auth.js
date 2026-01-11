@@ -475,6 +475,11 @@ import Otp from "../Models/Otp.js";
 
 const router = Router();
 
+// Rate limiting map for login attempts
+const loginAttempts = new Map();
+const MAX_LOGIN_ATTEMPTS = 5;
+const LOGIN_TIMEOUT = 15 * 60 * 1000; // 15 minutes
+
 // ——— Nodemailer transport (uses env-vars) ———
 const transporter = nodemailer.createTransport({
   service: "gmail",
@@ -484,31 +489,74 @@ const transporter = nodemailer.createTransport({
   },
 });
 
+// Rate limiting middleware
+const checkRateLimit = (identifier) => {
+  const now = Date.now();
+  const attempts = loginAttempts.get(identifier) || { count: 0, resetTime: now + LOGIN_TIMEOUT };
+  
+  if (now > attempts.resetTime) {
+    loginAttempts.set(identifier, { count: 1, resetTime: now + LOGIN_TIMEOUT });
+    return true;
+  }
+  
+  if (attempts.count >= MAX_LOGIN_ATTEMPTS) {
+    return false;
+  }
+  
+  attempts.count++;
+  loginAttempts.set(identifier, attempts);
+  return true;
+};
+
 // ——— 1) REGISTER ———
 router.post("/register", async (req, res) => {
   try {
     const { name, email, password } = req.body;
+    
+    // Input validation
     if (!name || !email || !password) {
       return res.status(400).json({ message: "All fields are required." });
     }
-    const existing = await User.findOne({ email });
+    
+    // Sanitize inputs
+    const sanitizedEmail = email.trim().toLowerCase();
+    const sanitizedName = name.trim();
+    
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(sanitizedEmail)) {
+      return res.status(400).json({ message: "Invalid email format." });
+    }
+    
+    // Validate password strength
+    if (password.length < 8) {
+      return res.status(400).json({ message: "Password must be at least 8 characters long." });
+    }
+    
+    const existing = await User.findOne({ email: sanitizedEmail });
     if (existing) {
       return res.status(409).json({ message: "Email already in use." });
     }
+    
+    // Check if email service is configured
+    if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
+      return res.status(500).json({ message: "Email service not configured." });
+    }
+    
     const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
     const expiresAt = new Date(Date.now() + 3 * 60 * 1000);
 
     await Otp.findOneAndUpdate(
-      { email, purpose: "register" },
-      { email, otpCode, purpose: "register", expiresAt, isUsed: false },
+      { email: sanitizedEmail, purpose: "register" },
+      { email: sanitizedEmail, otpCode, purpose: "register", expiresAt, isUsed: false },
       { upsert: true, new: true }
     );
 
     await transporter.sendMail({
-      to: email,
+      to: sanitizedEmail,
       from: process.env.EMAIL_USER,
       subject: "OTP code for registration",
-      html: `<p>Your OTP code is ${otpCode}</p>
+      html: `<p>Your OTP code is <strong>${otpCode}</strong></p>
       <p>This code will expire in 3 minutes.</p>
       `,
     });
@@ -525,8 +573,12 @@ router.post("/verify-otp", async (req, res) => {
     if (!name || !email || !password || !otp) {
       return res.status(400).json({ message: "All fields are required." });
     }
+    
+    // Sanitize inputs
+    const sanitizedEmail = email.trim().toLowerCase();
+    const sanitizedName = name.trim();
 
-    const otprecord = await Otp.findOne({ email, otpCode: otp, purpose: "register", isUsed: false });
+    const otprecord = await Otp.findOne({ email: sanitizedEmail, otpCode: otp, purpose: "register", isUsed: false });
     if (!otprecord) {
       return res.status(400).json({ message: "Invalid or expired OTP." });
     }
@@ -534,7 +586,7 @@ router.post("/verify-otp", async (req, res) => {
       return res.status(400).json({ message: "OTP expired. Please register again." });
     }
 
-    const existing = await User.findOne({ email });
+    const existing = await User.findOne({ email: sanitizedEmail });
     if (existing) {
       return res.status(409).json({ message: "Email already in use." });
     }
@@ -543,7 +595,7 @@ router.post("/verify-otp", async (req, res) => {
     await otprecord.save();
 
     const passwordHash = await bcrypt.hash(password, 12);
-    const user = await User.create({ name, email, passwordHash });
+    const user = await User.create({ name: sanitizedName, email: sanitizedEmail, passwordHash });
 
     return res.status(201).json({ id: user._id, email: user.email });
   } catch (err) {
@@ -559,7 +611,18 @@ router.post("/login", async (req, res) => {
     if (!email || !password) {
       return res.status(400).json({ message: "Email and password required." });
     }
-    const user = await User.findOne({ email });
+    
+    // Sanitize email
+    const sanitizedEmail = email.trim().toLowerCase();
+    
+    // Rate limiting check
+    if (!checkRateLimit(sanitizedEmail)) {
+      return res.status(429).json({ 
+        message: "Too many login attempts. Please try again in 15 minutes." 
+      });
+    }
+    
+    const user = await User.findOne({ email: sanitizedEmail });
     if (!user) {
       return res.status(401).json({ message: "Invalid credentials." });
     }
@@ -567,10 +630,14 @@ router.post("/login", async (req, res) => {
     if (!isValid) {
       return res.status(401).json({ message: "Invalid credentials." });
     }
+    
+    // Clear rate limit on successful login
+    loginAttempts.delete(sanitizedEmail);
+    
     const token = jwt.sign(
       { userId: user._id, role: user.role },
       process.env.JWT_SECRET,
-      { expiresIn: "2h" }
+      { expiresIn: process.env.JWT_EXPIRES_IN || "7d" }
     );
     return res.json({ token, role: user.role });
   } catch (err) {

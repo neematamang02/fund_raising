@@ -22,6 +22,10 @@ import {
   Sparkles,
 } from "lucide-react";
 
+const API_BASE_URL = import.meta.env.VITE_BACKEND_URL 
+  ? `${import.meta.env.VITE_BACKEND_URL}/api` 
+  : "/api";
+
 export default function Donate() {
   const { campaignId } = useParams();
   const { user, token } = useContext(AuthContext);
@@ -30,9 +34,26 @@ export default function Donate() {
   const [bill, setBill] = useState(null);
   const [errorMsg, setErrorMsg] = useState("");
   const [selectedPreset, setSelectedPreset] = useState(null);
+  const [paypalClientId, setPaypalClientId] = useState(null);
 
   // Preset donation amounts
   const presetAmounts = [25, 50, 100, 250, 500, 1000];
+
+  // Fetch PayPal Client ID from backend
+  const { isLoading: loadingPaypalConfig } = useQuery({
+    queryKey: ["paypalConfig"],
+    queryFn: async () => {
+      const res = await fetch(`${API_BASE_URL}/paypal/config`);
+      if (!res.ok) {
+        throw new Error("Could not fetch PayPal configuration");
+      }
+      const data = await res.json();
+      setPaypalClientId(data.clientId);
+      return data;
+    },
+    retry: 2,
+    staleTime: 1000 * 60 * 60, // Cache for 1 hour
+  });
 
   const {
     data: campaign,
@@ -42,7 +63,7 @@ export default function Donate() {
     queryKey: ["campaign", campaignId],
     queryFn: async () => {
       const headers = token ? { Authorization: `Bearer ${token}` } : {};
-      const res = await fetch(`/api/campaigns/${campaignId}`, { headers });
+      const res = await fetch(`${API_BASE_URL}/campaigns/${campaignId}`, { headers });
       if (!res.ok) {
         throw new Error("Could not fetch campaign");
       }
@@ -55,7 +76,7 @@ export default function Donate() {
   const createOrderMutation = useMutation({
     mutationFn: async (amountValue) => {
       try {
-        const res = await fetch("/api/paypal/create-order", {
+        const res = await fetch(`${API_BASE_URL}/paypal/create-order`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -86,7 +107,7 @@ export default function Donate() {
 
   const captureOrderMutation = useMutation({
     mutationFn: async (orderID) => {
-      const res = await fetch("/api/paypal/capture-order", {
+      const res = await fetch(`${API_BASE_URL}/paypal/capture-order`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -149,12 +170,14 @@ export default function Donate() {
   }, [campaign]);
 
   // If campaignId is missing or loading
-  if (!campaignId || loadingCampaign) {
+  if (!campaignId || loadingCampaign || loadingPaypalConfig) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading campaign...</p>
+          <p className="text-gray-600">
+            {loadingPaypalConfig ? "Loading payment system..." : "Loading campaign..."}
+          </p>
         </div>
       </div>
     );
@@ -484,58 +507,66 @@ export default function Donate() {
 
                     {/* PayPal Buttons */}
                     <div className="space-y-4">
-                      <PayPalScriptProvider
-                        options={{
-                          "client-id": import.meta.env.VITE_PAYPAL_CLIENT_ID,
-                          currency: "USD",
-                          intent: "capture",
-                          components: "buttons",
-                          "disable-funding": "credit",
-                        }}
-                      >
-                        <PayPalButtons
-                          style={{
-                            layout: "vertical",
-                            color: "gold",
-                            shape: "rect",
-                            height: 50,
+                      {paypalClientId ? (
+                        <PayPalScriptProvider
+                          options={{
+                            "client-id": paypalClientId,
+                            currency: "USD",
+                            intent: "capture",
+                            components: "buttons",
+                            "disable-funding": "credit",
                           }}
-                          createOrder={async () => {
-                            setErrorMsg("");
-                            if (!handleValidateBeforePayPal())
-                              return Promise.reject();
-                            try {
-                              const { orderID } =
-                                await createOrderMutation.mutateAsync(amount);
-                              return orderID;
-                            } catch (error) {
+                        >
+                          <PayPalButtons
+                            style={{
+                              layout: "vertical",
+                              color: "gold",
+                              shape: "rect",
+                              height: 50,
+                            }}
+                            createOrder={async () => {
+                              setErrorMsg("");
+                              if (!handleValidateBeforePayPal())
+                                return Promise.reject();
+                              try {
+                                const { orderID } =
+                                  await createOrderMutation.mutateAsync(amount);
+                                return orderID;
+                              } catch (error) {
+                                setErrorMsg(
+                                  error.message || "Failed to create PayPal order"
+                                );
+                                throw error;
+                              }
+                            }}
+                            onApprove={async (data) => {
+                              try {
+                                await captureOrderMutation.mutateAsync(
+                                  data.orderID
+                                );
+                              } catch (error) {
+                                setErrorMsg(
+                                  error.message ||
+                                    "An error occurred with PayPal. Please try again."
+                                );
+                              }
+                            }}
+                            onError={(err) => {
+                              console.error("PayPal error:", err);
                               setErrorMsg(
-                                error.message || "Failed to create PayPal order"
+                                "An error occurred with PayPal. Please try again."
                               );
-                              throw error;
-                            }
-                          }}
-                          onApprove={async (data) => {
-                            try {
-                              await captureOrderMutation.mutateAsync(
-                                data.orderID
-                              );
-                            } catch (error) {
-                              setErrorMsg(
-                                error.message ||
-                                  "An error occurred with PayPal. Please try again."
-                              );
-                            }
-                          }}
-                          onError={(err) => {
-                            console.error("PayPal error:", err);
-                            setErrorMsg(
-                              "An error occurred with PayPal. Please try again."
-                            );
-                          }}
-                          onCancel={() => setErrorMsg("Payment canceled.")}
-                        />
-                      </PayPalScriptProvider>
+                            }}
+                            onCancel={() => setErrorMsg("Payment canceled.")}
+                          />
+                        </PayPalScriptProvider>
+                      ) : (
+                        <div className="bg-red-50 border border-red-200 rounded-xl p-4">
+                          <p className="text-red-800 text-sm">
+                            Payment system is currently unavailable. Please try again later.
+                          </p>
+                        </div>
+                      )}
                     </div>
 
                     {!user && (

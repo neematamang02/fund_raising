@@ -38,6 +38,10 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 
+const API_BASE_URL = import.meta.env.VITE_BACKEND_URL 
+  ? `${import.meta.env.VITE_BACKEND_URL}/api` 
+  : "/api";
+
 // Enhanced Zod schema
 const applicationSchema = z.object({
   organizationName: z
@@ -95,7 +99,7 @@ export default function ApplyOrganizer() {
   // Submit basic application
   const applicationMutation = useMutation({
     mutationFn: async (values) => {
-      const res = await fetch("/api/organizer/apply", {
+      const res = await fetch(`${API_BASE_URL}/organizer/apply`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -122,7 +126,7 @@ export default function ApplyOrganizer() {
   // Upload documents
   const documentsMutation = useMutation({
     mutationFn: async (formData) => {
-      const res = await fetch(`/api/organizer/upload-documents/${applicationId}`, {
+      const res = await fetch(`${API_BASE_URL}/organizer/upload-documents/${applicationId}`, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${localStorage.getItem("token")}`,
