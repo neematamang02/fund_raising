@@ -45,10 +45,17 @@ router.post(
   async (req, res) => {
     try {
       const { campaignId, amount } = req.body;
+      
+      console.log("🔍 Creating PayPal Order:");
+      console.log("  Campaign ID:", campaignId);
+      console.log("  Amount:", amount);
+      console.log("  User:", req.user.email);
+      
       // Validate inputs
       if (!campaignId || !amount || amount <= 0) {
         return res.status(400).json({ error: "Invalid input" });
       }
+      
       // Optionally, verify campaign exists
       const campaign = await Campaign.findById(campaignId);
       if (!campaign)
@@ -57,14 +64,16 @@ router.post(
       // Build PayPal order request
       const request = new paypal.orders.OrdersCreateRequest();
       request.prefer("return=representation");
-      request.requestBody({
+      
+      const orderPayload = {
         intent: "CAPTURE",
         purchase_units: [
           {
             reference_id: campaignId,
+            description: `Donation to ${campaign.title}`,
             amount: {
               currency_code: "USD",
-              value: amount.toFixed(2),
+              value: parseFloat(amount).toFixed(2),
             },
           },
         ],
@@ -75,14 +84,29 @@ router.post(
           return_url: `${process.env.FRONTEND_URL}/donate/success`,
           cancel_url: `${process.env.FRONTEND_URL}/donate/cancel`,
         },
-      });
+      };
+      
+      console.log("  Order Payload:", JSON.stringify(orderPayload, null, 2));
+      request.requestBody(orderPayload);
 
       const paypalReq = await paypalClient().execute(request);
       const orderID = paypalReq.result.id;
+      
+      console.log("✅ PayPal Order Created:", orderID);
+      console.log("  Status:", paypalReq.result.status);
+      
       return res.json({ orderID });
     } catch (err) {
-      console.error("Create Order Error:", err);
-      return res.status(500).json({ error: "Could not create PayPal order." });
+      console.error("❌ Create Order Error:");
+      console.error("  Message:", err.message);
+      console.error("  Status Code:", err.statusCode);
+      if (err.headers) {
+        console.error("  Headers:", err.headers);
+      }
+      return res.status(500).json({ 
+        error: "Could not create PayPal order.",
+        details: process.env.NODE_ENV === 'development' ? err.message : undefined
+      });
     }
   }
 );
@@ -100,6 +124,12 @@ router.post(
   async (req, res) => {
     try {
       const { orderID, campaignId } = req.body;
+      
+      console.log("🔍 Capturing PayPal Order:");
+      console.log("  Order ID:", orderID);
+      console.log("  Campaign ID:", campaignId);
+      console.log("  User:", req.user.email);
+      
       if (!orderID || !campaignId) {
         return res.status(400).json({ error: "Invalid input" });
       }
@@ -110,6 +140,8 @@ router.post(
 
       const captureResponse = await paypalClient().execute(request);
       const result = captureResponse.result; // Full capture result
+      
+      console.log("  Capture Status:", result.status);
 
       // Extract relevant info
       const purchaseUnit = result.purchase_units[0];
@@ -142,6 +174,8 @@ router.post(
       });
       await donation.save();
 
+      console.log("✅ Donation Recorded:", donation._id);
+
       // Build a "bill" or receipt object to return to frontend
       const billReceipt = {
         donationId: donation._id,
@@ -156,32 +190,16 @@ router.post(
 
       return res.json({ donation, billReceipt });
     } catch (err) {
-      console.error("Capture Order Error:", err);
-      return res.status(500).json({ error: "Could not capture PayPal order." });
-    }
-  }
-);
-
-// ───────────────────────────────────────────────────────────────
-// 3) Get Logged‐In User's Donation History
-// ───────────────────────────────────────────────────────────────
-// GET /api/donations/me
-// Requires: donor to be logged in
-router.get(
-  "/donations/me",
-  requireAuth,
-  requireRole("donor"),
-  async (req, res) => {
-    try {
-      const donations = await Donation.find({ donor: req.user.userId })
-        .populate("campaign", "title")
-        .sort({ createdAt: -1 });
-      return res.json(donations);
-    } catch (err) {
-      console.error("Fetch Donations Error:", err);
-      return res
-        .status(500)
-        .json({ error: "Could not fetch donation history." });
+      console.error("❌ Capture Order Error:");
+      console.error("  Message:", err.message);
+      console.error("  Status Code:", err.statusCode);
+      if (err.headers) {
+        console.error("  Headers:", err.headers);
+      }
+      return res.status(500).json({ 
+        error: "Could not capture PayPal order.",
+        details: process.env.NODE_ENV === 'development' ? err.message : undefined
+      });
     }
   }
 );

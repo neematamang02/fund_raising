@@ -34,16 +34,22 @@ export default function Dashboard() {
   const queryClient = useQueryClient();
 
   // 1) Fetch my donations
-  const { data: donations = [], isLoading: isDonationsLoading } = useQuery({
+  const { data: donationsData, isLoading: isDonationsLoading } = useQuery({
     queryKey: ["myDonations"],
     queryFn: async () => {
       const res = await fetch("/api/donations/me", {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (!res.ok) throw new Error("Failed to fetch donations");
-      return res.json();
+      const data = await res.json();
+      console.log("Dashboard donations data:", data);
+      return data;
     },
+    enabled: !!token,
   });
+
+  // Extract donations array from response
+  const donations = donationsData?.donations || [];
 
   // Filtering state
   const [filterText, setFilterText] = useState("");
@@ -51,9 +57,11 @@ export default function Dashboard() {
   const [dateTo, setDateTo] = useState("");
 
   // Apply filters
-  const filteredDonations = donations.filter((d) => {
+  const filteredDonations = (donations || []).filter((d) => {
+    if (!d || !d.campaign) return false;
+    
     const matchCampaign = filterText
-      ? d.campaign.title.toLowerCase().includes(filterText.toLowerCase())
+      ? (d.campaign.title || "").toLowerCase().includes(filterText.toLowerCase())
       : true;
 
     const donationDate = new Date(d.createdAt);
@@ -205,9 +213,9 @@ export default function Dashboard() {
                 <Card key={donation._id} className="bg-gray-50">
                   <CardHeader>
                     <CardTitle>
-                      {donation.campaign.title} —{" "}
+                      {donation.campaign?.title || "Unknown Campaign"} —{" "}
                       <span className="font-semibold">
-                        ${donation.amount.toLocaleString()}
+                        ${(donation.amount || 0).toLocaleString()}
                       </span>
                     </CardTitle>
                   </CardHeader>
@@ -219,11 +227,11 @@ export default function Dashboard() {
                       </p>
                       <p>
                         <span className="font-semibold">Method:</span>{" "}
-                        {donation.method}
+                        {donation.method || "N/A"}
                       </p>
                     </div>
                     <div className="text-gray-600">
-                      Donation ID: {donation._id.slice(-6)}
+                      Donation ID: {donation._id?.slice(-6) || "N/A"}
                     </div>
                   </CardContent>
                 </Card>

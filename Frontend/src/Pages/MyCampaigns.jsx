@@ -466,7 +466,10 @@ const fetchMyCampaigns = async (token, userId) => {
   if (!response.ok) {
     throw new Error("Failed to fetch campaigns");
   }
-  return response.json();
+  const data = await response.json();
+  console.log("My campaigns data received:", data);
+  // Return just the campaigns array for backward compatibility
+  return data.campaigns || [];
 };
 
 const updateCampaign = async ({ campaignId, token, data }) => {

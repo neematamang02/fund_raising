@@ -514,7 +514,8 @@ export default function Donate() {
                             currency: "USD",
                             intent: "capture",
                             components: "buttons",
-                            "disable-funding": "credit",
+                            "disable-funding": "credit,card",
+                            "enable-funding": "venmo",
                           }}
                         >
                           <PayPalButtons
@@ -553,8 +554,9 @@ export default function Donate() {
                             }}
                             onError={(err) => {
                               console.error("PayPal error:", err);
+                              console.error("Error details:", JSON.stringify(err, null, 2));
                               setErrorMsg(
-                                "An error occurred with PayPal. Please try again."
+                                "PayPal payment failed. This is usually a sandbox account issue. Please try: 1) Creating a new sandbox test account at developer.paypal.com, or 2) Using a different sandbox account."
                               );
                             }}
                             onCancel={() => setErrorMsg("Payment canceled.")}

@@ -37,7 +37,7 @@ export function CampaignList() {
   const itemsPerPage = 9;
 
   const {
-    data: campaigns,
+    data: campaignsData,
     isLoading,
     error,
   } = useQuery({
@@ -47,18 +47,28 @@ export function CampaignList() {
       if (!response.ok) {
         throw new Error("Failed to fetch campaigns");
       }
-      return response.json();
+      const data = await response.json();
+      console.log("Campaigns data received:", data);
+      return data;
     },
   });
 
+  // Extract campaigns array from response
+  const campaigns = campaignsData?.campaigns || [];
+  const pagination = campaignsData?.pagination;
+
   // Filter and sort campaigns
   const filteredAndSortedCampaigns = useMemo(() => {
-    if (!campaigns) return [];
+    if (!campaigns || !Array.isArray(campaigns) || campaigns.length === 0) return [];
 
     const filtered = campaigns.filter((campaign) => {
+      if (!campaign) return false;
+      
+      const title = campaign.title || "";
+      const description = campaign.description || "";
       const matchesSearch =
-        campaign.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        campaign.description.toLowerCase().includes(searchTerm.toLowerCase());
+        title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        description.toLowerCase().includes(searchTerm.toLowerCase());
       const matchesCategory =
         categoryFilter === "all" || campaign.category === categoryFilter;
       return matchesSearch && matchesCategory;
@@ -72,11 +82,13 @@ export function CampaignList() {
         case "oldest":
           return new Date(a.createdAt) - new Date(b.createdAt);
         case "target-high":
-          return b.target - a.target;
+          return (b.target || 0) - (a.target || 0);
         case "target-low":
-          return a.target - b.target;
+          return (a.target || 0) - (b.target || 0);
         case "progress":
-          return b.raised / b.target - a.raised / a.target;
+          const progressB = (b.raised || 0) / (b.target || 1);
+          const progressA = (a.raised || 0) / (a.target || 1);
+          return progressB - progressA;
         default:
           return 0;
       }
@@ -99,9 +111,9 @@ export function CampaignList() {
 
   // Get unique categories from campaigns
   const categories = useMemo(() => {
-    if (!campaigns) return [];
+    if (!campaigns || !Array.isArray(campaigns)) return [];
     const uniqueCategories = [
-      ...new Set(campaigns.map((c) => c.category).filter(Boolean)),
+      ...new Set(campaigns.map((c) => c?.category).filter(Boolean)),
     ];
     return uniqueCategories;
   }, [campaigns]);

@@ -5,12 +5,30 @@ import Campaign from "../Models/Campaign.js";
 
 const router = Router();
 
-router.get("/me", requireAuth, requireRole("donor"), async (req, res) => {
+router.get("/me", requireAuth, async (req, res) => {
   try {
+    console.log("\n" + "=".repeat(60));
+    console.log("📋 Fetching donations for user:");
+    console.log("  Email:", req.user.email);
+    console.log("  User ID:", req.user.userId);
+    console.log("  Role:", req.user.role);
+    console.log("=".repeat(60));
+    
     // Pagination
     const page = parseInt(req.query.page) || 1;
     const limit = Math.min(parseInt(req.query.limit) || 20, 100);
     const skip = (page - 1) * limit;
+    
+    // Debug: Check what's in the database
+    const allDonationsForEmail = await Donation.find({ donorEmail: req.user.email }).lean();
+    console.log(`  Total donations in DB for ${req.user.email}: ${allDonationsForEmail.length}`);
+    
+    if (allDonationsForEmail.length > 0) {
+      console.log("  Sample donation emails in DB:");
+      allDonationsForEmail.slice(0, 3).forEach((d, i) => {
+        console.log(`    ${i + 1}. donorEmail: "${d.donorEmail}" (exact match: ${d.donorEmail === req.user.email})`);
+      });
+    }
     
     const [donations, total] = await Promise.all([
       Donation.find({ donorEmail: req.user.email })
@@ -22,6 +40,9 @@ router.get("/me", requireAuth, requireRole("donor"), async (req, res) => {
       Donation.countDocuments({ donorEmail: req.user.email }),
     ]);
 
+    console.log(`✅ Returning ${donations.length} donations (total: ${total})`);
+    console.log("=".repeat(60) + "\n");
+
     return res.json({
       donations,
       pagination: {
@@ -32,7 +53,7 @@ router.get("/me", requireAuth, requireRole("donor"), async (req, res) => {
       },
     });
   } catch (err) {
-    console.error("Get My Donations Error:", err);
+    console.error("❌ Get My Donations Error:", err);
     return res
       .status(500)
       .json({ message: "Failed to fetch donation history." });

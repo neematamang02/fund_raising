@@ -40,29 +40,43 @@ export default function MyDonations() {
   const [timeFilter, setTimeFilter] = useState("all");
 
   const {
-    data: donations = [],
+    data: donationsData,
     isLoading,
     error,
   } = useQuery({
     queryKey: ["myDonations"],
     queryFn: async () => {
-      const res = await fetch("/api/donations/me", {
-        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-      });
-      if (!res.ok) throw new Error("Failed to load donations");
-      return res.json();
-    },
-  });
-  const { data: campaigns } = useQuery({
-    queryKey: ["campaigns"],
-    queryFn: async () => {
-      const response = await fetch("/api/campaigns");
-      if (!response.ok) {
-        throw new Error("Failed to fetch campaigns");
+      const token = localStorage.getItem("token");
+      if (!token) {
+        throw new Error("No authentication token found");
       }
-      return response.json();
+
+      const res = await fetch("/api/donations/me", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        
+        // Handle 403 Forbidden specifically
+        if (res.status === 403) {
+          throw new Error("Access denied. Please ensure you have donor role to view donations.");
+        }
+        
+        throw new Error(errorData.message || `Failed to load donations (${res.status})`);
+      }
+      
+      const data = await res.json();
+      console.log("Donations data received:", data);
+      return data;
     },
+    enabled: !!user, // Only run query if user is logged in
+    retry: 1,
   });
+
+  // Extract donations array from response
+  const donations = donationsData?.donations || [];
+  const pagination = donationsData?.pagination;
 
   // If not logged in, show login prompt
   if (!user) {
@@ -88,13 +102,13 @@ export default function MyDonations() {
 
   // Calculate donation statistics
   const donationStats = useMemo(() => {
-    if (!donations.length) return null;
+    if (!donations || donations.length === 0) return null;
 
-    const totalAmount = donations.reduce((sum, d) => sum + d.amount, 0);
+    const totalAmount = donations.reduce((sum, d) => sum + (d.amount || 0), 0);
     const totalDonations = donations.length;
     const averageDonation = totalAmount / totalDonations;
     const completedDonations = donations.filter(
-      (d) => d.status === "completed"
+      (d) => d.status === "COMPLETED" || d.status === "completed"
     ).length;
     const successRate = (completedDonations / totalDonations) * 100;
 
@@ -104,12 +118,14 @@ export default function MyDonations() {
         year: "numeric",
         month: "short",
       });
-      acc[month] = (acc[month] || 0) + donation.amount;
+      acc[month] = (acc[month] || 0) + (donation.amount || 0);
       return acc;
     }, {});
 
     // Get unique campaigns supported
-    const uniqueCampaigns = new Set(donations.map((d) => d.campaign._id)).size;
+    const uniqueCampaigns = new Set(
+      donations.map((d) => d.campaign?._id).filter(Boolean)
+    ).size;
 
     return {
       totalAmount,
@@ -124,12 +140,19 @@ export default function MyDonations() {
 
   // Filter and sort donations
   const filteredDonations = useMemo(() => {
+    if (!donations || donations.length === 0) return [];
+
     const filtered = donations.filter((donation) => {
-      const matchesSearch = donation.campaign.title
+      // Safely check campaign title
+      const campaignTitle = donation.campaign?.title || "";
+      const matchesSearch = campaignTitle
         .toLowerCase()
         .includes(searchTerm.toLowerCase());
+      
+      // Normalize status for comparison
+      const donationStatus = (donation.status || "").toLowerCase();
       const matchesStatus =
-        statusFilter === "all" || donation.status === statusFilter;
+        statusFilter === "all" || donationStatus === statusFilter.toLowerCase();
 
       let matchesTime = true;
       if (timeFilter !== "all") {
@@ -160,9 +183,9 @@ export default function MyDonations() {
         case "oldest":
           return new Date(a.createdAt) - new Date(b.createdAt);
         case "amount-high":
-          return b.amount - a.amount;
+          return (b.amount || 0) - (a.amount || 0);
         case "amount-low":
-          return a.amount - b.amount;
+          return (a.amount || 0) - (b.amount || 0);
         default:
           return 0;
       }
@@ -172,7 +195,9 @@ export default function MyDonations() {
   }, [donations, searchTerm, statusFilter, sortBy, timeFilter]);
 
   const getStatusBadge = (status) => {
-    switch (status) {
+    const normalizedStatus = (status || "").toLowerCase();
+    
+    switch (normalizedStatus) {
       case "completed":
         return (
           <Badge className="bg-green-100 text-green-800 border-green-200">
@@ -197,7 +222,7 @@ export default function MyDonations() {
       default:
         return (
           <Badge className="bg-gray-100 text-gray-800 border-gray-200">
-            {status}
+            {status || "Unknown"}
           </Badge>
         );
     }
@@ -529,16 +554,14 @@ export default function MyDonations() {
                     <div className="flex items-start gap-4">
                       <img
                         src={
-                          campaigns.find(
-                            (campaign) => campaign._id === donation.campaign._id
-                          ).imageURL || "/placeholder.svg"
+                          donation.campaign?.imageURL || "/placeholder.svg"
                         }
-                        alt={donation.campaign.title}
+                        alt={donation.campaign?.title || "Campaign"}
                         className="w-16 h-16 rounded-xl object-cover flex-shrink-0"
                       />
                       <div className="flex-1">
                         <h3 className="font-bold text-lg text-gray-900 mb-2 line-clamp-1">
-                          {donation.campaign.title}
+                          {donation.campaign?.title || "Unknown Campaign"}
                         </h3>
                         <div className="flex flex-wrap items-center gap-3 text-sm text-gray-600">
                           <div className="flex items-center gap-1">
@@ -575,21 +598,23 @@ export default function MyDonations() {
                   <div className="flex flex-col lg:flex-row lg:items-center gap-4">
                     <div className="text-center lg:text-right">
                       <div className="text-2xl font-bold text-gray-900">
-                        ${donation.amount.toFixed(2)}
+                        ${(donation.amount || 0).toFixed(2)}
                       </div>
                       <div className="text-sm text-gray-500">
-                        Transaction ID: {donation.transactionId}
+                        Transaction ID: {donation.transactionId || "N/A"}
                       </div>
                     </div>
 
                     <div className="flex flex-col items-center lg:items-end gap-2">
                       {getStatusBadge(donation.status)}
-                      <Link to={`/donate/${donation.campaign._id}`}>
-                        <FundraisingButton variant="ghost-trust" size="sm">
-                          <ArrowUpRight className="h-4 w-4" />
-                          View Campaign
-                        </FundraisingButton>
-                      </Link>
+                      {donation.campaign?._id && (
+                        <Link to={`/donate/${donation.campaign._id}`}>
+                          <FundraisingButton variant="ghost-trust" size="sm">
+                            <ArrowUpRight className="h-4 w-4" />
+                            View Campaign
+                          </FundraisingButton>
+                        </Link>
+                      )}
                     </div>
                   </div>
                 </div>
