@@ -115,7 +115,11 @@ export default function ForgotPasswordPage() {
 
   const mutation = useMutation({
     mutationFn: async (data) => {
-      const res = await fetch("/api/auth/forgot-password", {
+      const API_BASE_URL = import.meta.env.VITE_BACKEND_URL 
+        ? `${import.meta.env.VITE_BACKEND_URL}/api` 
+        : "/api";
+      
+      const res = await fetch(`${API_BASE_URL}/auth/forgot-password`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),

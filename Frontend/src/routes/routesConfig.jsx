@@ -5,6 +5,8 @@ import Donate from "@/pages/Donate";
 import MyDonations from "@/pages/MyDonations";
 import ApplyOrganizer from "@/pages/ApplyOrganizer";
 import AdminApplications from "@/pages/AdminApplications";
+import AdminWithdrawals from "@/pages/AdminWithdrawals";
+import WithdrawalRequest from "@/pages/WithdrawalRequest";
 import About from "@/pages/About";
 import RequireRole from "@/components/RequireRole";
 import ROUTES from "./routes";
@@ -71,6 +73,24 @@ const routesConfig = [
     Component: () => (
       <RequireRole role="admin">
         <AdminApplications />
+      </RequireRole>
+    ),
+  },
+  {
+    path: ROUTES.ADMIN_WITHDRAWALS,
+    Component: () => (
+      <RequireRole role="admin">
+        <AdminWithdrawals />
+      </RequireRole>
+    ),
+  },
+
+  // Organizer withdrawal request
+  {
+    path: ROUTES.WITHDRAWAL_REQUEST,
+    Component: () => (
+      <RequireRole role="organizer">
+        <WithdrawalRequest />
       </RequireRole>
     ),
   },

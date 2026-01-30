@@ -430,6 +430,172 @@ export const sendOrganizerRevokedEmail = async (user, application, revokeReason)
   }
 };
 
+/**
+ * Send email notification for withdrawal request status updates
+ * @param {String} email - Organizer email
+ * @param {String} name - Organizer name
+ * @param {Object} withdrawalInfo - Withdrawal details
+ */
+export const sendWithdrawalStatusEmail = async (email, name, withdrawalInfo) => {
+  const { status, amount, campaignTitle, reviewNotes, rejectionReason, transactionReference } = withdrawalInfo;
+
+  let subject, headerColor, headerText, statusIcon, contentHtml;
+
+  switch (status) {
+    case "under_review":
+      subject = "📋 Withdrawal Request Under Review";
+      headerColor = "linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)";
+      headerText = "Under Review";
+      statusIcon = "🔍";
+      contentHtml = `
+        <p>Your withdrawal request is currently being reviewed by our team.</p>
+        <div class="info-box">
+          <h3 style="margin-top: 0; color: #3b82f6;">📋 Request Details</h3>
+          <p><strong>Amount:</strong> $${amount.toFixed(2)}</p>
+          <p><strong>Campaign:</strong> ${campaignTitle}</p>
+          <p><strong>Status:</strong> Under Review</p>
+        </div>
+        <div style="background: #dbeafe; border-left: 4px solid #3b82f6; padding: 15px; border-radius: 5px; margin: 20px 0;">
+          <p style="margin: 0;"><strong>⏱️ Expected Review Time:</strong> 2-5 business days</p>
+        </div>
+        <p>We're verifying your documents and bank details. You'll receive another email once the review is complete.</p>
+      `;
+      break;
+
+    case "approved":
+      subject = "✅ Withdrawal Request Approved";
+      headerColor = "linear-gradient(135deg, #10b981 0%, #059669 100%)";
+      headerText = "Approved!";
+      statusIcon = "✅";
+      contentHtml = `
+        <div class="success-box">
+          <h2 style="margin-top: 0; color: #059669;">✅ Great News!</h2>
+          <p style="margin: 0; font-size: 16px;">Your withdrawal request has been approved and will be processed shortly.</p>
+        </div>
+        <div class="info-box">
+          <h3 style="margin-top: 0; color: #10b981;">💰 Withdrawal Details</h3>
+          <p><strong>Amount:</strong> $${amount.toFixed(2)}</p>
+          <p><strong>Campaign:</strong> ${campaignTitle}</p>
+          <p><strong>Status:</strong> Approved</p>
+          ${reviewNotes ? `<p><strong>Admin Notes:</strong> ${reviewNotes}</p>` : ''}
+        </div>
+        <div style="background: #d1fae5; border-left: 4px solid #10b981; padding: 15px; border-radius: 5px; margin: 20px 0;">
+          <p style="margin: 0;"><strong>⏱️ Processing Time:</strong> Funds will be transferred to your bank account within 3-7 business days.</p>
+        </div>
+        <p>You'll receive a confirmation email once the transfer is completed.</p>
+      `;
+      break;
+
+    case "rejected":
+      subject = "❌ Withdrawal Request Rejected";
+      headerColor = "linear-gradient(135deg, #ef4444 0%, #dc2626 100%)";
+      headerText = "Request Rejected";
+      statusIcon = "❌";
+      contentHtml = `
+        <p>We regret to inform you that your withdrawal request could not be approved at this time.</p>
+        <div class="warning-box">
+          <h3 style="margin-top: 0; color: #dc2626;">📋 Reason for Rejection</h3>
+          <p style="margin: 0; font-size: 15px; white-space: pre-wrap;">${rejectionReason || 'Your request did not meet our verification requirements.'}</p>
+        </div>
+        <div class="info-box">
+          <h3 style="margin-top: 0; color: #ef4444;">📋 Request Details</h3>
+          <p><strong>Amount:</strong> $${amount.toFixed(2)}</p>
+          <p><strong>Campaign:</strong> ${campaignTitle}</p>
+          <p><strong>Status:</strong> Rejected</p>
+          ${reviewNotes ? `<p><strong>Admin Notes:</strong> ${reviewNotes}</p>` : ''}
+        </div>
+        <div class="info-box">
+          <h3 style="margin-top: 0; color: #3b82f6;">🔄 What You Can Do</h3>
+          <ul style="margin: 10px 0; padding-left: 20px;">
+            <li>Review the rejection reason carefully</li>
+            <li>Update your documents or bank information if needed</li>
+            <li>Submit a new withdrawal request once issues are resolved</li>
+            <li>Contact support if you need clarification</li>
+          </ul>
+        </div>
+      `;
+      break;
+
+    case "completed":
+      subject = "🎉 Withdrawal Completed - Funds Transferred";
+      headerColor = "linear-gradient(135deg, #10b981 0%, #059669 100%)";
+      headerText = "Transfer Completed!";
+      statusIcon = "🎉";
+      contentHtml = `
+        <div class="success-box">
+          <h2 style="margin-top: 0; color: #059669;">🎉 Success!</h2>
+          <p style="margin: 0; font-size: 16px;">Your withdrawal has been completed and funds have been transferred to your bank account.</p>
+        </div>
+        <div class="info-box">
+          <h3 style="margin-top: 0; color: #10b981;">💰 Transfer Details</h3>
+          <p><strong>Amount:</strong> $${amount.toFixed(2)}</p>
+          <p><strong>Campaign:</strong> ${campaignTitle}</p>
+          <p><strong>Status:</strong> Completed</p>
+          ${transactionReference ? `<p><strong>Transaction Reference:</strong> ${transactionReference}</p>` : ''}
+          ${reviewNotes ? `<p><strong>Admin Notes:</strong> ${reviewNotes}</p>` : ''}
+        </div>
+        <div style="background: #d1fae5; border-left: 4px solid #10b981; padding: 15px; border-radius: 5px; margin: 20px 0;">
+          <p style="margin: 0;"><strong>💡 Note:</strong> It may take 1-2 business days for the funds to appear in your bank account depending on your bank's processing time.</p>
+        </div>
+        <p>Thank you for using our platform to make a positive impact!</p>
+      `;
+      break;
+
+    default:
+      return;
+  }
+
+  const mailOptions = {
+    from: process.env.EMAIL_USER,
+    to: email,
+    subject,
+    html: `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <style>
+          body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+          .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+          .header { background: ${headerColor}; color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
+          .content { background: #f9fafb; padding: 30px; border-radius: 0 0 10px 10px; }
+          .info-box { background: white; padding: 20px; border-radius: 5px; margin: 20px 0; }
+          .success-box { background: #d1fae5; border-left: 4px solid #10b981; padding: 20px; margin: 20px 0; border-radius: 5px; }
+          .warning-box { background: #fee2e2; border-left: 4px solid #ef4444; padding: 20px; margin: 20px 0; border-radius: 5px; }
+          .footer { text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #e5e7eb; color: #6b7280; font-size: 14px; }
+          .button { display: inline-block; padding: 12px 30px; background: #667eea; color: white; text-decoration: none; border-radius: 5px; margin: 20px 0; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            <h1 style="margin: 0; font-size: 32px;">${statusIcon} ${headerText}</h1>
+          </div>
+          <div class="content">
+            <p style="font-size: 16px;">Dear <strong>${name}</strong>,</p>
+            ${contentHtml}
+            <div style="text-align: center; margin: 30px 0;">
+              <a href="${process.env.FRONTEND_URL}/my-campaigns" class="button">View My Campaigns</a>
+            </div>
+          </div>
+          <div class="footer">
+            <p>This is an automated message. Please do not reply to this email.</p>
+            <p>© ${new Date().getFullYear()} Fundraising Platform. All rights reserved.</p>
+          </div>
+        </div>
+      </body>
+      </html>
+    `,
+  };
+
+  try {
+    await transporter.sendMail(mailOptions);
+    console.log(`✅ Withdrawal status email sent to ${email}`);
+  } catch (error) {
+    console.error("❌ Error sending withdrawal status email:", error);
+    throw error;
+  }
+};
+
 // Test email configuration
 export const testEmailConnection = async () => {
   try {
@@ -439,5 +605,99 @@ export const testEmailConnection = async () => {
   } catch (error) {
     console.error("❌ Email service configuration error:", error);
     return false;
+  }
+};
+
+/**
+ * Send email notification when withdrawal request is submitted
+ * @param {Object} organizer - Organizer user object
+ * @param {Object} campaign - Campaign object
+ * @param {Object} withdrawalRequest - Withdrawal request object
+ */
+export const sendWithdrawalRequestEmail = async (organizer, campaign, withdrawalRequest) => {
+  const mailOptions = {
+    from: process.env.EMAIL_USER,
+    to: organizer.email,
+    subject: "✅ Withdrawal Request Submitted - Under Review",
+    html: `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <style>
+          body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+          .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+          .header { background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
+          .content { background: #f9fafb; padding: 30px; border-radius: 0 0 10px 10px; }
+          .info-box { background: white; padding: 20px; border-left: 4px solid #10b981; margin: 20px 0; border-radius: 5px; }
+          .footer { text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #e5e7eb; color: #6b7280; font-size: 14px; }
+          .button { display: inline-block; padding: 12px 30px; background: #10b981; color: white; text-decoration: none; border-radius: 5px; margin: 20px 0; }
+          .amount { font-size: 32px; font-weight: bold; color: #10b981; text-align: center; margin: 20px 0; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            <h1 style="margin: 0; font-size: 28px;">💰 Withdrawal Request Received</h1>
+          </div>
+          <div class="content">
+            <p style="font-size: 16px;">Dear <strong>${organizer.name}</strong>,</p>
+            
+            <p>Your withdrawal request has been successfully submitted and is now under review by our admin team.</p>
+            
+            <div class="info-box">
+              <h3 style="margin-top: 0; color: #10b981;">📋 Request Details</h3>
+              <p><strong>Campaign:</strong> ${campaign.title}</p>
+              <p><strong>Request ID:</strong> ${withdrawalRequest._id}</p>
+              <p><strong>Status:</strong> <span style="color: #f59e0b;">Pending Review</span></p>
+              <p><strong>Submitted:</strong> ${new Date(withdrawalRequest.createdAt).toLocaleDateString()}</p>
+            </div>
+            
+            <div class="amount">
+              $${withdrawalRequest.amount.toFixed(2)}
+            </div>
+            
+            <div class="info-box">
+              <h3 style="margin-top: 0; color: #10b981;">⏱️ What Happens Next?</h3>
+              <p><strong>1. Document Verification (1-2 business days)</strong><br/>
+              Our team will verify your submitted documents including bank details and KYC information.</p>
+              
+              <p><strong>2. Admin Review (2-3 business days)</strong><br/>
+              The admin team will review your withdrawal request and ensure all requirements are met.</p>
+              
+              <p><strong>3. Payment Processing (3-5 business days)</strong><br/>
+              Once approved, the funds will be transferred to your provided bank account.</p>
+            </div>
+            
+            <div class="info-box" style="background: #fef3c7; border-left-color: #f59e0b;">
+              <h3 style="margin-top: 0; color: #d97706;">⚠️ Important Notes</h3>
+              <ul style="margin: 10px 0; padding-left: 20px;">
+                <li>Ensure your bank details are accurate to avoid delays</li>
+                <li>Processing time may vary based on your bank and location</li>
+                <li>You'll receive email updates on your request status</li>
+                <li>Contact support if you have any questions</li>
+              </ul>
+            </div>
+            
+            <p style="margin-top: 30px;">We'll notify you via email once your request has been reviewed.</p>
+            
+            <p>Thank you for using our platform!</p>
+            
+            <div class="footer">
+              <p>This is an automated email. Please do not reply to this message.</p>
+              <p>&copy; ${new Date().getFullYear()} Fundraising Platform. All rights reserved.</p>
+            </div>
+          </div>
+        </div>
+      </body>
+      </html>
+    `,
+  };
+
+  try {
+    await transporter.sendMail(mailOptions);
+    console.log(`✅ Withdrawal request email sent to ${organizer.email}`);
+  } catch (error) {
+    console.error("❌ Error sending withdrawal request email:", error);
+    throw error;
   }
 };

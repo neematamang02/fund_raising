@@ -65,6 +65,11 @@ export default function NavigationBar() {
             path: ROUTES.ADMIN_APPLICATIONS,
             icon: Setting2,
           },
+          {
+            name: "Withdrawals",
+            path: ROUTES.ADMIN_WITHDRAWALS,
+            icon: MoneyRecive,
+          },
         ]
       : user?.role === "organizer"
       ? [{ name: "My Campaigns", path: ROUTES.MY_CAMPAIGNS, icon: Heart }]

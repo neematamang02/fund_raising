@@ -1,8 +1,12 @@
 import { Router } from "express";
 import { requireAuth } from "../middleware/auth.js";
+import { uploadRateLimiter } from "../middleware/rateLimiter.js";
+import { validateDocumentUpload } from "../middleware/fileValidation.js";
 import OrganizerApplication from "../Models/OrganizerApplication.js";
 import User from "../Models/User.js";
 import { upload } from "../config/s3.js";
+import { logError, logInfo, logSecurityEvent } from "../utils/logger.js";
+import { sanitizeString } from "../utils/validation.js";
 import {
   sendApplicationSubmittedEmail,
   sendApplicationApprovedEmail,

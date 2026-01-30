@@ -9,6 +9,8 @@ const ROUTES = {
   MY_CAMPAIGNS: "/my-campaigns",
   CREATE_CAMPAIGN: "/campaign/new",
   ADMIN_APPLICATIONS: "/admin/applications",
+  ADMIN_WITHDRAWALS: "/admin/withdrawals",
+  WITHDRAWAL_REQUEST: "/withdrawal-request/:campaignId",
   ABOUT: "/about",
   DASHBOARD: "/dashboard",
   FORGOT_PASSWORD: "/forgot-password",

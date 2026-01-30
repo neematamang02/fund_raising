@@ -452,7 +452,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Edit, Trash, Plus, Calendar, Target, Users } from "lucide-react";
+import { Edit, Trash, Plus, Calendar, Target, Users, DollarSign } from "lucide-react";
 import ROUTES from "@/routes/routes";
 import { FundraisingButton } from "@/components/ui/fundraising-button";
 import { toast } from "sonner";
@@ -795,6 +795,20 @@ export default function MyCampaigns() {
                       </FundraisingButton>
                     </DialogTrigger>
                   </Dialog>
+
+                  {/* Withdrawal Request Button - Only show if campaign has raised funds */}
+                  {campaign.raised > 0 && (
+                    <Link to={`/withdrawal-request/${campaign._id}`} className="flex-1">
+                      <FundraisingButton
+                        variant="donate"
+                        size="sm"
+                        className="w-full flex items-center justify-center"
+                      >
+                        <DollarSign className="w-4 h-4 mr-1" />
+                        Withdraw
+                      </FundraisingButton>
+                    </Link>
+                  )}
 
                   <Dialog>
                     <DialogTrigger asChild>
