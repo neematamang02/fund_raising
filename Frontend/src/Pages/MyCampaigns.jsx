@@ -1,6 +1,6 @@
 // import { useState, useEffect, useContext, useCallback } from "react";
 // import { useNavigate } from "react-router-dom";
-// import { AuthContext } from "@/context/AuthContext";
+// import { AuthContext } from "@/Context/AuthContext";
 // import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 // import {
 //   Card,
@@ -429,7 +429,7 @@
 
 import { useState, useEffect, useContext, useCallback } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { AuthContext } from "@/context/AuthContext";
+import { AuthContext } from "@/Context/AuthContext";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   Card,

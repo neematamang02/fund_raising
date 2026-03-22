@@ -1,13 +1,12 @@
-import Home from "@/pages/Home";
-import LoginPage from "@/pages/Authentication/Loginpage";
-import RegisterPage from "@/pages/Authentication/Registerpage";
-import Donate from "@/pages/Donate";
-import MyDonations from "@/pages/MyDonations";
-import ApplyOrganizer from "@/pages/ApplyOrganizer";
-import AdminApplications from "@/pages/AdminApplications";
-import AdminWithdrawals from "@/pages/AdminWithdrawals";
-import WithdrawalRequest from "@/pages/WithdrawalRequest";
-import About from "@/pages/About";
+import { lazy } from "react";
+import Home from "@/Pages/Home";
+import LoginPage from "@/Pages/Authentication/Loginpage";
+import RegisterPage from "@/Pages/Authentication/Registerpage";
+import Donate from "@/Pages/Donate";
+import MyDonations from "@/Pages/MyDonations";
+import ApplyOrganizer from "@/Pages/ApplyOrganizer";
+import WithdrawalRequest from "@/Pages/WithdrawalRequest";
+import About from "@/Pages/About";
 import RequireRole from "@/components/RequireRole";
 import ROUTES from "./routes";
 import Dashboard from "@/Pages/Dashboard";
@@ -17,6 +16,14 @@ import MyCampaigns from "@/Pages/MyCampaigns";
 import ForgotPasswordPage from "@/Pages/Authentication/ForgotPasswordPage";
 import ResetPasswordPage from "@/Pages/Authentication/ResetPasswordPage";
 import Otpverification from "@/Pages/Authentication/Otpverification";
+
+const AdminDashboard = lazy(() => import("@/Pages/AdminDashboard"));
+const AdminCampaigns = lazy(() => import("@/Pages/AdminCampaigns"));
+const AdminActivities = lazy(() => import("@/Pages/AdminActivities"));
+const AdminUsers = lazy(() => import("@/Pages/AdminUsers"));
+const AdminDonations = lazy(() => import("@/Pages/AdminDonations"));
+const AdminApplications = lazy(() => import("@/Pages/AdminApplications"));
+const AdminWithdrawals = lazy(() => import("@/Pages/AdminWithdrawals"));
 
 const routesConfig = [
   // Public pages
@@ -68,6 +75,46 @@ const routesConfig = [
   },
 
   // Admin‐only pages
+  {
+    path: ROUTES.ADMIN_DASHBOARD,
+    Component: () => (
+      <RequireRole role="admin">
+        <AdminDashboard />
+      </RequireRole>
+    ),
+  },
+  {
+    path: ROUTES.ADMIN_CAMPAIGNS,
+    Component: () => (
+      <RequireRole role="admin">
+        <AdminCampaigns />
+      </RequireRole>
+    ),
+  },
+  {
+    path: ROUTES.ADMIN_ACTIVITIES,
+    Component: () => (
+      <RequireRole role="admin">
+        <AdminActivities />
+      </RequireRole>
+    ),
+  },
+  {
+    path: ROUTES.ADMIN_USERS,
+    Component: () => (
+      <RequireRole role="admin">
+        <AdminUsers />
+      </RequireRole>
+    ),
+  },
+  {
+    path: ROUTES.ADMIN_DONATIONS,
+    Component: () => (
+      <RequireRole role="admin">
+        <AdminDonations />
+      </RequireRole>
+    ),
+  },
   {
     path: ROUTES.ADMIN_APPLICATIONS,
     Component: () => (

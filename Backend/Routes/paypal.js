@@ -16,18 +16,18 @@ const router = express.Router();
 router.get("/paypal/config", (req, res) => {
   try {
     const clientId = process.env.PAYPAL_CLIENT_ID;
-    
+
     if (!clientId) {
-      return res.status(500).json({ 
-        error: "PayPal configuration not found on server" 
+      return res.status(500).json({
+        error: "PayPal configuration not found on server",
       });
     }
-    
+
     return res.json({ clientId });
   } catch (err) {
     console.error("PayPal Config Error:", err);
-    return res.status(500).json({ 
-      error: "Could not fetch PayPal configuration" 
+    return res.status(500).json({
+      error: "Could not fetch PayPal configuration",
     });
   }
 });
@@ -45,17 +45,17 @@ router.post(
   async (req, res) => {
     try {
       const { campaignId, amount } = req.body;
-      
+
       console.log("🔍 Creating PayPal Order:");
       console.log("  Campaign ID:", campaignId);
       console.log("  Amount:", amount);
       console.log("  User:", req.user.email);
-      
+
       // Validate inputs
       if (!campaignId || !amount || amount <= 0) {
         return res.status(400).json({ error: "Invalid input" });
       }
-      
+
       // Optionally, verify campaign exists
       const campaign = await Campaign.findById(campaignId);
       if (!campaign)
@@ -64,7 +64,7 @@ router.post(
       // Build PayPal order request
       const request = new paypal.orders.OrdersCreateRequest();
       request.prefer("return=representation");
-      
+
       const orderPayload = {
         intent: "CAPTURE",
         purchase_units: [
@@ -85,16 +85,16 @@ router.post(
           cancel_url: `${process.env.FRONTEND_URL}/donate/cancel`,
         },
       };
-      
+
       console.log("  Order Payload:", JSON.stringify(orderPayload, null, 2));
       request.requestBody(orderPayload);
 
       const paypalReq = await paypalClient().execute(request);
       const orderID = paypalReq.result.id;
-      
+
       console.log("✅ PayPal Order Created:", orderID);
       console.log("  Status:", paypalReq.result.status);
-      
+
       return res.json({ orderID });
     } catch (err) {
       console.error("❌ Create Order Error:");
@@ -103,12 +103,13 @@ router.post(
       if (err.headers) {
         console.error("  Headers:", err.headers);
       }
-      return res.status(500).json({ 
+      return res.status(500).json({
         error: "Could not create PayPal order.",
-        details: process.env.NODE_ENV === 'development' ? err.message : undefined
+        details:
+          process.env.NODE_ENV === "development" ? err.message : undefined,
       });
     }
-  }
+  },
 );
 
 // ───────────────────────────────────────────────────────────────
@@ -124,12 +125,12 @@ router.post(
   async (req, res) => {
     try {
       const { orderID, campaignId } = req.body;
-      
+
       console.log("🔍 Capturing PayPal Order:");
       console.log("  Order ID:", orderID);
       console.log("  Campaign ID:", campaignId);
       console.log("  User:", req.user.email);
-      
+
       if (!orderID || !campaignId) {
         return res.status(400).json({ error: "Invalid input" });
       }
@@ -140,7 +141,7 @@ router.post(
 
       const captureResponse = await paypalClient().execute(request);
       const result = captureResponse.result; // Full capture result
-      
+
       console.log("  Capture Status:", result.status);
 
       // Extract relevant info
@@ -150,20 +151,30 @@ router.post(
       const amountValue = purchaseUnit.payments.captures[0].amount.value; // string
       const payer = result.payer; // payer object
 
-      // Find campaign and update its raised amount
+      // Find campaign for receipt fields
       const campaign = await Campaign.findById(campaignId);
       if (!campaign)
         return res.status(404).json({ error: "Campaign not found" });
 
-      campaign.raised += parseFloat(amountValue);
-      await campaign.save();
+      const parsedAmount = parseFloat(amountValue);
+      if (Number.isNaN(parsedAmount) || parsedAmount <= 0) {
+        return res
+          .status(400)
+          .json({ error: "Invalid capture amount from PayPal" });
+      }
+
+      // Use atomic increment to avoid full-document validation on legacy records.
+      await Campaign.updateOne(
+        { _id: campaignId },
+        { $inc: { raised: parsedAmount } },
+      );
 
       // Create a Donation record
       const donation = new Donation({
         campaign: campaignId,
         donor: req.user.userId,
         donorEmail: req.user.email,
-        amount: parseFloat(amountValue),
+        amount: parsedAmount,
         method: "paypal",
         transactionId: captureId,
         payerEmail: payer.email_address,
@@ -196,12 +207,13 @@ router.post(
       if (err.headers) {
         console.error("  Headers:", err.headers);
       }
-      return res.status(500).json({ 
+      return res.status(500).json({
         error: "Could not capture PayPal order.",
-        details: process.env.NODE_ENV === 'development' ? err.message : undefined
+        details:
+          process.env.NODE_ENV === "development" ? err.message : undefined,
       });
     }
-  }
+  },
 );
 
 export default router;

@@ -24,7 +24,7 @@ import {
 } from "@/components/ui/select";
 import { useNavigate } from "react-router-dom";
 import ROUTES from "@/routes/routes";
-import { AuthContext } from "@/context/AuthContext";
+import { AuthContext } from "@/Context/AuthContext";
 import {
   Target,
   ImageIcon,

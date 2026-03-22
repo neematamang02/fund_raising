@@ -1,18 +1,18 @@
 import { Router } from "express";
-import { requireAuth } from "../middleware/auth.js";
+import { requireAuth, requireRole } from "../middleware/auth.js";
 import { uploadRateLimiter } from "../middleware/rateLimiter.js";
 import { validateDocumentUpload } from "../middleware/fileValidation.js";
 import OrganizerApplication from "../Models/OrganizerApplication.js";
-import User from "../Models/User.js";
 import { upload } from "../config/s3.js";
 import { logError, logInfo, logSecurityEvent } from "../utils/logger.js";
 import { sanitizeString } from "../utils/validation.js";
+import { sendApplicationSubmittedEmail } from "../services/emailService.js";
 import {
-  sendApplicationSubmittedEmail,
-  sendApplicationApprovedEmail,
-  sendApplicationRejectedEmail,
-  sendOrganizerRevokedEmail,
-} from "../services/emailService.js";
+  approveAdminApplication,
+  listAdminApplications,
+  rejectAdminApplication,
+  revokeAdminApplication,
+} from "../controllers/adminApplicationsController.js";
 
 const router = Router();
 
@@ -23,13 +23,13 @@ const router = Router();
  */
 router.post("/organizer/apply", requireAuth, async (req, res) => {
   try {
-    const { 
-      organizationName, 
-      description, 
-      contactEmail, 
-      phoneNumber, 
+    const {
+      organizationName,
+      description,
+      contactEmail,
+      phoneNumber,
       website,
-      organizationType 
+      organizationType,
     } = req.body;
     const userId = req.user.userId;
 
@@ -49,7 +49,8 @@ router.post("/organizer/apply", requireAuth, async (req, res) => {
       // If they have a draft, allow them to continue with that one
       if (existing.status === "draft") {
         return res.status(200).json({
-          message: "You have an incomplete application. Redirecting to document upload.",
+          message:
+            "You have an incomplete application. Redirecting to document upload.",
           applicationId: existing._id,
           app: existing,
         });
@@ -73,10 +74,10 @@ router.post("/organizer/apply", requireAuth, async (req, res) => {
       status: "draft", // ← Changed from "pending" to "draft"
     });
 
-    return res.status(201).json({ 
-      message: "Application submitted. Please upload verification documents.", 
+    return res.status(201).json({
+      message: "Application submitted. Please upload verification documents.",
       applicationId: app._id,
-      app 
+      app,
     });
   } catch (err) {
     console.error("Apply Organizer Error:", err);
@@ -113,21 +114,22 @@ router.post(
 
       // 2) Verify ownership
       if (application.user.toString() !== userId) {
-        return res
-          .status(403)
-          .json({ message: "You can only upload documents for your own application." });
+        return res.status(403).json({
+          message: "You can only upload documents for your own application.",
+        });
       }
 
       // 3) Verify application is in draft status (awaiting documents)
       if (application.status !== "draft" && application.status !== "pending") {
-        return res.status(400).json({ 
-          message: "Can only upload documents for draft or pending applications." 
+        return res.status(400).json({
+          message:
+            "Can only upload documents for draft or pending applications.",
         });
       }
 
       // 4) Process uploaded files
       const documents = {};
-      
+
       if (req.files.governmentId) {
         documents["documents.governmentId"] = {
           url: req.files.governmentId[0].location,
@@ -135,7 +137,7 @@ router.post(
           uploadedAt: new Date(),
         };
       }
-      
+
       if (req.files.selfieWithId) {
         documents["documents.selfieWithId"] = {
           url: req.files.selfieWithId[0].location,
@@ -143,7 +145,7 @@ router.post(
           uploadedAt: new Date(),
         };
       }
-      
+
       if (req.files.registrationCertificate) {
         documents["documents.registrationCertificate"] = {
           url: req.files.registrationCertificate[0].location,
@@ -151,7 +153,7 @@ router.post(
           uploadedAt: new Date(),
         };
       }
-      
+
       if (req.files.taxId) {
         documents["documents.taxId"] = {
           url: req.files.taxId[0].location,
@@ -159,7 +161,7 @@ router.post(
           uploadedAt: new Date(),
         };
       }
-      
+
       if (req.files.addressProof) {
         documents["documents.addressProof"] = {
           url: req.files.addressProof[0].location,
@@ -182,33 +184,40 @@ router.post(
       // 5) Update application with documents AND change status to "pending"
       // This makes it visible to admin for review
       documents["status"] = "pending"; // ← NOW the application is sent to admin!
-      
+
       const updatedApplication = await OrganizerApplication.findByIdAndUpdate(
         applicationId,
         { $set: documents },
-        { new: true }
+        { new: true },
       ).populate("user", "name email");
 
       // 6) Send email notification to user
       try {
-        await sendApplicationSubmittedEmail(updatedApplication.user, updatedApplication);
+        await sendApplicationSubmittedEmail(
+          updatedApplication.user,
+          updatedApplication,
+        );
       } catch (emailError) {
-        console.error("Failed to send application submitted email:", emailError);
+        console.error(
+          "Failed to send application submitted email:",
+          emailError,
+        );
         // Don't fail the request if email fails
       }
 
-      return res.json({ 
-        message: "Documents uploaded successfully! Your application is now pending admin review.",
-        uploadedFiles: Object.keys(documents).length - 1 // -1 to exclude status field
+      return res.json({
+        message:
+          "Documents uploaded successfully! Your application is now pending admin review.",
+        uploadedFiles: Object.keys(documents).length - 1, // -1 to exclude status field
       });
     } catch (err) {
       console.error("Upload Documents Error:", err);
-      return res.status(500).json({ 
+      return res.status(500).json({
         message: "Failed to upload documents.",
-        error: err.message 
+        error: err.message,
       });
     }
-  }
+  },
 );
 
 /**
@@ -217,25 +226,12 @@ router.post(
  *   • Only shows completed applications (pending, approved, rejected, revoked)
  *   • Excludes "draft" applications (incomplete - no documents uploaded yet)
  */
-router.get("/admin/applications", requireAuth, async (req, res) => {
-  try {
-    if (req.user.role !== "admin") {
-      return res.status(403).json({ message: "Forbidden" });
-    }
-
-    // Only fetch applications that have been submitted (not drafts)
-    const apps = await OrganizerApplication.find({
-      status: { $ne: "draft" } // Exclude draft applications
-    })
-      .populate("user", "name email")
-      .sort({ createdAt: -1 });
-
-    return res.json(apps);
-  } catch (err) {
-    console.error("List Applications Error:", err);
-    return res.status(500).json({ message: "Server error." });
-  }
-});
+router.get(
+  "/admin/applications",
+  requireAuth,
+  requireRole(["admin"]),
+  listAdminApplications,
+);
 
 /**
  * PATCH /api/admin/applications/:id/approve
@@ -246,51 +242,8 @@ router.get("/admin/applications", requireAuth, async (req, res) => {
 router.patch(
   "/admin/applications/:id/approve",
   requireAuth,
-  async (req, res) => {
-    try {
-      if (req.user.role !== "admin") {
-        return res.status(403).json({ message: "Forbidden" });
-      }
-
-      const { id } = req.params;
-      const application = await OrganizerApplication.findById(id);
-      if (!application) {
-        return res.status(404).json({ message: "Application not found." });
-      }
-      if (application.status !== "pending") {
-        return res
-          .status(400)
-          .json({ message: "Only pending applications can be approved." });
-      }
-
-      // 1) Mark application as approved
-      application.status = "approved";
-      application.reviewedBy = req.user.userId;
-      application.reviewedAt = new Date();
-      await application.save();
-
-      // 2) Update the User record:
-      const userToApprove = await User.findById(application.user);
-      if (userToApprove) {
-        userToApprove.role = "organizer";
-        userToApprove.isOrganizerApproved = true;
-        await userToApprove.save();
-      }
-
-      // 3) Send approval email notification
-      try {
-        await sendApplicationApprovedEmail(userToApprove, application);
-      } catch (emailError) {
-        console.error("Failed to send approval email:", emailError);
-        // Don't fail the request if email fails
-      }
-
-      return res.json({ message: "Application approved." });
-    } catch (err) {
-      console.error("Approve Application Error:", err);
-      return res.status(500).json({ message: "Server error." });
-    }
-  }
+  requireRole(["admin"]),
+  approveAdminApplication,
 );
 
 /**
@@ -301,51 +254,8 @@ router.patch(
 router.patch(
   "/admin/applications/:id/reject",
   requireAuth,
-  async (req, res) => {
-    try {
-      if (req.user.role !== "admin") {
-        return res.status(403).json({ message: "Forbidden" });
-      }
-
-      const { id } = req.params;
-      const { rejectionReason } = req.body;
-      const application = await OrganizerApplication.findById(id);
-      if (!application) {
-        return res.status(404).json({ message: "Application not found." });
-      }
-      if (application.status !== "pending") {
-        return res
-          .status(400)
-          .json({ message: "Only pending applications can be rejected." });
-      }
-
-      application.status = "rejected";
-      application.reviewedBy = req.user.userId;
-      application.reviewedAt = new Date();
-      application.rejectionReason = rejectionReason?.trim() || null;
-      await application.save();
-
-      // Send rejection email notification
-      try {
-        const userToNotify = await User.findById(application.user);
-        if (userToNotify) {
-          await sendApplicationRejectedEmail(
-            userToNotify,
-            application,
-            application.rejectionReason
-          );
-        }
-      } catch (emailError) {
-        console.error("Failed to send rejection email:", emailError);
-        // Don't fail the request if email fails
-      }
-
-      return res.json({ message: "Application rejected." });
-    } catch (err) {
-      console.error("Reject Application Error:", err);
-      return res.status(500).json({ message: "Server error." });
-    }
-  }
+  requireRole(["admin"]),
+  rejectAdminApplication,
 );
 
 /**
@@ -357,60 +267,8 @@ router.patch(
 router.patch(
   "/admin/applications/:id/revoke",
   requireAuth,
-  async (req, res) => {
-    try {
-      if (req.user.role !== "admin") {
-        return res.status(403).json({ message: "Forbidden" });
-      }
-
-      const { id } = req.params;
-      const { reason } = req.body;
-      const application = await OrganizerApplication.findById(id);
-      if (!application) {
-        return res.status(404).json({ message: "Application not found." });
-      }
-      if (application.status !== "approved") {
-        return res
-          .status(400)
-          .json({ message: "Only an approved application can be revoked." });
-      }
-
-      application.status = "revoked";
-      application.reviewedBy = req.user.userId;
-      application.reviewedAt = new Date();
-      if (reason) {
-        application.rejectionReason = reason.trim();
-      }
-      await application.save();
-
-      // Also flip the user's role back to "donor"
-      const userToRevoke = await User.findById(application.user);
-      if (userToRevoke) {
-        userToRevoke.role = "donor";
-        userToRevoke.isOrganizerApproved = false;
-        await userToRevoke.save();
-      }
-
-      // Send revocation email notification
-      try {
-        if (userToRevoke) {
-          await sendOrganizerRevokedEmail(
-            userToRevoke,
-            application,
-            application.rejectionReason
-          );
-        }
-      } catch (emailError) {
-        console.error("Failed to send revocation email:", emailError);
-        // Don't fail the request if email fails
-      }
-
-      return res.json({ message: "Organizer role revoked." });
-    } catch (err) {
-      console.error("Revoke Organizer Error:", err);
-      return res.status(500).json({ message: "Server error." });
-    }
-  }
+  requireRole(["admin"]),
+  revokeAdminApplication,
 );
 
 export default router;

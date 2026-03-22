@@ -1,4 +1,4 @@
-import React from "react";
+import React, { Suspense } from "react";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "./Context/AuthContext";
 import Navigationbar from "./components/Navigationbar";
@@ -17,11 +17,19 @@ export default function App() {
 
         <main className="bg-[#F9FAFB] min-h-screen">
           <Toaster position="bottom-right" />
-          <Routes>
-            {routesConfig.map(({ path, Component }) => (
-              <Route key={path} path={path} element={<Component />} />
-            ))}
-          </Routes>
+          <Suspense
+            fallback={
+              <div className="min-h-screen flex items-center justify-center">
+                <div className="h-10 w-10 rounded-full border-2 border-slate-300 border-t-slate-700 animate-spin" />
+              </div>
+            }
+          >
+            <Routes>
+              {routesConfig.map(({ path, Component }) => (
+                <Route key={path} path={path} element={<Component />} />
+              ))}
+            </Routes>
+          </Suspense>
         </main>
 
         <Footer />

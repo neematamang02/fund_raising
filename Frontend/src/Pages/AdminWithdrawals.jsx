@@ -1,72 +1,113 @@
 import { useState, useEffect, useContext } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { AuthContext } from "@/Context/AuthContext";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import ROUTES from "@/routes/routes";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { toast } from "sonner";
-import { Loader2, DollarSign, CheckCircle, XCircle, Clock, Eye, FileText, Building2, User, Calendar } from "lucide-react";
+import {
+  Loader2,
+  DollarSign,
+  CheckCircle,
+  XCircle,
+  Clock,
+  Eye,
+  FileText,
+  Building2,
+  User,
+  Calendar,
+} from "lucide-react";
+import {
+  adminQueryKeys,
+  getAdminWithdrawalDetails,
+  getAdminWithdrawals,
+  updateAdminWithdrawalStatus,
+} from "@/services/adminApi";
 
 const AdminWithdrawals = () => {
   const { user, loading: authLoading } = useContext(AuthContext);
   const navigate = useNavigate();
-  const [withdrawals, setWithdrawals] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [selectedWithdrawal, setSelectedWithdrawal] = useState(null);
+  const queryClient = useQueryClient();
+
+  const [selectedWithdrawalId, setSelectedWithdrawalId] = useState(null);
   const [statusFilter, setStatusFilter] = useState("all");
   const [reviewNotes, setReviewNotes] = useState("");
   const [rejectionReason, setRejectionReason] = useState("");
   const [transactionReference, setTransactionReference] = useState("");
-  const [processing, setProcessing] = useState(false);
+  const scopedStatus = statusFilter === "all" ? undefined : statusFilter;
+
+  const {
+    data: withdrawalsData,
+    isLoading,
+    isFetching,
+  } = useQuery({
+    queryKey: adminQueryKeys.withdrawals(scopedStatus),
+    queryFn: () => getAdminWithdrawals({ status: scopedStatus }),
+    enabled: Boolean(user?.role === "admin"),
+  });
+
+  const withdrawals = withdrawalsData?.withdrawalRequests || [];
+
+  const { data: selectedWithdrawal, isFetching: isDetailsLoading } = useQuery({
+    queryKey: adminQueryKeys.withdrawalDetails(selectedWithdrawalId),
+    queryFn: () => getAdminWithdrawalDetails(selectedWithdrawalId),
+    enabled: Boolean(selectedWithdrawalId),
+  });
+
+  const updateStatusMutation = useMutation({
+    mutationFn: ({ withdrawalId, payload }) =>
+      updateAdminWithdrawalStatus(withdrawalId, payload),
+    onSuccess: async (_, variables) => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["admin", "withdrawals"] }),
+        queryClient.invalidateQueries({
+          queryKey: adminQueryKeys.withdrawalDetails(variables.withdrawalId),
+        }),
+      ]);
+      toast.success("Withdrawal request updated successfully");
+    },
+    onError: (error) => {
+      toast.error(error.message || "Failed to update withdrawal status");
+    },
+  });
 
   useEffect(() => {
     if (!authLoading) {
       if (!user) {
-        navigate("/login");
+        navigate(`${ROUTES.LOGIN}?redirect=${ROUTES.ADMIN_WITHDRAWALS}`);
       } else if (user.role !== "admin") {
-        navigate("/");
+        navigate(ROUTES.HOME);
         toast.error("Access denied. Admin only.");
-      } else {
-        fetchWithdrawals();
       }
     }
   }, [user, authLoading, navigate]);
-
-  const fetchWithdrawals = async () => {
-    try {
-      const token = localStorage.getItem("token");
-      const url = statusFilter === "all" 
-        ? `${import.meta.env.VITE_BACKEND_URL}/api/withdrawal-requests`
-        : `${import.meta.env.VITE_BACKEND_URL}/api/withdrawal-requests?status=${statusFilter}`;
-      
-      const response = await fetch(url, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setWithdrawals(data.withdrawalRequests || []);
-      } else {
-        toast.error("Failed to fetch withdrawal requests");
-      }
-    } catch (error) {
-      console.error("Error fetching withdrawals:", error);
-      toast.error("An error occurred");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    if (user?.role === "admin") {
-      fetchWithdrawals();
-    }
-  }, [statusFilter]);
 
   const handleStatusUpdate = async (withdrawalId, newStatus) => {
     if (newStatus === "rejected" && !rejectionReason.trim()) {
@@ -79,42 +120,22 @@ const AdminWithdrawals = () => {
       return;
     }
 
-    setProcessing(true);
     try {
-      const token = localStorage.getItem("token");
-      const response = await fetch(
-        `${import.meta.env.VITE_BACKEND_URL}/api/withdrawal-requests/${withdrawalId}/status`,
-        {
-          method: "PATCH",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({
-            status: newStatus,
-            reviewNotes: reviewNotes.trim() || undefined,
-            rejectionReason: rejectionReason.trim() || undefined,
-            transactionReference: transactionReference.trim() || undefined,
-          }),
-        }
-      );
+      await updateStatusMutation.mutateAsync({
+        withdrawalId,
+        payload: {
+          status: newStatus,
+          reviewNotes: reviewNotes.trim() || undefined,
+          rejectionReason: rejectionReason.trim() || undefined,
+          transactionReference: transactionReference.trim() || undefined,
+        },
+      });
 
-      if (response.ok) {
-        toast.success(`Withdrawal request ${newStatus} successfully`);
-        setSelectedWithdrawal(null);
-        setReviewNotes("");
-        setRejectionReason("");
-        setTransactionReference("");
-        fetchWithdrawals();
-      } else {
-        const data = await response.json();
-        toast.error(data.message || "Failed to update status");
-      }
+      setReviewNotes("");
+      setRejectionReason("");
+      setTransactionReference("");
     } catch (error) {
       console.error("Error updating status:", error);
-      toast.error("An error occurred");
-    } finally {
-      setProcessing(false);
     }
   };
 
@@ -124,7 +145,11 @@ const AdminWithdrawals = () => {
       under_review: { color: "bg-blue-500", label: "Under Review", icon: Eye },
       approved: { color: "bg-green-500", label: "Approved", icon: CheckCircle },
       rejected: { color: "bg-red-500", label: "Rejected", icon: XCircle },
-      completed: { color: "bg-purple-500", label: "Completed", icon: CheckCircle },
+      completed: {
+        color: "bg-purple-500",
+        label: "Completed",
+        icon: CheckCircle,
+      },
     };
 
     const config = statusConfig[status] || statusConfig.pending;
@@ -138,29 +163,9 @@ const AdminWithdrawals = () => {
     );
   };
 
-  const viewDetails = async (withdrawalId) => {
-    try {
-      const token = localStorage.getItem("token");
-      const response = await fetch(
-        `${import.meta.env.VITE_BACKEND_URL}/api/withdrawal-requests/${withdrawalId}`,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
+  const processing = updateStatusMutation.isPending;
 
-      if (response.ok) {
-        const data = await response.json();
-        setSelectedWithdrawal(data);
-      } else {
-        toast.error("Failed to fetch withdrawal details");
-      }
-    } catch (error) {
-      console.error("Error fetching details:", error);
-      toast.error("An error occurred");
-    }
-  };
-
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="container mx-auto px-4 py-8 flex items-center justify-center min-h-screen">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -171,10 +176,28 @@ const AdminWithdrawals = () => {
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="mb-6">
-        <h1 className="text-3xl font-bold mb-2">Withdrawal Requests</h1>
-        <p className="text-muted-foreground">
-          Review and manage organizer withdrawal requests
-        </p>
+        <div className="flex items-center justify-between gap-4 flex-wrap">
+          <div>
+            <h1 className="text-3xl font-bold mb-2">Withdrawal Requests</h1>
+            <p className="text-muted-foreground">
+              Review and manage organizer withdrawal requests
+            </p>
+          </div>
+          <Button
+            variant="outline"
+            disabled={isFetching}
+            onClick={() =>
+              queryClient.invalidateQueries({
+                queryKey: ["admin", "withdrawals"],
+              })
+            }
+          >
+            {isFetching ? (
+              <Loader2 className="h-4 w-4 animate-spin mr-2" />
+            ) : null}
+            Refresh
+          </Button>
+        </div>
       </div>
 
       {/* Filter */}
@@ -209,7 +232,9 @@ const AdminWithdrawals = () => {
         <Card>
           <CardContent className="py-12 text-center">
             <DollarSign className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-            <h3 className="text-lg font-semibold mb-2">No withdrawal requests</h3>
+            <h3 className="text-lg font-semibold mb-2">
+              No withdrawal requests
+            </h3>
             <p className="text-muted-foreground">
               {statusFilter === "all"
                 ? "There are no withdrawal requests yet"
@@ -220,7 +245,10 @@ const AdminWithdrawals = () => {
       ) : (
         <div className="grid gap-4">
           {withdrawals.map((withdrawal) => (
-            <Card key={withdrawal._id} className="hover:shadow-md transition-shadow">
+            <Card
+              key={withdrawal._id}
+              className="hover:shadow-md transition-shadow"
+            >
               <CardHeader>
                 <div className="flex justify-between items-start">
                   <div className="flex-1">
@@ -231,12 +259,15 @@ const AdminWithdrawals = () => {
                       <div className="flex items-center gap-2">
                         <User className="h-4 w-4" />
                         <span>{withdrawal.organizer?.name || "Unknown"}</span>
-                        <span className="text-xs">({withdrawal.organizer?.email})</span>
+                        <span className="text-xs">
+                          ({withdrawal.organizer?.email})
+                        </span>
                       </div>
                       <div className="flex items-center gap-2">
                         <Calendar className="h-4 w-4" />
                         <span>
-                          Submitted: {new Date(withdrawal.createdAt).toLocaleDateString()}
+                          Submitted:{" "}
+                          {new Date(withdrawal.createdAt).toLocaleDateString()}
                         </span>
                       </div>
                     </CardDescription>
@@ -256,13 +287,16 @@ const AdminWithdrawals = () => {
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => viewDetails(withdrawal._id)}
+                        onClick={() => setSelectedWithdrawalId(withdrawal._id)}
                       >
                         <Eye className="h-4 w-4 mr-2" />
                         View Details
                       </Button>
                     </DialogTrigger>
-                    <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+                    <DialogContent
+                      className="max-w-4xl max-h-[90vh] overflow-y-auto"
+                      onPointerDownOutside={() => setSelectedWithdrawalId(null)}
+                    >
                       <DialogHeader>
                         <DialogTitle>Withdrawal Request Details</DialogTitle>
                         <DialogDescription>
@@ -270,7 +304,11 @@ const AdminWithdrawals = () => {
                         </DialogDescription>
                       </DialogHeader>
 
-                      {selectedWithdrawal && (
+                      {isDetailsLoading ? (
+                        <div className="py-16 flex items-center justify-center">
+                          <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                        </div>
+                      ) : selectedWithdrawal ? (
                         <div className="space-y-6">
                           {/* Basic Info */}
                           <div>
@@ -280,22 +318,36 @@ const AdminWithdrawals = () => {
                             </h3>
                             <div className="grid grid-cols-2 gap-4 text-sm">
                               <div>
-                                <span className="text-muted-foreground">Amount:</span>
+                                <span className="text-muted-foreground">
+                                  Amount:
+                                </span>
                                 <p className="font-semibold text-lg text-green-600">
                                   ${selectedWithdrawal.amount.toFixed(2)}
                                 </p>
                               </div>
                               <div>
-                                <span className="text-muted-foreground">Status:</span>
-                                <div className="mt-1">{getStatusBadge(selectedWithdrawal.status)}</div>
+                                <span className="text-muted-foreground">
+                                  Status:
+                                </span>
+                                <div className="mt-1">
+                                  {getStatusBadge(selectedWithdrawal.status)}
+                                </div>
                               </div>
                               <div>
-                                <span className="text-muted-foreground">Campaign:</span>
-                                <p className="font-medium">{selectedWithdrawal.campaign?.title}</p>
+                                <span className="text-muted-foreground">
+                                  Campaign:
+                                </span>
+                                <p className="font-medium">
+                                  {selectedWithdrawal.campaign?.title}
+                                </p>
                               </div>
                               <div>
-                                <span className="text-muted-foreground">Organizer:</span>
-                                <p className="font-medium">{selectedWithdrawal.organizer?.name}</p>
+                                <span className="text-muted-foreground">
+                                  Organizer:
+                                </span>
+                                <p className="font-medium">
+                                  {selectedWithdrawal.organizer?.name}
+                                </p>
                               </div>
                             </div>
                           </div>
@@ -308,31 +360,65 @@ const AdminWithdrawals = () => {
                             </h3>
                             <div className="grid grid-cols-2 gap-4 text-sm bg-muted p-4 rounded-lg">
                               <div>
-                                <span className="text-muted-foreground">Account Holder:</span>
-                                <p className="font-medium">{selectedWithdrawal.bankDetails?.accountHolderName}</p>
+                                <span className="text-muted-foreground">
+                                  Account Holder:
+                                </span>
+                                <p className="font-medium">
+                                  {
+                                    selectedWithdrawal.bankDetails
+                                      ?.accountHolderName
+                                  }
+                                </p>
                               </div>
                               <div>
-                                <span className="text-muted-foreground">Bank Name:</span>
-                                <p className="font-medium">{selectedWithdrawal.bankDetails?.bankName}</p>
+                                <span className="text-muted-foreground">
+                                  Bank Name:
+                                </span>
+                                <p className="font-medium">
+                                  {selectedWithdrawal.bankDetails?.bankName}
+                                </p>
                               </div>
                               <div>
-                                <span className="text-muted-foreground">Account Number:</span>
-                                <p className="font-medium">{selectedWithdrawal.bankDetails?.accountNumber}</p>
+                                <span className="text-muted-foreground">
+                                  Account Number:
+                                </span>
+                                <p className="font-medium">
+                                  {
+                                    selectedWithdrawal.bankDetails
+                                      ?.accountNumber
+                                  }
+                                </p>
                               </div>
                               <div>
-                                <span className="text-muted-foreground">Account Type:</span>
-                                <p className="font-medium capitalize">{selectedWithdrawal.bankDetails?.accountType}</p>
+                                <span className="text-muted-foreground">
+                                  Account Type:
+                                </span>
+                                <p className="font-medium capitalize">
+                                  {selectedWithdrawal.bankDetails?.accountType}
+                                </p>
                               </div>
-                              {selectedWithdrawal.bankDetails?.routingNumber && (
+                              {selectedWithdrawal.bankDetails
+                                ?.routingNumber && (
                                 <div>
-                                  <span className="text-muted-foreground">Routing Number:</span>
-                                  <p className="font-medium">{selectedWithdrawal.bankDetails.routingNumber}</p>
+                                  <span className="text-muted-foreground">
+                                    Routing Number:
+                                  </span>
+                                  <p className="font-medium">
+                                    {
+                                      selectedWithdrawal.bankDetails
+                                        .routingNumber
+                                    }
+                                  </p>
                                 </div>
                               )}
                               {selectedWithdrawal.bankDetails?.swiftCode && (
                                 <div>
-                                  <span className="text-muted-foreground">SWIFT Code:</span>
-                                  <p className="font-medium">{selectedWithdrawal.bankDetails.swiftCode}</p>
+                                  <span className="text-muted-foreground">
+                                    SWIFT Code:
+                                  </span>
+                                  <p className="font-medium">
+                                    {selectedWithdrawal.bankDetails.swiftCode}
+                                  </p>
                                 </div>
                               )}
                             </div>
@@ -346,27 +432,52 @@ const AdminWithdrawals = () => {
                             </h3>
                             <div className="grid grid-cols-2 gap-4 text-sm bg-muted p-4 rounded-lg">
                               <div>
-                                <span className="text-muted-foreground">Full Legal Name:</span>
-                                <p className="font-medium">{selectedWithdrawal.kycInfo?.fullLegalName}</p>
-                              </div>
-                              <div>
-                                <span className="text-muted-foreground">Date of Birth:</span>
+                                <span className="text-muted-foreground">
+                                  Full Legal Name:
+                                </span>
                                 <p className="font-medium">
-                                  {new Date(selectedWithdrawal.kycInfo?.dateOfBirth).toLocaleDateString()}
+                                  {selectedWithdrawal.kycInfo?.fullLegalName}
                                 </p>
                               </div>
                               <div>
-                                <span className="text-muted-foreground">Nationality:</span>
-                                <p className="font-medium">{selectedWithdrawal.kycInfo?.nationality}</p>
+                                <span className="text-muted-foreground">
+                                  Date of Birth:
+                                </span>
+                                <p className="font-medium">
+                                  {new Date(
+                                    selectedWithdrawal.kycInfo?.dateOfBirth,
+                                  ).toLocaleDateString()}
+                                </p>
                               </div>
                               <div>
-                                <span className="text-muted-foreground">Phone:</span>
-                                <p className="font-medium">{selectedWithdrawal.kycInfo?.phoneNumber}</p>
+                                <span className="text-muted-foreground">
+                                  Nationality:
+                                </span>
+                                <p className="font-medium">
+                                  {selectedWithdrawal.kycInfo?.nationality}
+                                </p>
+                              </div>
+                              <div>
+                                <span className="text-muted-foreground">
+                                  Phone:
+                                </span>
+                                <p className="font-medium">
+                                  {selectedWithdrawal.kycInfo?.phoneNumber}
+                                </p>
                               </div>
                               <div className="col-span-2">
-                                <span className="text-muted-foreground">Address:</span>
+                                <span className="text-muted-foreground">
+                                  Address:
+                                </span>
                                 <p className="font-medium">
-                                  {selectedWithdrawal.kycInfo?.address?.street}, {selectedWithdrawal.kycInfo?.address?.city}, {selectedWithdrawal.kycInfo?.address?.postalCode}, {selectedWithdrawal.kycInfo?.address?.country}
+                                  {selectedWithdrawal.kycInfo?.address?.street},{" "}
+                                  {selectedWithdrawal.kycInfo?.address?.city},{" "}
+                                  {
+                                    selectedWithdrawal.kycInfo?.address
+                                      ?.postalCode
+                                  }
+                                  ,{" "}
+                                  {selectedWithdrawal.kycInfo?.address?.country}
                                 </p>
                               </div>
                             </div>
@@ -379,13 +490,27 @@ const AdminWithdrawals = () => {
                               Submitted Documents
                             </h3>
                             <div className="space-y-2">
-                              {selectedWithdrawal.documents?.governmentId?.url && (
+                              {selectedWithdrawal.documents?.governmentId
+                                ?.url && (
                                 <div className="flex items-center justify-between p-3 bg-muted rounded-lg">
-                                  <span className="text-sm">Government ID ({selectedWithdrawal.documents.governmentId.type})</span>
+                                  <span className="text-sm">
+                                    Government ID (
+                                    {
+                                      selectedWithdrawal.documents.governmentId
+                                        .type
+                                    }
+                                    )
+                                  </span>
                                   <Button
                                     variant="outline"
                                     size="sm"
-                                    onClick={() => window.open(selectedWithdrawal.documents.governmentId.url, "_blank")}
+                                    onClick={() =>
+                                      window.open(
+                                        selectedWithdrawal.documents
+                                          .governmentId.url,
+                                        "_blank",
+                                      )
+                                    }
                                   >
                                     View Document
                                   </Button>
@@ -393,23 +518,50 @@ const AdminWithdrawals = () => {
                               )}
                               {selectedWithdrawal.documents?.bankProof?.url && (
                                 <div className="flex items-center justify-between p-3 bg-muted rounded-lg">
-                                  <span className="text-sm">Bank Proof ({selectedWithdrawal.documents.bankProof.type})</span>
+                                  <span className="text-sm">
+                                    Bank Proof (
+                                    {
+                                      selectedWithdrawal.documents.bankProof
+                                        .type
+                                    }
+                                    )
+                                  </span>
                                   <Button
                                     variant="outline"
                                     size="sm"
-                                    onClick={() => window.open(selectedWithdrawal.documents.bankProof.url, "_blank")}
+                                    onClick={() =>
+                                      window.open(
+                                        selectedWithdrawal.documents.bankProof
+                                          .url,
+                                        "_blank",
+                                      )
+                                    }
                                   >
                                     View Document
                                   </Button>
                                 </div>
                               )}
-                              {selectedWithdrawal.documents?.addressProof?.url && (
+                              {selectedWithdrawal.documents?.addressProof
+                                ?.url && (
                                 <div className="flex items-center justify-between p-3 bg-muted rounded-lg">
-                                  <span className="text-sm">Address Proof ({selectedWithdrawal.documents.addressProof.type})</span>
+                                  <span className="text-sm">
+                                    Address Proof (
+                                    {
+                                      selectedWithdrawal.documents.addressProof
+                                        .type
+                                    }
+                                    )
+                                  </span>
                                   <Button
                                     variant="outline"
                                     size="sm"
-                                    onClick={() => window.open(selectedWithdrawal.documents.addressProof.url, "_blank")}
+                                    onClick={() =>
+                                      window.open(
+                                        selectedWithdrawal.documents
+                                          .addressProof.url,
+                                        "_blank",
+                                      )
+                                    }
                                   >
                                     View Document
                                   </Button>
@@ -419,14 +571,19 @@ const AdminWithdrawals = () => {
                           </div>
 
                           {/* Action Section */}
-                          {selectedWithdrawal.status === "pending" || selectedWithdrawal.status === "under_review" ? (
+                          {selectedWithdrawal.status === "pending" ||
+                          selectedWithdrawal.status === "under_review" ? (
                             <div className="space-y-4 border-t pt-4">
                               <div>
-                                <Label htmlFor="review-notes">Review Notes (Optional)</Label>
+                                <Label htmlFor="review-notes">
+                                  Review Notes (Optional)
+                                </Label>
                                 <Textarea
                                   id="review-notes"
                                   value={reviewNotes}
-                                  onChange={(e) => setReviewNotes(e.target.value)}
+                                  onChange={(e) =>
+                                    setReviewNotes(e.target.value)
+                                  }
                                   placeholder="Add any notes about this review..."
                                   rows={3}
                                 />
@@ -435,25 +592,34 @@ const AdminWithdrawals = () => {
                               <div className="flex gap-2">
                                 <Dialog>
                                   <DialogTrigger asChild>
-                                    <Button variant="outline" className="flex-1">
+                                    <Button
+                                      variant="outline"
+                                      className="flex-1"
+                                    >
                                       <XCircle className="h-4 w-4 mr-2" />
                                       Reject
                                     </Button>
                                   </DialogTrigger>
                                   <DialogContent>
                                     <DialogHeader>
-                                      <DialogTitle>Reject Withdrawal Request</DialogTitle>
+                                      <DialogTitle>
+                                        Reject Withdrawal Request
+                                      </DialogTitle>
                                       <DialogDescription>
                                         Please provide a reason for rejection
                                       </DialogDescription>
                                     </DialogHeader>
                                     <div className="space-y-4">
                                       <div>
-                                        <Label htmlFor="rejection-reason">Rejection Reason *</Label>
+                                        <Label htmlFor="rejection-reason">
+                                          Rejection Reason *
+                                        </Label>
                                         <Textarea
                                           id="rejection-reason"
                                           value={rejectionReason}
-                                          onChange={(e) => setRejectionReason(e.target.value)}
+                                          onChange={(e) =>
+                                            setRejectionReason(e.target.value)
+                                          }
                                           placeholder="Explain why this request is being rejected..."
                                           rows={4}
                                           required
@@ -461,15 +627,27 @@ const AdminWithdrawals = () => {
                                       </div>
                                     </div>
                                     <DialogFooter>
-                                      <Button variant="outline" onClick={() => setRejectionReason("")}>
+                                      <Button
+                                        variant="outline"
+                                        onClick={() => setRejectionReason("")}
+                                      >
                                         Cancel
                                       </Button>
                                       <Button
                                         variant="destructive"
-                                        onClick={() => handleStatusUpdate(selectedWithdrawal._id, "rejected")}
+                                        onClick={() =>
+                                          handleStatusUpdate(
+                                            selectedWithdrawal._id,
+                                            "rejected",
+                                          )
+                                        }
                                         disabled={processing}
                                       >
-                                        {processing ? <Loader2 className="h-4 w-4 animate-spin" /> : "Confirm Rejection"}
+                                        {processing ? (
+                                          <Loader2 className="h-4 w-4 animate-spin" />
+                                        ) : (
+                                          "Confirm Rejection"
+                                        )}
                                       </Button>
                                     </DialogFooter>
                                   </DialogContent>
@@ -477,7 +655,12 @@ const AdminWithdrawals = () => {
 
                                 <Button
                                   className="flex-1"
-                                  onClick={() => handleStatusUpdate(selectedWithdrawal._id, "approved")}
+                                  onClick={() =>
+                                    handleStatusUpdate(
+                                      selectedWithdrawal._id,
+                                      "approved",
+                                    )
+                                  }
                                   disabled={processing}
                                 >
                                   {processing ? (
@@ -492,18 +675,27 @@ const AdminWithdrawals = () => {
                           ) : selectedWithdrawal.status === "approved" ? (
                             <div className="space-y-4 border-t pt-4">
                               <div>
-                                <Label htmlFor="transaction-ref">Transaction Reference *</Label>
+                                <Label htmlFor="transaction-ref">
+                                  Transaction Reference *
+                                </Label>
                                 <Input
                                   id="transaction-ref"
                                   value={transactionReference}
-                                  onChange={(e) => setTransactionReference(e.target.value)}
+                                  onChange={(e) =>
+                                    setTransactionReference(e.target.value)
+                                  }
                                   placeholder="Enter transaction/transfer reference number"
                                   required
                                 />
                               </div>
                               <Button
                                 className="w-full"
-                                onClick={() => handleStatusUpdate(selectedWithdrawal._id, "completed")}
+                                onClick={() =>
+                                  handleStatusUpdate(
+                                    selectedWithdrawal._id,
+                                    "completed",
+                                  )
+                                }
                                 disabled={processing}
                               >
                                 {processing ? (
@@ -516,6 +708,10 @@ const AdminWithdrawals = () => {
                             </div>
                           ) : null}
                         </div>
+                      ) : (
+                        <div className="py-8 text-center text-muted-foreground">
+                          Unable to load withdrawal details.
+                        </div>
                       )}
                     </DialogContent>
                   </Dialog>
@@ -526,7 +722,10 @@ const AdminWithdrawals = () => {
                         variant="outline"
                         size="sm"
                         onClick={async () => {
-                          await handleStatusUpdate(withdrawal._id, "under_review");
+                          await handleStatusUpdate(
+                            withdrawal._id,
+                            "under_review",
+                          );
                         }}
                         disabled={processing}
                       >

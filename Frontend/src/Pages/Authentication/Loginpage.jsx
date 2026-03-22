@@ -26,7 +26,7 @@ import { Input } from "@/components/ui/input";
 import { FundraisingButton } from "@/components/ui/fundraising-button";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { AuthContext } from "@/context/AuthContext";
+import { AuthContext } from "@/Context/AuthContext";
 import ROUTES from "@/routes/routes";
 import { toast } from "sonner";
 

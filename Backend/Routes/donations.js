@@ -13,23 +13,29 @@ router.get("/me", requireAuth, async (req, res) => {
     console.log("  User ID:", req.user.userId);
     console.log("  Role:", req.user.role);
     console.log("=".repeat(60));
-    
+
     // Pagination
     const page = parseInt(req.query.page) || 1;
     const limit = Math.min(parseInt(req.query.limit) || 20, 100);
     const skip = (page - 1) * limit;
-    
+
     // Debug: Check what's in the database
-    const allDonationsForEmail = await Donation.find({ donorEmail: req.user.email }).lean();
-    console.log(`  Total donations in DB for ${req.user.email}: ${allDonationsForEmail.length}`);
-    
+    const allDonationsForEmail = await Donation.find({
+      donorEmail: req.user.email,
+    }).lean();
+    console.log(
+      `  Total donations in DB for ${req.user.email}: ${allDonationsForEmail.length}`,
+    );
+
     if (allDonationsForEmail.length > 0) {
       console.log("  Sample donation emails in DB:");
       allDonationsForEmail.slice(0, 3).forEach((d, i) => {
-        console.log(`    ${i + 1}. donorEmail: "${d.donorEmail}" (exact match: ${d.donorEmail === req.user.email})`);
+        console.log(
+          `    ${i + 1}. donorEmail: "${d.donorEmail}" (exact match: ${d.donorEmail === req.user.email})`,
+        );
       });
     }
-    
+
     const [donations, total] = await Promise.all([
       Donation.find({ donorEmail: req.user.email })
         .populate("campaign", "title imageURL")
@@ -91,9 +97,8 @@ router.post("/", requireAuth, requireRole("donor"), async (req, res) => {
       method,
     });
 
-    // 3) Increment the campaign's raised amount
-    campaign.raised = (campaign.raised || 0) + amount;
-    await campaign.save();
+    // 3) Increment the campaign's raised amount atomically
+    await Campaign.updateOne({ _id: campaignId }, { $inc: { raised: amount } });
 
     // 4) Return the newly created donation (populated with campaign title)
     await donation.populate("campaign", "title");

@@ -14,7 +14,7 @@ import {
   Grid2,
   Setting2,
 } from "iconsax-reactjs";
-import { AuthContext } from "@/context/AuthContext";
+import { AuthContext } from "@/Context/AuthContext";
 import ROUTES from "@/routes/routes";
 import { Link, useNavigate } from "react-router-dom";
 import { FundraisingButton } from "./ui/fundraising-button";
@@ -61,37 +61,62 @@ export default function NavigationBar() {
     ...(user?.role === "admin"
       ? [
           {
+            name: "Admin Home",
+            path: ROUTES.ADMIN_DASHBOARD,
+            icon: Grid2,
+          },
+          {
             name: "Applications",
             path: ROUTES.ADMIN_APPLICATIONS,
             icon: Setting2,
+          },
+          {
+            name: "Campaigns",
+            path: ROUTES.ADMIN_CAMPAIGNS,
+            icon: Heart,
+          },
+          {
+            name: "Users",
+            path: ROUTES.ADMIN_USERS,
+            icon: Profile,
           },
           {
             name: "Withdrawals",
             path: ROUTES.ADMIN_WITHDRAWALS,
             icon: MoneyRecive,
           },
-        ]
-      : user?.role === "organizer"
-      ? [{ name: "My Campaigns", path: ROUTES.MY_CAMPAIGNS, icon: Heart }]
-      : user
-      ? [
           {
-            name: "My Donations",
-            path: ROUTES.MY_DONATIONS,
+            name: "Donations",
+            path: ROUTES.ADMIN_DONATIONS,
             icon: MoneyRecive,
           },
-          // Only show "Apply Organizer" if user is not already approved as an organizer
-          ...(user.isOrganizerApproved !== true
-            ? [
-                {
-                  name: "Apply Organizer",
-                  path: ROUTES.APPLY_ORGANIZER,
-                  icon: UserEdit,
-                },
-              ]
-            : []),
+          {
+            name: "Activity Logs",
+            path: ROUTES.ADMIN_ACTIVITIES,
+            icon: Setting2,
+          },
         ]
-      : []),
+      : user?.role === "organizer"
+        ? [{ name: "My Campaigns", path: ROUTES.MY_CAMPAIGNS, icon: Heart }]
+        : user
+          ? [
+              {
+                name: "My Donations",
+                path: ROUTES.MY_DONATIONS,
+                icon: MoneyRecive,
+              },
+              // Only show "Apply Organizer" if user is not already approved as an organizer
+              ...(user.isOrganizerApproved !== true
+                ? [
+                    {
+                      name: "Apply Organizer",
+                      path: ROUTES.APPLY_ORGANIZER,
+                      icon: UserEdit,
+                    },
+                  ]
+                : []),
+            ]
+          : []),
   ];
 
   return (
@@ -152,7 +177,13 @@ export default function NavigationBar() {
                     <FundraisingButton
                       variant="trust"
                       size="default"
-                      onClick={() => handleNavigation(ROUTES.DASHBOARD)}
+                      onClick={() =>
+                        handleNavigation(
+                          user?.role === "admin"
+                            ? ROUTES.ADMIN_DASHBOARD
+                            : ROUTES.DASHBOARD,
+                        )
+                      }
                     >
                       <Profile size={18} variant="Broken" />
                       {user.name}
@@ -286,7 +317,11 @@ export default function NavigationBar() {
                       size="default"
                       fullWidth
                       onClick={() => {
-                        handleNavigation(ROUTES.DASHBOARD);
+                        handleNavigation(
+                          user?.role === "admin"
+                            ? ROUTES.ADMIN_DASHBOARD
+                            : ROUTES.DASHBOARD,
+                        );
                         setOpen(false);
                       }}
                     >

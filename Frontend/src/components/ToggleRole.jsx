@@ -1,6 +1,6 @@
 import { useContext, useState } from "react";
 import { Switch } from "@/components/ui/switch";
-import { AuthContext } from "@/context/AuthContext";
+import { AuthContext } from "@/Context/AuthContext";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";

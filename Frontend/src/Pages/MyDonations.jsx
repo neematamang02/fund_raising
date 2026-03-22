@@ -1,6 +1,6 @@
 import { useContext, useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { AuthContext } from "@/context/AuthContext";
+import { AuthContext } from "@/Context/AuthContext";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";

@@ -1,6 +1,6 @@
 import { useContext, useState, useMemo } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
-import { AuthContext } from "@/context/AuthContext";
+import { AuthContext } from "@/Context/AuthContext";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";

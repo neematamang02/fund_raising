@@ -1,8 +1,15 @@
 import React, { useContext, useEffect, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
-import { AuthContext } from "@/context/AuthContext";
+import { AuthContext } from "@/Context/AuthContext";
 import ROUTES from "@/routes/routes";
+import {
+  adminQueryKeys,
+  approveOrganizerApplication,
+  getAdminApplications,
+  rejectOrganizerApplication,
+  revokeOrganizerApplication,
+} from "@/services/adminApi";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { FundraisingButton } from "@/components/ui/fundraising-button";
 import { Badge } from "@/components/ui/badge";
@@ -75,36 +82,16 @@ export default function AdminApplications() {
     isLoading: isAppsLoading,
     isError: appsError,
   } = useQuery({
-    queryKey: ["applications"],
-    queryFn: async () => {
-      const res = await fetch("/api/admin/applications", {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
-        },
-      });
-      if (!res.ok) throw new Error("Failed to fetch applications");
-      return res.json();
-    },
+    queryKey: adminQueryKeys.applications,
+    queryFn: () => getAdminApplications(),
+    enabled: Boolean(user?.role === "admin"),
   });
 
   // Approve mutation
   const approveMutation = useMutation({
-    mutationFn: async (appId) => {
-      const res = await fetch(`/api/admin/applications/${appId}/approve`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
-        },
-      });
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        throw new Error(err.message || "Approve failed");
-      }
-      return res.json();
-    },
+    mutationFn: (appId) => approveOrganizerApplication(appId),
     onSuccess: () => {
-      queryClient.invalidateQueries(["applications"]);
+      queryClient.invalidateQueries({ queryKey: adminQueryKeys.applications });
       toast.success("Application approved successfully! 🎉");
     },
     onError: (error) => {
@@ -114,23 +101,10 @@ export default function AdminApplications() {
 
   // Reject mutation
   const rejectMutation = useMutation({
-    mutationFn: async ({ appId, reason }) => {
-      const res = await fetch(`/api/admin/applications/${appId}/reject`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
-        },
-        body: JSON.stringify({ rejectionReason: reason }),
-      });
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        throw new Error(err.message || "Reject failed");
-      }
-      return res.json();
-    },
+    mutationFn: ({ appId, reason }) =>
+      rejectOrganizerApplication(appId, reason),
     onSuccess: () => {
-      queryClient.invalidateQueries(["applications"]);
+      queryClient.invalidateQueries({ queryKey: adminQueryKeys.applications });
       setShowRejectDialog(false);
       setRejectionReason("");
       setSelectedApp(null);
@@ -143,23 +117,10 @@ export default function AdminApplications() {
 
   // Revoke mutation
   const revokeMutation = useMutation({
-    mutationFn: async ({ appId, reason }) => {
-      const res = await fetch(`/api/admin/applications/${appId}/revoke`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
-        },
-        body: JSON.stringify({ reason }),
-      });
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        throw new Error(err.message || "Revoke failed");
-      }
-      return res.json();
-    },
+    mutationFn: ({ appId, reason }) =>
+      revokeOrganizerApplication(appId, reason),
     onSuccess: () => {
-      queryClient.invalidateQueries(["applications"]);
+      queryClient.invalidateQueries({ queryKey: adminQueryKeys.applications });
       setShowRevokeDialog(false);
       setRevokeReason("");
       setRevokeTargetAppId(null);
@@ -465,7 +426,9 @@ export default function AdminApplications() {
                       <div className="space-y-2 text-sm">
                         <div className="flex items-center gap-2">
                           <Mail className="h-3 w-3 text-gray-400" />
-                          <span>{app.contactEmail || app.user?.email || "N/A"}</span>
+                          <span>
+                            {app.contactEmail || app.user?.email || "N/A"}
+                          </span>
                         </div>
                         {app.phoneNumber && (
                           <div className="flex items-center gap-2">
@@ -527,9 +490,17 @@ export default function AdminApplications() {
                         {/* Government ID */}
                         {app.documents.governmentId?.url && (
                           <div className="border rounded-lg p-3 bg-gray-50">
-                            <div className="text-sm font-medium text-gray-700 mb-2">Government ID</div>
-                            {/\.(png|jpe?g|gif|webp)$/i.test(app.documents.governmentId.url) ? (
-                              <a href={app.documents.governmentId.url} target="_blank" rel="noopener noreferrer">
+                            <div className="text-sm font-medium text-gray-700 mb-2">
+                              Government ID
+                            </div>
+                            {/\.(png|jpe?g|gif|webp)$/i.test(
+                              app.documents.governmentId.url,
+                            ) ? (
+                              <a
+                                href={app.documents.governmentId.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                              >
                                 <img
                                   src={app.documents.governmentId.url}
                                   alt="Government ID"
@@ -552,9 +523,17 @@ export default function AdminApplications() {
                         {/* Selfie with ID */}
                         {app.documents.selfieWithId?.url && (
                           <div className="border rounded-lg p-3 bg-gray-50">
-                            <div className="text-sm font-medium text-gray-700 mb-2">Selfie with ID</div>
-                            {/\.(png|jpe?g|gif|webp)$/i.test(app.documents.selfieWithId.url) ? (
-                              <a href={app.documents.selfieWithId.url} target="_blank" rel="noopener noreferrer">
+                            <div className="text-sm font-medium text-gray-700 mb-2">
+                              Selfie with ID
+                            </div>
+                            {/\.(png|jpe?g|gif|webp)$/i.test(
+                              app.documents.selfieWithId.url,
+                            ) ? (
+                              <a
+                                href={app.documents.selfieWithId.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                              >
                                 <img
                                   src={app.documents.selfieWithId.url}
                                   alt="Selfie with ID"
@@ -577,11 +556,21 @@ export default function AdminApplications() {
                         {/* Registration Certificate */}
                         {app.documents.registrationCertificate?.url && (
                           <div className="border rounded-lg p-3 bg-gray-50">
-                            <div className="text-sm font-medium text-gray-700 mb-2">Registration Certificate</div>
-                            {/\.(png|jpe?g|gif|webp)$/i.test(app.documents.registrationCertificate.url) ? (
-                              <a href={app.documents.registrationCertificate.url} target="_blank" rel="noopener noreferrer">
+                            <div className="text-sm font-medium text-gray-700 mb-2">
+                              Registration Certificate
+                            </div>
+                            {/\.(png|jpe?g|gif|webp)$/i.test(
+                              app.documents.registrationCertificate.url,
+                            ) ? (
+                              <a
+                                href={app.documents.registrationCertificate.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                              >
                                 <img
-                                  src={app.documents.registrationCertificate.url}
+                                  src={
+                                    app.documents.registrationCertificate.url
+                                  }
                                   alt="Registration Certificate"
                                   className="w-full h-40 object-cover rounded"
                                 />
@@ -602,9 +591,17 @@ export default function AdminApplications() {
                         {/* Tax ID */}
                         {app.documents.taxId?.url && (
                           <div className="border rounded-lg p-3 bg-gray-50">
-                            <div className="text-sm font-medium text-gray-700 mb-2">Tax ID / EIN</div>
-                            {/\.(png|jpe?g|gif|webp)$/i.test(app.documents.taxId.url) ? (
-                              <a href={app.documents.taxId.url} target="_blank" rel="noopener noreferrer">
+                            <div className="text-sm font-medium text-gray-700 mb-2">
+                              Tax ID / EIN
+                            </div>
+                            {/\.(png|jpe?g|gif|webp)$/i.test(
+                              app.documents.taxId.url,
+                            ) ? (
+                              <a
+                                href={app.documents.taxId.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                              >
                                 <img
                                   src={app.documents.taxId.url}
                                   alt="Tax ID"
@@ -627,9 +624,17 @@ export default function AdminApplications() {
                         {/* Address Proof */}
                         {app.documents.addressProof?.url && (
                           <div className="border rounded-lg p-3 bg-gray-50">
-                            <div className="text-sm font-medium text-gray-700 mb-2">Address Proof</div>
-                            {/\.(png|jpe?g|gif|webp)$/i.test(app.documents.addressProof.url) ? (
-                              <a href={app.documents.addressProof.url} target="_blank" rel="noopener noreferrer">
+                            <div className="text-sm font-medium text-gray-700 mb-2">
+                              Address Proof
+                            </div>
+                            {/\.(png|jpe?g|gif|webp)$/i.test(
+                              app.documents.addressProof.url,
+                            ) ? (
+                              <a
+                                href={app.documents.addressProof.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                              >
                                 <img
                                   src={app.documents.addressProof.url}
                                   alt="Address Proof"
@@ -650,21 +655,35 @@ export default function AdminApplications() {
                         )}
                       </div>
                     ) : (
-                      <div className="text-sm text-gray-600">No documents uploaded.</div>
+                      <div className="text-sm text-gray-600">
+                        No documents uploaded.
+                      </div>
                     )}
 
                     {/* Additional Documents */}
                     {app.documents?.additionalDocuments?.length > 0 && (
                       <div className="space-y-2">
-                        <div className="text-sm font-medium text-gray-700">Additional Documents</div>
+                        <div className="text-sm font-medium text-gray-700">
+                          Additional Documents
+                        </div>
                         <div className="grid gap-3 md:grid-cols-3">
                           {app.documents.additionalDocuments.map((doc, idx) => (
-                            <div key={idx} className="border rounded-lg p-3 bg-gray-50">
+                            <div
+                              key={idx}
+                              className="border rounded-lg p-3 bg-gray-50"
+                            >
                               {/\.(png|jpe?g|gif|webp)$/i.test(doc.url) ? (
-                                <a href={doc.url} target="_blank" rel="noopener noreferrer">
+                                <a
+                                  href={doc.url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                >
                                   <img
                                     src={doc.url}
-                                    alt={doc.name || `Additional Document ${idx + 1}`}
+                                    alt={
+                                      doc.name ||
+                                      `Additional Document ${idx + 1}`
+                                    }
                                     className="w-full h-40 object-cover rounded"
                                   />
                                 </a>
