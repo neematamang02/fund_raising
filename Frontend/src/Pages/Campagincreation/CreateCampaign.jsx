@@ -55,6 +55,13 @@ const campaignSchema = z.object({
     .number()
     .min(10, "Target must be at least $10")
     .max(1000000, "Target must be less than $1,000,000"),
+  expiryMode: z.enum(["duration", "date"]),
+  duration: z
+    .number()
+    .int("Duration must be a whole number")
+    .min(1, "Duration must be at least 1 day")
+    .max(365, "Duration must be 365 days or less"),
+  deadlineAt: z.string().optional(),
 });
 
 export default function CreateCampaign() {
@@ -71,7 +78,9 @@ export default function CreateCampaign() {
       imageUrl: "",
       target: 1000,
       category: "",
+      expiryMode: "duration",
       duration: 30,
+      deadlineAt: "",
       urgency: "medium",
     },
   });
@@ -86,6 +95,9 @@ export default function CreateCampaign() {
   const watchedTitle = watch("title");
   const watchedDescription = watch("description");
   const watchedTarget = watch("target");
+  const watchedExpiryMode = watch("expiryMode");
+  const watchedDuration = watch("duration");
+  const watchedDeadlineAt = watch("deadlineAt");
 
   // Update image preview when URL changes
   useEffect(() => {
@@ -137,13 +149,36 @@ export default function CreateCampaign() {
   const onSubmit = async (data) => {
     setIsSubmitting(true);
 
+    if (data.expiryMode === "date") {
+      if (!data.deadlineAt) {
+        toast.error("Please select a campaign end date.");
+        setIsSubmitting(false);
+        return;
+      }
+
+      const parsedDeadline = new Date(data.deadlineAt);
+      if (
+        Number.isNaN(parsedDeadline.getTime()) ||
+        parsedDeadline <= new Date()
+      ) {
+        toast.error("Campaign end date must be in the future.");
+        setIsSubmitting(false);
+        return;
+      }
+    }
+
+    const payloadExpiry =
+      data.expiryMode === "date"
+        ? { deadlineAt: new Date(data.deadlineAt).toISOString() }
+        : { duration: data.duration };
+
     const payload = {
       title: data.title,
       description: data.description,
       imageURL: data.imageUrl,
       target: data.target,
       category: data.category,
-      duration: data.duration,
+      ...payloadExpiry,
       urgency: data.urgency,
     };
 
@@ -330,6 +365,97 @@ export default function CreateCampaign() {
                             </FormItem>
                           )}
                         />
+
+                        <FormField
+                          name="expiryMode"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel className="text-sm font-medium text-gray-700">
+                                Campaign Expiry Option *
+                              </FormLabel>
+                              <Select
+                                onValueChange={field.onChange}
+                                value={field.value}
+                              >
+                                <FormControl>
+                                  <SelectTrigger className="h-11 border-2 border-gray-200 focus:border-green-500 rounded-xl">
+                                    <SelectValue placeholder="Select expiry option" />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  <SelectItem value="duration">
+                                    Expire after number of days
+                                  </SelectItem>
+                                  <SelectItem value="date">
+                                    Expire on specific date
+                                  </SelectItem>
+                                </SelectContent>
+                              </Select>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        {watchedExpiryMode === "duration" ? (
+                          <FormField
+                            name="duration"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel className="text-sm font-medium text-gray-700">
+                                  Campaign Duration (Days) *
+                                </FormLabel>
+                                <FormControl>
+                                  <Input
+                                    {...field}
+                                    type="number"
+                                    min="1"
+                                    max="365"
+                                    onChange={(e) =>
+                                      field.onChange(
+                                        Number(e.target.value || 0),
+                                      )
+                                    }
+                                    className="h-11 border-2 border-gray-200 focus:border-green-500 rounded-xl"
+                                  />
+                                </FormControl>
+                                <p className="text-xs text-gray-500">
+                                  Campaign will end after {watchedDuration || 0}{" "}
+                                  day(s).
+                                </p>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                        ) : (
+                          <FormField
+                            name="deadlineAt"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel className="text-sm font-medium text-gray-700">
+                                  Campaign End Date *
+                                </FormLabel>
+                                <FormControl>
+                                  <Input
+                                    {...field}
+                                    type="datetime-local"
+                                    min={new Date().toISOString().slice(0, 16)}
+                                    className="h-11 border-2 border-gray-200 focus:border-green-500 rounded-xl"
+                                  />
+                                </FormControl>
+                                {watchedDeadlineAt ? (
+                                  <p className="text-xs text-gray-500">
+                                    Ends on{" "}
+                                    {new Date(
+                                      watchedDeadlineAt,
+                                    ).toLocaleString()}
+                                    .
+                                  </p>
+                                ) : null}
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                        )}
                       </div>
                     </div>
 

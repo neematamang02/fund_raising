@@ -153,7 +153,7 @@ export async function removeAdminCampaign(req, res) {
       return res.status(result.status).json({ message: result.message });
     }
 
-    return res.json({ message: "Campaign deleted successfully" });
+    return res.json({ message: "Campaign marked as inactive successfully" });
   } catch (error) {
     console.error("Error deleting campaign:", error);
     return res

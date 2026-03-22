@@ -9,6 +9,7 @@ import {
   rejectApplication,
   revokeApplication,
 } from "../services/adminApplicationsService.js";
+import { createInAppNotification } from "../services/notificationService.js";
 
 export async function listAdminApplications(req, res) {
   try {
@@ -37,6 +38,18 @@ export async function approveAdminApplication(req, res) {
           result.userToApprove,
           result.application,
         );
+
+        await createInAppNotification({
+          recipient: result.userToApprove._id,
+          eventType: "organizer_application_approved",
+          title: "Application Approved",
+          message:
+            "Your organizer application has been approved. You can now create campaigns.",
+          payload: {
+            applicationId: result.application._id,
+            status: "approved",
+          },
+        });
       }
     } catch (emailError) {
       console.error("Failed to send approval email:", emailError);
@@ -68,6 +81,19 @@ export async function rejectAdminApplication(req, res) {
           result.application,
           result.application.rejectionReason,
         );
+
+        await createInAppNotification({
+          recipient: result.userToNotify._id,
+          eventType: "organizer_application_rejected",
+          title: "Application Rejected",
+          message:
+            "Your organizer application was rejected. Review the reason and resubmit when ready.",
+          payload: {
+            applicationId: result.application._id,
+            status: "rejected",
+            rejectionReason: result.application.rejectionReason,
+          },
+        });
       }
     } catch (emailError) {
       console.error("Failed to send rejection email:", emailError);
@@ -99,6 +125,19 @@ export async function revokeAdminApplication(req, res) {
           result.application,
           result.application.rejectionReason,
         );
+
+        await createInAppNotification({
+          recipient: result.userToRevoke._id,
+          eventType: "organizer_application_revoked",
+          title: "Organizer Access Revoked",
+          message:
+            "Your organizer access has been revoked. Contact support if you believe this is a mistake.",
+          payload: {
+            applicationId: result.application._id,
+            status: "revoked",
+            reason: result.application.rejectionReason,
+          },
+        });
       }
     } catch (emailError) {
       console.error("Failed to send revocation email:", emailError);

@@ -5,6 +5,7 @@ import {
   updateWithdrawalStatus,
   verifyWithdrawalDocument,
 } from "../services/adminWithdrawalsService.js";
+import { createInAppNotification } from "../services/notificationService.js";
 
 export async function listAdminWithdrawalRequests(req, res) {
   try {
@@ -84,6 +85,21 @@ export async function updateAdminWithdrawalRequestStatus(req, res) {
           transactionReference,
         },
       );
+
+      await createInAppNotification({
+        recipient: result.withdrawalRequest.organizer._id,
+        eventType: `withdrawal_${status}`,
+        title: "Withdrawal Request Updated",
+        message: `Your withdrawal request for ${result.withdrawalRequest.campaign.title} is now ${status}.`,
+        payload: {
+          withdrawalRequestId: result.withdrawalRequest._id,
+          campaignId: result.withdrawalRequest.campaign._id,
+          status,
+          reviewNotes,
+          rejectionReason,
+          transactionReference,
+        },
+      });
     } catch (emailError) {
       console.error("Error sending withdrawal status email:", emailError);
     }

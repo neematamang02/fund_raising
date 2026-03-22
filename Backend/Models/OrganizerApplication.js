@@ -1,5 +1,35 @@
 import mongoose from "mongoose";
 
+const OrganizerApplicationStatusEventSchema = new mongoose.Schema(
+  {
+    fromStatus: {
+      type: String,
+      enum: ["draft", "pending", "approved", "rejected", "revoked", null],
+      default: null,
+    },
+    toStatus: {
+      type: String,
+      enum: ["draft", "pending", "approved", "rejected", "revoked"],
+      required: true,
+    },
+    changedBy: {
+      type: mongoose.Types.ObjectId,
+      ref: "User",
+      default: null,
+    },
+    reason: {
+      type: String,
+      trim: true,
+      default: null,
+    },
+    changedAt: {
+      type: Date,
+      default: Date.now,
+    },
+  },
+  { _id: false },
+);
+
 const OrganizerApplicationSchema = new mongoose.Schema(
   {
     // Reference to the User who submitted the application
@@ -135,19 +165,32 @@ const OrganizerApplicationSchema = new mongoose.Schema(
       type: String,
       trim: true,
     },
+
+    statusHistory: {
+      type: [OrganizerApplicationStatusEventSchema],
+      default: [],
+    },
   },
   {
     timestamps: true, // Automatically adds createdAt and updatedAt
-  }
+  },
 );
 
 // Indexes for performance
 OrganizerApplicationSchema.index({ user: 1, status: 1 });
 OrganizerApplicationSchema.index({ status: 1, createdAt: -1 });
+OrganizerApplicationSchema.index(
+  { user: 1 },
+  {
+    unique: true,
+    partialFilterExpression: { status: "pending" },
+    name: "uniq_pending_application_per_user",
+  },
+);
 
-const OrganizerApplication = mongoose.model(  
+const OrganizerApplication = mongoose.model(
   "OrganizerApplication",
-  OrganizerApplicationSchema
+  OrganizerApplicationSchema,
 );
 
 export default OrganizerApplication;

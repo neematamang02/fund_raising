@@ -2,10 +2,17 @@ import express from "express";
 import WithdrawalRequest from "../Models/WithdrawalRequest.js";
 import Campaign from "../Models/Campaign.js";
 import Donation from "../Models/Donation.js";
+import OrganizerProfile from "../Models/OrganizerProfile.js";
 import ActivityLog from "../Models/ActivityLog.js";
 import { authenticateToken, requireRole } from "../middleware/auth.js";
 import { sendWithdrawalRequestEmail } from "../services/emailService.js";
+import { createInAppNotification } from "../services/notificationService.js";
 import { upload } from "../config/s3.js";
+import {
+  buildRequestHash,
+  getStoredIdempotentResponse,
+  storeIdempotentResponse,
+} from "../utils/idempotency.js";
 import {
   getAdminWithdrawalRequestDetails,
   listAdminWithdrawalRequests,
@@ -47,7 +54,55 @@ router.post(
   requireRole(["organizer"]),
   async (req, res) => {
     try {
-      const { campaignId, amount, bankDetails, documents, kycInfo } = req.body;
+      const { campaignId, amount } = req.body;
+      const idempotencyKey = req.get("Idempotency-Key") || "";
+
+      if (!campaignId || typeof amount !== "number" || amount <= 0) {
+        return res.status(400).json({
+          message: "campaignId and a positive numeric amount are required.",
+        });
+      }
+
+      const requestHash = buildRequestHash({ campaignId, amount });
+      const idempotencyState = await getStoredIdempotentResponse({
+        idempotencyKey,
+        userId: req.user.userId,
+        endpoint: "withdrawal_create",
+        requestHash,
+      });
+
+      if (idempotencyState.conflict) {
+        return res
+          .status(idempotencyState.statusCode)
+          .json(idempotencyState.responseBody);
+      }
+
+      if (idempotencyState.replay) {
+        return res
+          .status(idempotencyState.statusCode)
+          .json(idempotencyState.responseBody);
+      }
+
+      const organizerProfile = await OrganizerProfile.findOne({
+        organizer: req.user.userId,
+      });
+      if (!organizerProfile) {
+        return res.status(400).json({
+          message:
+            "Organizer profile not found. Complete your KYC/bank profile before requesting withdrawals.",
+          code: "ORGANIZER_PROFILE_REQUIRED",
+        });
+      }
+
+      if (organizerProfile.verificationStatus !== "verified") {
+        return res.status(400).json({
+          message:
+            "Organizer profile is not verified yet. You can request withdrawals after verification.",
+          code: "ORGANIZER_PROFILE_NOT_VERIFIED",
+          verificationStatus: organizerProfile.verificationStatus,
+          rejectionReason: organizerProfile.rejectionReason,
+        });
+      }
 
       // Validate campaign ownership
       const campaign = await Campaign.findById(campaignId);
@@ -82,7 +137,9 @@ router.post(
         {
           $match: {
             campaign: campaign._id,
-            status: { $in: ["approved", "completed"] },
+            status: {
+              $in: ["pending", "under_review", "approved", "completed"],
+            },
           },
         },
         {
@@ -104,26 +161,18 @@ router.post(
         });
       }
 
-      // Validate required documents
-      if (
-        !documents.governmentId?.url ||
-        !documents.bankProof?.url ||
-        !documents.addressProof?.url
-      ) {
-        return res.status(400).json({
-          message:
-            "All required documents must be uploaded (Government ID, Bank Proof, Address Proof)",
-        });
-      }
-
       // Create withdrawal request
       const withdrawalRequest = new WithdrawalRequest({
         organizer: req.user.userId,
+        organizerProfile: organizerProfile._id,
         campaign: campaignId,
         amount,
-        bankDetails,
-        documents,
-        kycInfo,
+        availableBalanceSnapshot: availableAmount,
+        totalRaisedSnapshot: totalRaised,
+        totalWithdrawnSnapshot: totalWithdrawn,
+        bankDetails: organizerProfile.getDecryptedBankDetails(),
+        documents: organizerProfile.documents,
+        kycInfo: organizerProfile.kycInfo,
         status: "pending",
       });
 
@@ -145,6 +194,19 @@ router.post(
         },
       });
 
+      await createInAppNotification({
+        recipient: req.user.userId,
+        eventType: "withdrawal_requested",
+        title: "Withdrawal Request Submitted",
+        message: `Your withdrawal request for ${campaign.title} is pending review.`,
+        payload: {
+          withdrawalRequestId: withdrawalRequest._id,
+          campaignId: campaign._id,
+          amount,
+          status: "pending",
+        },
+      });
+
       // Send email notification to organizer
       try {
         const User = (await import("../Models/User.js")).default;
@@ -160,10 +222,21 @@ router.post(
         console.error("Error sending withdrawal request email:", emailError);
       }
 
-      res.status(201).json({
+      const responseBody = {
         message: "Withdrawal request submitted successfully",
         withdrawalRequest,
+      };
+
+      await storeIdempotentResponse({
+        idempotencyKey,
+        userId: req.user.userId,
+        endpoint: "withdrawal_create",
+        requestHash,
+        statusCode: 201,
+        responseBody,
       });
+
+      res.status(201).json(responseBody);
     } catch (error) {
       console.error("Error creating withdrawal request:", error);
       res.status(500).json({ message: "Server error", error: error.message });
@@ -182,6 +255,7 @@ router.get(
         organizer: req.user.userId,
       })
         .populate("campaign", "title imageURL target raised")
+        .populate("organizerProfile", "verificationStatus")
         .populate("reviewedBy", "name email")
         .sort({ createdAt: -1 });
 

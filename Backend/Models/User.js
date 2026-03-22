@@ -33,12 +33,10 @@ const UserSchema = new mongoose.Schema(
     resetToken: String,
     resetTokenExpiry: Date,
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
 // Indexes for performance
-UserSchema.index({ email: 1 });
-UserSchema.index({ role: 1 });
 UserSchema.index({ resetToken: 1 });
 
 const User = mongoose.model("User", UserSchema);

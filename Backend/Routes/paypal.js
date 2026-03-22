@@ -2,10 +2,46 @@ import express from "express";
 import { requireAuth, requireRole } from "../middleware/auth.js";
 import Campaign from "../Models/Campaign.js";
 import Donation from "../Models/Donation.js";
+import ActivityLog from "../Models/ActivityLog.js";
 import paypal from "@paypal/checkout-server-sdk";
 import { paypalClient } from "../services/paypalClient.js";
+import {
+  buildRequestHash,
+  getStoredIdempotentResponse,
+  storeIdempotentResponse,
+} from "../utils/idempotency.js";
 
 const router = express.Router();
+
+async function getCampaignWithLifecycleChecks(campaignId) {
+  const campaign = await Campaign.findById(campaignId);
+  if (!campaign) {
+    return { error: { status: 404, message: "Campaign not found" } };
+  }
+
+  const now = new Date();
+  const isDeadlinePassed =
+    campaign.deadlineAt instanceof Date && campaign.deadlineAt <= now;
+
+  if (campaign.status === "active" && isDeadlinePassed) {
+    campaign.status = "expired";
+    campaign.isDonationEnabled = false;
+    campaign.endedAt = campaign.endedAt || now;
+    campaign.expiresProcessedAt = now;
+    await campaign.save();
+  }
+
+  if (campaign.status !== "active" || campaign.isDonationEnabled === false) {
+    return {
+      error: {
+        status: 400,
+        message: "This campaign is no longer accepting donations.",
+      },
+    };
+  }
+
+  return { campaign };
+}
 
 // ───────────────────────────────────────────────────────────────
 // 0) Get PayPal Configuration (Client ID)
@@ -56,10 +92,11 @@ router.post(
         return res.status(400).json({ error: "Invalid input" });
       }
 
-      // Optionally, verify campaign exists
-      const campaign = await Campaign.findById(campaignId);
-      if (!campaign)
-        return res.status(404).json({ error: "Campaign not found" });
+      const { campaign, error } =
+        await getCampaignWithLifecycleChecks(campaignId);
+      if (error) {
+        return res.status(error.status).json({ error: error.message });
+      }
 
       // Build PayPal order request
       const request = new paypal.orders.OrdersCreateRequest();
@@ -124,7 +161,8 @@ router.post(
   requireRole("donor"),
   async (req, res) => {
     try {
-      const { orderID, campaignId } = req.body;
+      const { orderID, campaignId, isAnonymous } = req.body;
+      const idempotencyKey = req.get("Idempotency-Key") || "";
 
       console.log("🔍 Capturing PayPal Order:");
       console.log("  Order ID:", orderID);
@@ -133,6 +171,59 @@ router.post(
 
       if (!orderID || !campaignId) {
         return res.status(400).json({ error: "Invalid input" });
+      }
+
+      const requestHash = buildRequestHash({ orderID, campaignId });
+      const idempotencyState = await getStoredIdempotentResponse({
+        idempotencyKey,
+        userId: req.user.userId,
+        endpoint: "paypal_capture_order",
+        requestHash,
+      });
+
+      if (idempotencyState.conflict) {
+        return res
+          .status(idempotencyState.statusCode)
+          .json(idempotencyState.responseBody);
+      }
+
+      if (idempotencyState.replay) {
+        return res
+          .status(idempotencyState.statusCode)
+          .json(idempotencyState.responseBody);
+      }
+
+      const existingDonation = await Donation.findOne({
+        paypalOrderId: orderID,
+        donor: req.user.userId,
+      }).populate("campaign", "title");
+      if (existingDonation) {
+        const replayBody = {
+          donation: existingDonation,
+          billReceipt: {
+            donationId: existingDonation._id,
+            campaignTitle:
+              existingDonation.campaign?.title || "Campaign Donation",
+            amount: existingDonation.amount,
+            currency: "USD",
+            transactionId: existingDonation.transactionId,
+            payerName: existingDonation.payerName,
+            payerEmail: existingDonation.payerEmail,
+            timestamp: existingDonation.createdAt,
+          },
+          replayed: true,
+        };
+
+        await storeIdempotentResponse({
+          idempotencyKey,
+          userId: req.user.userId,
+          endpoint: "paypal_capture_order",
+          requestHash,
+          statusCode: 200,
+          responseBody: replayBody,
+        });
+
+        return res.json(replayBody);
       }
 
       // Capture the order
@@ -151,10 +242,11 @@ router.post(
       const amountValue = purchaseUnit.payments.captures[0].amount.value; // string
       const payer = result.payer; // payer object
 
-      // Find campaign for receipt fields
-      const campaign = await Campaign.findById(campaignId);
-      if (!campaign)
-        return res.status(404).json({ error: "Campaign not found" });
+      const { campaign, error } =
+        await getCampaignWithLifecycleChecks(campaignId);
+      if (error) {
+        return res.status(error.status).json({ error: error.message });
+      }
 
       const parsedAmount = parseFloat(amountValue);
       if (Number.isNaN(parsedAmount) || parsedAmount <= 0) {
@@ -164,18 +256,22 @@ router.post(
       }
 
       // Use atomic increment to avoid full-document validation on legacy records.
+      let raisedIncremented = false;
       await Campaign.updateOne(
         { _id: campaignId },
         { $inc: { raised: parsedAmount } },
       );
+      raisedIncremented = true;
 
       // Create a Donation record
       const donation = new Donation({
         campaign: campaignId,
         donor: req.user.userId,
         donorEmail: req.user.email,
+        isAnonymous: Boolean(isAnonymous),
         amount: parsedAmount,
         method: "paypal",
+        paypalOrderId: orderID,
         transactionId: captureId,
         payerEmail: payer.email_address,
         payerName: `${payer.name.given_name} ${payer.name.surname}`,
@@ -183,7 +279,50 @@ router.post(
         status: captureStatus,
         captureDetails: result,
       });
-      await donation.save();
+      try {
+        await donation.save();
+      } catch (saveError) {
+        if (raisedIncremented) {
+          try {
+            await Campaign.updateOne(
+              { _id: campaignId },
+              { $inc: { raised: -parsedAmount } },
+            );
+          } catch (rollbackError) {
+            console.error(
+              "❌ Failed to rollback campaign raised amount after donation persistence failure:",
+              rollbackError,
+            );
+          }
+        }
+
+        throw new Error(
+          `Donation persistence failed after PayPal capture. Transaction ID: ${captureId}`,
+        );
+      }
+
+      try {
+        await ActivityLog.create({
+          user: req.user.userId,
+          activityType: "donation_made",
+          description: `Donation of $${parsedAmount.toFixed(2)} made to campaign "${campaign.title}"`,
+          metadata: {
+            campaignId: campaign._id,
+            campaignTitle: campaign.title,
+            donationId: donation._id,
+            transactionId: donation.transactionId,
+            amount: parsedAmount,
+            currency: purchaseUnit.payments.captures[0].amount.currency_code,
+            method: "paypal",
+          },
+          relatedEntity: {
+            entityType: "Donation",
+            entityId: donation._id,
+          },
+        });
+      } catch (activityError) {
+        console.error("Donation activity log write failed:", activityError);
+      }
 
       console.log("✅ Donation Recorded:", donation._id);
 
@@ -198,8 +337,18 @@ router.post(
         payerEmail: donation.payerEmail,
         timestamp: donation.createdAt,
       };
+      const responseBody = { donation, billReceipt };
 
-      return res.json({ donation, billReceipt });
+      await storeIdempotentResponse({
+        idempotencyKey,
+        userId: req.user.userId,
+        endpoint: "paypal_capture_order",
+        requestHash,
+        statusCode: 200,
+        responseBody,
+      });
+
+      return res.json(responseBody);
     } catch (err) {
       console.error("❌ Capture Order Error:");
       console.error("  Message:", err.message);

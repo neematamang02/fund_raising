@@ -452,7 +452,15 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Edit, Trash, Plus, Calendar, Target, Users, DollarSign } from "lucide-react";
+import {
+  Edit,
+  Trash,
+  Plus,
+  Calendar,
+  Target,
+  Users,
+  DollarSign,
+} from "lucide-react";
 import ROUTES from "@/routes/routes";
 import { FundraisingButton } from "@/components/ui/fundraising-button";
 import { toast } from "sonner";
@@ -516,6 +524,14 @@ const fetchDonors = async (token, campaignId) => {
   return res.json();
 };
 
+const toDateTimeLocalValue = (value) => {
+  if (!value) return "";
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return "";
+  const offsetMs = parsed.getTimezoneOffset() * 60000;
+  return new Date(parsed.getTime() - offsetMs).toISOString().slice(0, 16);
+};
+
 export default function MyCampaigns() {
   const { user, token } = useContext(AuthContext);
   const navigate = useNavigate();
@@ -528,6 +544,7 @@ export default function MyCampaigns() {
     description: "",
     imageURL: "",
     target: 0,
+    deadlineAt: "",
   });
 
   // Redirect if not authenticated or not an organizer
@@ -593,6 +610,7 @@ export default function MyCampaigns() {
       description: campaign.description,
       imageURL: campaign.imageURL,
       target: campaign.target,
+      deadlineAt: toDateTimeLocalValue(campaign.deadlineAt),
     });
   }, []);
 
@@ -601,7 +619,15 @@ export default function MyCampaigns() {
     updateMutation.mutate({
       campaignId: editingCampaign._id,
       token,
-      data: editForm,
+      data: {
+        title: editForm.title,
+        description: editForm.description,
+        imageURL: editForm.imageURL,
+        target: Number(editForm.target),
+        ...(editForm.deadlineAt
+          ? { deadlineAt: new Date(editForm.deadlineAt).toISOString() }
+          : {}),
+      },
     });
   };
 
@@ -757,7 +783,7 @@ export default function MyCampaigns() {
                           style={{
                             width: `${getProgressPercentage(
                               campaign.raised,
-                              campaign.target
+                              campaign.target,
                             )}%`,
                           }}
                         />
@@ -798,7 +824,10 @@ export default function MyCampaigns() {
 
                   {/* Withdrawal Request Button - Only show if campaign has raised funds */}
                   {campaign.raised > 0 && (
-                    <Link to={`/withdrawal-request/${campaign._id}`} className="flex-1">
+                    <Link
+                      to={`/withdrawal-request/${campaign._id}`}
+                      className="flex-1"
+                    >
                       <FundraisingButton
                         variant="donate"
                         size="sm"
@@ -902,6 +931,18 @@ export default function MyCampaigns() {
                   placeholder="10000"
                 />
               </div>
+              <div className="space-y-2">
+                <Label htmlFor="deadlineAt">Campaign End Date</Label>
+                <Input
+                  id="deadlineAt"
+                  type="datetime-local"
+                  min={new Date().toISOString().slice(0, 16)}
+                  value={editForm.deadlineAt}
+                  onChange={(e) =>
+                    setEditForm({ ...editForm, deadlineAt: e.target.value })
+                  }
+                />
+              </div>
             </div>
             <DialogFooter>
               <FundraisingButton
@@ -928,8 +969,8 @@ export default function MyCampaigns() {
                 {isDonorsLoading
                   ? "Loading donors…"
                   : donorsError
-                  ? `Error: ${donorsError.message}`
-                  : `Total donors: ${donors.length}`}
+                    ? `Error: ${donorsError.message}`
+                    : `Total donors: ${donors.length}`}
               </DialogDescription>
             </DialogHeader>
 
@@ -973,19 +1014,22 @@ export default function MyCampaigns() {
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
                       {donors.map((donation) => {
-                        const nameToShow =
-                          donation.donor?.name || donation.payerName || "–";
-                        const emailToShow =
-                          donation.donor?.email ||
-                          donation.payerEmail ||
-                          donation.donorEmail ||
-                          "–";
+                        const isAnonymous = donation.isAnonymous === true;
+                        const nameToShow = isAnonymous
+                          ? "Anonymous Donor"
+                          : donation.donor?.name || donation.payerName || "–";
+                        const emailToShow = isAnonymous
+                          ? "Hidden by donor"
+                          : donation.donor?.email ||
+                            donation.payerEmail ||
+                            donation.donorEmail ||
+                            "–";
 
                         const dateString = new Date(
-                          donation.createdAt
+                          donation.createdAt,
                         ).toLocaleDateString();
                         const timeString = new Date(
-                          donation.createdAt
+                          donation.createdAt,
                         ).toLocaleTimeString();
 
                         return (

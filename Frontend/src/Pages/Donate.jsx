@@ -22,8 +22,8 @@ import {
   Sparkles,
 } from "lucide-react";
 
-const API_BASE_URL = import.meta.env.VITE_BACKEND_URL 
-  ? `${import.meta.env.VITE_BACKEND_URL}/api` 
+const API_BASE_URL = import.meta.env.VITE_BACKEND_URL
+  ? `${import.meta.env.VITE_BACKEND_URL}/api`
   : "/api";
 
 export default function Donate() {
@@ -35,6 +35,7 @@ export default function Donate() {
   const [errorMsg, setErrorMsg] = useState("");
   const [selectedPreset, setSelectedPreset] = useState(null);
   const [paypalClientId, setPaypalClientId] = useState(null);
+  const [isAnonymousDonation, setIsAnonymousDonation] = useState(false);
 
   // Preset donation amounts
   const presetAmounts = [25, 50, 100, 250, 500, 1000];
@@ -63,7 +64,9 @@ export default function Donate() {
     queryKey: ["campaign", campaignId],
     queryFn: async () => {
       const headers = token ? { Authorization: `Bearer ${token}` } : {};
-      const res = await fetch(`${API_BASE_URL}/campaigns/${campaignId}`, { headers });
+      const res = await fetch(`${API_BASE_URL}/campaigns/${campaignId}`, {
+        headers,
+      });
       if (!res.ok) {
         throw new Error("Could not fetch campaign");
       }
@@ -107,13 +110,19 @@ export default function Donate() {
 
   const captureOrderMutation = useMutation({
     mutationFn: async (orderID) => {
+      const captureIdempotencyKey = `paypal-capture:${campaignId}:${orderID}`;
       const res = await fetch(`${API_BASE_URL}/paypal/capture-order`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           Authorization: token ? `Bearer ${token}` : "",
+          "Idempotency-Key": captureIdempotencyKey,
         },
-        body: JSON.stringify({ orderID, campaignId }),
+        body: JSON.stringify({
+          orderID,
+          campaignId,
+          isAnonymous: isAnonymousDonation,
+        }),
       });
       if (!res.ok) {
         const json = await res.json().catch(() => ({}));
@@ -169,6 +178,15 @@ export default function Donate() {
     return Math.max(0, campaign.target - campaign.raised);
   }, [campaign]);
 
+  const campaignEnded = useMemo(() => {
+    if (!campaign) return false;
+    return (
+      campaign.status === "expired" ||
+      campaign.status === "inactive" ||
+      campaign.isDonationEnabled === false
+    );
+  }, [campaign]);
+
   // If campaignId is missing or loading
   if (!campaignId || loadingCampaign || loadingPaypalConfig) {
     return (
@@ -176,7 +194,9 @@ export default function Donate() {
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
           <p className="text-gray-600">
-            {loadingPaypalConfig ? "Loading payment system..." : "Loading campaign..."}
+            {loadingPaypalConfig
+              ? "Loading payment system..."
+              : "Loading campaign..."}
           </p>
         </div>
       </div>
@@ -332,9 +352,15 @@ export default function Donate() {
           <div className="space-y-6">
             {/* Header & Badge */}
             <div>
-              <Badge className="bg-gradient-to-r from-blue-500 to-indigo-500 text-white mb-4">
+              <Badge
+                className={
+                  campaignEnded
+                    ? "bg-slate-700 text-white mb-4"
+                    : "bg-gradient-to-r from-blue-500 to-indigo-500 text-white mb-4"
+                }
+              >
                 <Heart className="h-4 w-4 mr-2" />
-                Support This Cause
+                {campaignEnded ? "Campaign Ended" : "Support This Cause"}
               </Badge>
               <h1 className="text-3xl font-bold text-gray-900 mb-4">
                 {campaign.title}
@@ -437,7 +463,18 @@ export default function Donate() {
                 )}
 
                 {/* If target is already met, show disabled button instead of the form */}
-                {remainingAmount <= 0 ? (
+                {campaignEnded ? (
+                  <div className="text-center">
+                    <FundraisingButton
+                      variant="outline-donate"
+                      size="lg"
+                      fullWidth
+                      disabled
+                    >
+                      Donations Disabled (Campaign Ended)
+                    </FundraisingButton>
+                  </div>
+                ) : remainingAmount <= 0 ? (
                   <div className="text-center">
                     <FundraisingButton
                       variant="outline-donate"
@@ -505,6 +542,22 @@ export default function Donate() {
                       </div>
                     </div>
 
+                    {/* Privacy Option */}
+                    <label className="flex items-start gap-3 rounded-xl border border-gray-200 p-4 bg-white">
+                      <input
+                        type="checkbox"
+                        className="mt-1"
+                        checked={isAnonymousDonation}
+                        onChange={(e) =>
+                          setIsAnonymousDonation(e.target.checked)
+                        }
+                      />
+                      <span className="text-sm text-gray-700">
+                        Donate anonymously. Your identity will be hidden in
+                        donor lists and shown as Anonymous Donor.
+                      </span>
+                    </label>
+
                     {/* PayPal Buttons */}
                     <div className="space-y-4">
                       {paypalClientId ? (
@@ -535,7 +588,8 @@ export default function Donate() {
                                 return orderID;
                               } catch (error) {
                                 setErrorMsg(
-                                  error.message || "Failed to create PayPal order"
+                                  error.message ||
+                                    "Failed to create PayPal order",
                                 );
                                 throw error;
                               }
@@ -543,20 +597,23 @@ export default function Donate() {
                             onApprove={async (data) => {
                               try {
                                 await captureOrderMutation.mutateAsync(
-                                  data.orderID
+                                  data.orderID,
                                 );
                               } catch (error) {
                                 setErrorMsg(
                                   error.message ||
-                                    "An error occurred with PayPal. Please try again."
+                                    "An error occurred with PayPal. Please try again.",
                                 );
                               }
                             }}
                             onError={(err) => {
                               console.error("PayPal error:", err);
-                              console.error("Error details:", JSON.stringify(err, null, 2));
+                              console.error(
+                                "Error details:",
+                                JSON.stringify(err, null, 2),
+                              );
                               setErrorMsg(
-                                "PayPal payment failed. This is usually a sandbox account issue. Please try: 1) Creating a new sandbox test account at developer.paypal.com, or 2) Using a different sandbox account."
+                                "PayPal payment failed. This is usually a sandbox account issue. Please try: 1) Creating a new sandbox test account at developer.paypal.com, or 2) Using a different sandbox account.",
                               );
                             }}
                             onCancel={() => setErrorMsg("Payment canceled.")}
@@ -565,7 +622,8 @@ export default function Donate() {
                       ) : (
                         <div className="bg-red-50 border border-red-200 rounded-xl p-4">
                           <p className="text-red-800 text-sm">
-                            Payment system is currently unavailable. Please try again later.
+                            Payment system is currently unavailable. Please try
+                            again later.
                           </p>
                         </div>
                       )}

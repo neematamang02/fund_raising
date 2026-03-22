@@ -53,11 +53,25 @@ export default function NavigationBar() {
     setOpen(false);
   };
 
+  const getRoleHomePath = () => {
+    if (user?.role === "admin") return ROUTES.ADMIN_DASHBOARD;
+    if (user?.role === "organizer") return ROUTES.ORGANIZER_DASHBOARD;
+    return ROUTES.HOME;
+  };
+
   // Dynamically build navigation links
+  const shouldShowPublicLinks = !user || user.role === "donor";
   const navLinks = [
-    { name: "Home", path: ROUTES.HOME, icon: Home2 },
-    { name: "About Us", path: ROUTES.ABOUT, icon: InfoCircle },
-    { name: "Donate", path: ROUTES.DONATE, icon: Heart },
+    ...(shouldShowPublicLinks
+      ? [
+          { name: "Home", path: ROUTES.HOME, icon: Home2 },
+          { name: "About Us", path: ROUTES.ABOUT, icon: InfoCircle },
+          { name: "Donate", path: ROUTES.DONATE, icon: Heart },
+        ]
+      : []),
+    ...(user
+      ? [{ name: "Notifications", path: ROUTES.NOTIFICATIONS, icon: Setting2 }]
+      : []),
     ...(user?.role === "admin"
       ? [
           {
@@ -69,6 +83,11 @@ export default function NavigationBar() {
             name: "Applications",
             path: ROUTES.ADMIN_APPLICATIONS,
             icon: Setting2,
+          },
+          {
+            name: "Organizer Profiles",
+            path: ROUTES.ADMIN_ORGANIZER_PROFILES,
+            icon: UserEdit,
           },
           {
             name: "Campaigns",
@@ -97,7 +116,19 @@ export default function NavigationBar() {
           },
         ]
       : user?.role === "organizer"
-        ? [{ name: "My Campaigns", path: ROUTES.MY_CAMPAIGNS, icon: Heart }]
+        ? [
+            {
+              name: "Organizer Home",
+              path: ROUTES.ORGANIZER_DASHBOARD,
+              icon: Grid2,
+            },
+            { name: "My Campaigns", path: ROUTES.MY_CAMPAIGNS, icon: Heart },
+            {
+              name: "Organizer Profile",
+              path: ROUTES.ORGANIZER_PROFILE,
+              icon: UserEdit,
+            },
+          ]
         : user
           ? [
               {
@@ -113,6 +144,11 @@ export default function NavigationBar() {
                       path: ROUTES.APPLY_ORGANIZER,
                       icon: UserEdit,
                     },
+                    {
+                      name: "Application Status",
+                      path: ROUTES.APPLICATION_STATUS,
+                      icon: Setting2,
+                    },
                   ]
                 : []),
             ]
@@ -126,7 +162,7 @@ export default function NavigationBar() {
           <div className="flex justify-between h-20 w-full items-center">
             {/* Logo */}
             <Link
-              to={ROUTES.HOME}
+              to={getRoleHomePath()}
               className="text-2xl font-bold text-white hover:text-amber-300 transition-colors duration-300 flex items-center gap-2"
             >
               <Heart size={24} variant="Broken" className="text-amber-300" />
@@ -177,13 +213,7 @@ export default function NavigationBar() {
                     <FundraisingButton
                       variant="trust"
                       size="default"
-                      onClick={() =>
-                        handleNavigation(
-                          user?.role === "admin"
-                            ? ROUTES.ADMIN_DASHBOARD
-                            : ROUTES.DASHBOARD,
-                        )
-                      }
+                      onClick={() => handleNavigation(getRoleHomePath())}
                     >
                       <Profile size={18} variant="Broken" />
                       {user.name}
@@ -317,11 +347,7 @@ export default function NavigationBar() {
                       size="default"
                       fullWidth
                       onClick={() => {
-                        handleNavigation(
-                          user?.role === "admin"
-                            ? ROUTES.ADMIN_DASHBOARD
-                            : ROUTES.DASHBOARD,
-                        );
+                        handleNavigation(getRoleHomePath());
                         setOpen(false);
                       }}
                     >

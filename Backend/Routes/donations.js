@@ -38,7 +38,7 @@ router.get("/me", requireAuth, async (req, res) => {
 
     const [donations, total] = await Promise.all([
       Donation.find({ donorEmail: req.user.email })
-        .populate("campaign", "title imageURL")
+        .populate("campaign", "title imageURL status endedAt isDonationEnabled")
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(limit)

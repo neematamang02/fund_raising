@@ -54,18 +54,22 @@ export default function MyDonations() {
       const res = await fetch("/api/donations/me", {
         headers: { Authorization: `Bearer ${token}` },
       });
-      
+
       if (!res.ok) {
         const errorData = await res.json().catch(() => ({}));
-        
+
         // Handle 403 Forbidden specifically
         if (res.status === 403) {
-          throw new Error("Access denied. Please ensure you have donor role to view donations.");
+          throw new Error(
+            "Access denied. Please ensure you have donor role to view donations.",
+          );
         }
-        
-        throw new Error(errorData.message || `Failed to load donations (${res.status})`);
+
+        throw new Error(
+          errorData.message || `Failed to load donations (${res.status})`,
+        );
       }
-      
+
       const data = await res.json();
       console.log("Donations data received:", data);
       return data;
@@ -108,7 +112,7 @@ export default function MyDonations() {
     const totalDonations = donations.length;
     const averageDonation = totalAmount / totalDonations;
     const completedDonations = donations.filter(
-      (d) => d.status === "COMPLETED" || d.status === "completed"
+      (d) => d.status === "COMPLETED" || d.status === "completed",
     ).length;
     const successRate = (completedDonations / totalDonations) * 100;
 
@@ -124,7 +128,7 @@ export default function MyDonations() {
 
     // Get unique campaigns supported
     const uniqueCampaigns = new Set(
-      donations.map((d) => d.campaign?._id).filter(Boolean)
+      donations.map((d) => d.campaign?._id).filter(Boolean),
     ).size;
 
     return {
@@ -148,7 +152,7 @@ export default function MyDonations() {
       const matchesSearch = campaignTitle
         .toLowerCase()
         .includes(searchTerm.toLowerCase());
-      
+
       // Normalize status for comparison
       const donationStatus = (donation.status || "").toLowerCase();
       const matchesStatus =
@@ -196,7 +200,7 @@ export default function MyDonations() {
 
   const getStatusBadge = (status) => {
     const normalizedStatus = (status || "").toLowerCase();
-    
+
     switch (normalizedStatus) {
       case "completed":
         return (
@@ -226,6 +230,23 @@ export default function MyDonations() {
           </Badge>
         );
     }
+  };
+
+  const getCampaignLifecycleBadge = (campaign) => {
+    if (!campaign) return null;
+
+    const isEnded =
+      campaign.status === "expired" ||
+      campaign.status === "inactive" ||
+      campaign.isDonationEnabled === false;
+
+    if (!isEnded) return null;
+
+    return (
+      <Badge className="bg-slate-100 text-slate-800 border-slate-300">
+        Campaign Ended
+      </Badge>
+    );
   };
 
   if (isLoading) {
@@ -456,7 +477,7 @@ export default function MyDonations() {
                   {donationStats?.recentDonation
                     ? Math.floor(
                         (new Date() - new Date(donationStats.recentDonation)) /
-                          (1000 * 60 * 60 * 24)
+                          (1000 * 60 * 60 * 24),
                       )
                     : 0}
                 </div>
@@ -553,9 +574,7 @@ export default function MyDonations() {
                   <div className="flex-1">
                     <div className="flex items-start gap-4">
                       <img
-                        src={
-                          donation.campaign?.imageURL || "/placeholder.svg"
-                        }
+                        src={donation.campaign?.imageURL || "/placeholder.svg"}
                         alt={donation.campaign?.title || "Campaign"}
                         className="w-16 h-16 rounded-xl object-cover flex-shrink-0"
                       />
@@ -573,7 +592,7 @@ export default function MyDonations() {
                                   year: "numeric",
                                   month: "short",
                                   day: "numeric",
-                                }
+                                },
                               )}
                             </span>
                           </div>
@@ -585,7 +604,7 @@ export default function MyDonations() {
                                 {
                                   hour: "2-digit",
                                   minute: "2-digit",
-                                }
+                                },
                               )}
                             </span>
                           </div>
@@ -607,6 +626,7 @@ export default function MyDonations() {
 
                     <div className="flex flex-col items-center lg:items-end gap-2">
                       {getStatusBadge(donation.status)}
+                      {getCampaignLifecycleBadge(donation.campaign)}
                       {donation.campaign?._id && (
                         <Link to={`/donate/${donation.campaign._id}`}>
                           <FundraisingButton variant="ghost-trust" size="sm">

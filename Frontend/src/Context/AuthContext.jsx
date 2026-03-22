@@ -1,8 +1,9 @@
 import React, { createContext, useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import ROUTES from "@/routes/routes";
 
-const API_BASE_URL = import.meta.env.VITE_BACKEND_URL 
-  ? `${import.meta.env.VITE_BACKEND_URL}/api` 
+const API_BASE_URL = import.meta.env.VITE_BACKEND_URL
+  ? `${import.meta.env.VITE_BACKEND_URL}/api`
   : "/api";
 
 export const AuthContext = createContext({
@@ -83,7 +84,7 @@ export function AuthProvider({ children }) {
       return false;
     }
   };
-  
+
   const switchRole = async (newRole) => {
     if (!token) return false;
     try {
@@ -98,6 +99,13 @@ export function AuthProvider({ children }) {
       if (!res.ok) throw new Error();
       // Update just the role in the `user` object we already have:
       setUser((prev) => (prev ? { ...prev, role: newRole } : prev));
+
+      if (newRole === "organizer") {
+        navigate(ROUTES.ORGANIZER_DASHBOARD);
+      } else if (newRole === "donor") {
+        navigate(ROUTES.DASHBOARD);
+      }
+
       return true;
     } catch {
       return false;

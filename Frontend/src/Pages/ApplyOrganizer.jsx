@@ -3,7 +3,7 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation } from "@tanstack/react-query";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { AuthContext } from "@/Context/AuthContext";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -38,8 +38,8 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 
-const API_BASE_URL = import.meta.env.VITE_BACKEND_URL 
-  ? `${import.meta.env.VITE_BACKEND_URL}/api` 
+const API_BASE_URL = import.meta.env.VITE_BACKEND_URL
+  ? `${import.meta.env.VITE_BACKEND_URL}/api`
   : "/api";
 
 // Enhanced Zod schema
@@ -52,15 +52,27 @@ const applicationSchema = z.object({
     .string()
     .min(50, "Please provide at least 50 characters describing your cause")
     .max(1000, "Description must be less than 1000 characters"),
-  contactEmail: z.string().email("Invalid email address").optional().or(z.literal("")),
+  contactEmail: z
+    .string()
+    .email("Invalid email address")
+    .optional()
+    .or(z.literal("")),
   phoneNumber: z.string().optional(),
   website: z.string().url("Invalid URL").optional().or(z.literal("")),
-  organizationType: z.enum(["nonprofit", "charity", "individual", "business", "other"]),
+  organizationType: z.enum([
+    "nonprofit",
+    "charity",
+    "individual",
+    "business",
+    "other",
+  ]),
 });
 
 export default function ApplyOrganizer() {
   const { user, loading } = useContext(AuthContext);
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const resubmitId = searchParams.get("resubmit");
   const [step, setStep] = useState(1); // 1 = Basic Info, 2 = Documents
   const [applicationId, setApplicationId] = useState(null);
 
@@ -99,8 +111,13 @@ export default function ApplyOrganizer() {
   // Submit basic application
   const applicationMutation = useMutation({
     mutationFn: async (values) => {
-      const res = await fetch(`${API_BASE_URL}/organizer/apply`, {
-        method: "POST",
+      const endpoint = resubmitId
+        ? `${API_BASE_URL}/organizer/applications/${resubmitId}/resubmit`
+        : `${API_BASE_URL}/organizer/apply`;
+      const method = resubmitId ? "PATCH" : "POST";
+
+      const res = await fetch(endpoint, {
+        method,
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${localStorage.getItem("token")}`,
@@ -109,16 +126,27 @@ export default function ApplyOrganizer() {
       });
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
-        throw new Error(err.message || "Application failed");
+        const error = new Error(err.message || "Application failed");
+        error.status = res.status;
+        throw error;
       }
       return res.json();
     },
     onSuccess: (data) => {
       setApplicationId(data.applicationId);
       setStep(2); // Move to documents step
-      toast.success("✅ Basic info saved! Now upload your verification documents to submit your application.");
+      toast.success(
+        "✅ Basic info saved! Now upload your verification documents to submit your application.",
+      );
     },
     onError: (err) => {
+      if (err.status === 409) {
+        toast.info(
+          "You already have an active application. Opening status page.",
+        );
+        navigate(ROUTES.APPLICATION_STATUS);
+        return;
+      }
       toast.error(err.message || "Failed to submit application");
     },
   });
@@ -126,13 +154,16 @@ export default function ApplyOrganizer() {
   // Upload documents
   const documentsMutation = useMutation({
     mutationFn: async (formData) => {
-      const res = await fetch(`${API_BASE_URL}/organizer/upload-documents/${applicationId}`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
+      const res = await fetch(
+        `${API_BASE_URL}/organizer/upload-documents/${applicationId}`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+          body: formData,
         },
-        body: formData,
-      });
+      );
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
         throw new Error(err.message || "Upload failed");
@@ -142,11 +173,11 @@ export default function ApplyOrganizer() {
     onSuccess: () => {
       toast.success(
         "🎉 Application submitted successfully! Your application is now pending admin review. We'll notify you within 2-3 business days.",
-        { duration: 6000 }
+        { duration: 6000 },
       );
       // Redirect to home after a brief delay
       setTimeout(() => {
-        navigate(ROUTES.HOME);
+        navigate(ROUTES.APPLICATION_STATUS);
       }, 2000);
     },
     onError: (err) => {
@@ -161,13 +192,15 @@ export default function ApplyOrganizer() {
   const onSubmitDocuments = () => {
     // Validate required documents
     if (!documents.governmentId || !documents.selfieWithId) {
-      toast.error("Please upload required identity documents (Government ID and Selfie with ID)");
+      toast.error(
+        "Please upload required identity documents (Government ID and Selfie with ID)",
+      );
       return;
     }
 
     // Create FormData
     const formData = new FormData();
-    
+
     if (documents.governmentId) {
       formData.append("governmentId", documents.governmentId);
     }
@@ -175,7 +208,10 @@ export default function ApplyOrganizer() {
       formData.append("selfieWithId", documents.selfieWithId);
     }
     if (documents.registrationCertificate) {
-      formData.append("registrationCertificate", documents.registrationCertificate);
+      formData.append(
+        "registrationCertificate",
+        documents.registrationCertificate,
+      );
     }
     if (documents.taxId) {
       formData.append("taxId", documents.taxId);
@@ -224,19 +260,27 @@ export default function ApplyOrganizer() {
         {/* Progress Indicator */}
         <div className="mb-8">
           <div className="flex items-center justify-center gap-4">
-            <div className={`flex items-center gap-2 ${step >= 1 ? "text-blue-600" : "text-gray-400"}`}>
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                step >= 1 ? "bg-blue-600 text-white" : "bg-gray-300"
-              }`}>
+            <div
+              className={`flex items-center gap-2 ${step >= 1 ? "text-blue-600" : "text-gray-400"}`}
+            >
+              <div
+                className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                  step >= 1 ? "bg-blue-600 text-white" : "bg-gray-300"
+                }`}
+              >
                 1
               </div>
               <span className="font-medium">Basic Info</span>
             </div>
             <ArrowRight className="text-gray-400" />
-            <div className={`flex items-center gap-2 ${step >= 2 ? "text-blue-600" : "text-gray-400"}`}>
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                step >= 2 ? "bg-blue-600 text-white" : "bg-gray-300"
-              }`}>
+            <div
+              className={`flex items-center gap-2 ${step >= 2 ? "text-blue-600" : "text-gray-400"}`}
+            >
+              <div
+                className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                  step >= 2 ? "bg-blue-600 text-white" : "bg-gray-300"
+                }`}
+              >
                 2
               </div>
               <span className="font-medium">Documents</span>
@@ -277,7 +321,9 @@ export default function ApplyOrganizer() {
                   </div>
 
                   <div>
-                    <Label htmlFor="organizationType">Organization Type *</Label>
+                    <Label htmlFor="organizationType">
+                      Organization Type *
+                    </Label>
                     <Select
                       onValueChange={(value) =>
                         form.setValue("organizationType", value)
@@ -288,10 +334,16 @@ export default function ApplyOrganizer() {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="nonprofit">Non-Profit Organization</SelectItem>
-                        <SelectItem value="charity">Registered Charity</SelectItem>
+                        <SelectItem value="nonprofit">
+                          Non-Profit Organization
+                        </SelectItem>
+                        <SelectItem value="charity">
+                          Registered Charity
+                        </SelectItem>
                         <SelectItem value="individual">Individual</SelectItem>
-                        <SelectItem value="business">Social Enterprise/Business</SelectItem>
+                        <SelectItem value="business">
+                          Social Enterprise/Business
+                        </SelectItem>
                         <SelectItem value="other">Other</SelectItem>
                       </SelectContent>
                     </Select>
@@ -368,10 +420,13 @@ export default function ApplyOrganizer() {
                   <div className="flex items-start gap-3">
                     <AlertCircle className="h-5 w-5 text-blue-600 mt-0.5 flex-shrink-0" />
                     <div className="text-sm text-blue-800">
-                      <p className="font-medium mb-1">Next Step: Document Verification</p>
+                      <p className="font-medium mb-1">
+                        Next Step: Document Verification
+                      </p>
                       <p>
-                        After submitting this form, you'll need to upload verification documents including:
-                        Government ID, Selfie with ID, and other supporting documents.
+                        After submitting this form, you'll need to upload
+                        verification documents including: Government ID, Selfie
+                        with ID, and other supporting documents.
                       </p>
                     </div>
                   </div>
@@ -408,8 +463,17 @@ export default function ApplyOrganizer() {
                 <div className="flex items-start gap-3">
                   <AlertCircle className="h-5 w-5 text-amber-600 mt-0.5" />
                   <div className="text-sm text-amber-800">
-                    <p className="font-medium mb-1">⚡ Final Step - Required Documents</p>
-                    <p>Upload clear, legible copies of your documents. <strong>Government ID and Selfie with ID are required.</strong> Once you submit, your application will be sent to admin for review.</p>
+                    <p className="font-medium mb-1">
+                      ⚡ Final Step - Required Documents
+                    </p>
+                    <p>
+                      Upload clear, legible copies of your documents.{" "}
+                      <strong>
+                        Government ID and Selfie with ID are required.
+                      </strong>{" "}
+                      Once you submit, your application will be sent to admin
+                      for review.
+                    </p>
                   </div>
                 </div>
               </div>
@@ -420,13 +484,13 @@ export default function ApplyOrganizer() {
                   <UserCheck className="h-5 w-5 text-purple-600" />
                   Identity Verification (Required)
                 </h3>
-                
+
                 <DocumentUploader
                   label="Government-Issued ID"
                   description="Passport, Driver's License, or National ID Card"
                   required
-                  onFileSelect={(file) => 
-                    setDocuments(prev => ({ ...prev, governmentId: file }))
+                  onFileSelect={(file) =>
+                    setDocuments((prev) => ({ ...prev, governmentId: file }))
                   }
                 />
 
@@ -434,8 +498,8 @@ export default function ApplyOrganizer() {
                   label="Selfie with ID"
                   description="Take a photo of yourself holding your ID next to your face"
                   required
-                  onFileSelect={(file) => 
-                    setDocuments(prev => ({ ...prev, selfieWithId: file }))
+                  onFileSelect={(file) =>
+                    setDocuments((prev) => ({ ...prev, selfieWithId: file }))
                   }
                 />
               </div>
@@ -446,28 +510,31 @@ export default function ApplyOrganizer() {
                   <FileText className="h-5 w-5 text-blue-600" />
                   Organization Documents (Optional but Recommended)
                 </h3>
-                
+
                 <DocumentUploader
                   label="Registration Certificate"
                   description="For nonprofits/charities: Official registration documents"
-                  onFileSelect={(file) => 
-                    setDocuments(prev => ({ ...prev, registrationCertificate: file }))
+                  onFileSelect={(file) =>
+                    setDocuments((prev) => ({
+                      ...prev,
+                      registrationCertificate: file,
+                    }))
                   }
                 />
 
                 <DocumentUploader
                   label="Tax ID / EIN"
                   description="Tax identification number document"
-                  onFileSelect={(file) => 
-                    setDocuments(prev => ({ ...prev, taxId: file }))
+                  onFileSelect={(file) =>
+                    setDocuments((prev) => ({ ...prev, taxId: file }))
                   }
                 />
 
                 <DocumentUploader
                   label="Address Proof"
                   description="Utility bill or bank statement (within last 3 months)"
-                  onFileSelect={(file) => 
-                    setDocuments(prev => ({ ...prev, addressProof: file }))
+                  onFileSelect={(file) =>
+                    setDocuments((prev) => ({ ...prev, addressProof: file }))
                   }
                 />
               </div>
@@ -492,7 +559,11 @@ export default function ApplyOrganizer() {
                   onClick={onSubmitDocuments}
                   loading={documentsMutation.isPending}
                   loadingText="Uploading..."
-                  disabled={documentsMutation.isPending || !documents.governmentId || !documents.selfieWithId}
+                  disabled={
+                    documentsMutation.isPending ||
+                    !documents.governmentId ||
+                    !documents.selfieWithId
+                  }
                   className="flex-1"
                 >
                   <Sparkles className="h-5 w-5" />

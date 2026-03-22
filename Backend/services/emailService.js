@@ -5,14 +5,22 @@ import nodemailer from "nodemailer";
  * Handles all email communications related to organizer applications
  */
 
-// Configure nodemailer transporter
-const transporter = nodemailer.createTransport({
-  service: "gmail",
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS,
-  },
-});
+let transporter;
+
+function getTransporter() {
+  if (!transporter) {
+    // Create transporter on first use so runtime env values are available.
+    transporter = nodemailer.createTransport({
+      service: "gmail",
+      auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS,
+      },
+    });
+  }
+
+  return transporter;
+}
 
 /**
  * Send email notification when application is submitted
@@ -55,12 +63,14 @@ export const sendApplicationSubmittedEmail = async (user, application) => {
               <h3 style="margin-top: 0; color: #667eea;">📋 Application Details</h3>
               <p><strong>Organization:</strong> ${application.organizationName}</p>
               <p><strong>Type:</strong> ${application.organizationType}</p>
-              <p><strong>Submitted:</strong> ${new Date(application.createdAt).toLocaleDateString('en-US', { 
-                year: 'numeric', 
-                month: 'long', 
-                day: 'numeric',
-                hour: '2-digit',
-                minute: '2-digit'
+              <p><strong>Submitted:</strong> ${new Date(
+                application.createdAt,
+              ).toLocaleDateString("en-US", {
+                year: "numeric",
+                month: "long",
+                day: "numeric",
+                hour: "2-digit",
+                minute: "2-digit",
               })}</p>
               <p><strong>Application ID:</strong> ${application._id}</p>
             </div>
@@ -111,7 +121,7 @@ export const sendApplicationSubmittedEmail = async (user, application) => {
   };
 
   try {
-    await transporter.sendMail(mailOptions);
+    await getTransporter().sendMail(mailOptions);
     console.log(`✅ Application submitted email sent to ${user.email}`);
   } catch (error) {
     console.error("❌ Error sending application submitted email:", error);
@@ -201,12 +211,14 @@ export const sendApplicationApprovedEmail = async (user, application) => {
               <h3 style="margin-top: 0; color: #10b981;">📋 Application Details</h3>
               <p><strong>Organization:</strong> ${application.organizationName}</p>
               <p><strong>Type:</strong> ${application.organizationType}</p>
-              <p><strong>Approved On:</strong> ${new Date(application.reviewedAt).toLocaleDateString('en-US', { 
-                year: 'numeric', 
-                month: 'long', 
-                day: 'numeric',
-                hour: '2-digit',
-                minute: '2-digit'
+              <p><strong>Approved On:</strong> ${new Date(
+                application.reviewedAt,
+              ).toLocaleDateString("en-US", {
+                year: "numeric",
+                month: "long",
+                day: "numeric",
+                hour: "2-digit",
+                minute: "2-digit",
               })}</p>
             </div>
 
@@ -227,7 +239,7 @@ export const sendApplicationApprovedEmail = async (user, application) => {
   };
 
   try {
-    await transporter.sendMail(mailOptions);
+    await getTransporter().sendMail(mailOptions);
     console.log(`✅ Application approved email sent to ${user.email}`);
   } catch (error) {
     console.error("❌ Error sending application approved email:", error);
@@ -241,7 +253,11 @@ export const sendApplicationApprovedEmail = async (user, application) => {
  * @param {Object} application - Application object with details
  * @param {String} rejectionReason - Reason for rejection
  */
-export const sendApplicationRejectedEmail = async (user, application, rejectionReason) => {
+export const sendApplicationRejectedEmail = async (
+  user,
+  application,
+  rejectionReason,
+) => {
   const mailOptions = {
     from: process.env.EMAIL_USER,
     to: user.email,
@@ -273,7 +289,7 @@ export const sendApplicationRejectedEmail = async (user, application, rejectionR
 
             <div class="warning-box">
               <h3 style="margin-top: 0; color: #dc2626;">📋 Reason for Decision</h3>
-              <p style="margin: 0; font-size: 15px; white-space: pre-wrap;">${rejectionReason || 'Your application did not meet our current requirements.'}</p>
+              <p style="margin: 0; font-size: 15px; white-space: pre-wrap;">${rejectionReason || "Your application did not meet our current requirements."}</p>
             </div>
 
             <div class="info-box">
@@ -294,12 +310,14 @@ export const sendApplicationRejectedEmail = async (user, application, rejectionR
               <h3 style="margin-top: 0; color: #6b7280;">📋 Application Details</h3>
               <p><strong>Organization:</strong> ${application.organizationName}</p>
               <p><strong>Type:</strong> ${application.organizationType}</p>
-              <p><strong>Reviewed On:</strong> ${new Date(application.reviewedAt).toLocaleDateString('en-US', { 
-                year: 'numeric', 
-                month: 'long', 
-                day: 'numeric',
-                hour: '2-digit',
-                minute: '2-digit'
+              <p><strong>Reviewed On:</strong> ${new Date(
+                application.reviewedAt,
+              ).toLocaleDateString("en-US", {
+                year: "numeric",
+                month: "long",
+                day: "numeric",
+                hour: "2-digit",
+                minute: "2-digit",
               })}</p>
             </div>
 
@@ -320,7 +338,7 @@ export const sendApplicationRejectedEmail = async (user, application, rejectionR
   };
 
   try {
-    await transporter.sendMail(mailOptions);
+    await getTransporter().sendMail(mailOptions);
     console.log(`✅ Application rejected email sent to ${user.email}`);
   } catch (error) {
     console.error("❌ Error sending application rejected email:", error);
@@ -334,7 +352,11 @@ export const sendApplicationRejectedEmail = async (user, application, rejectionR
  * @param {Object} application - Application object with details
  * @param {String} revokeReason - Reason for revocation
  */
-export const sendOrganizerRevokedEmail = async (user, application, revokeReason) => {
+export const sendOrganizerRevokedEmail = async (
+  user,
+  application,
+  revokeReason,
+) => {
   const mailOptions = {
     from: process.env.EMAIL_USER,
     to: user.email,
@@ -366,7 +388,7 @@ export const sendOrganizerRevokedEmail = async (user, application, revokeReason)
 
             <div class="alert-box">
               <h3 style="margin-top: 0; color: #d97706;">📋 Reason for Revocation</h3>
-              <p style="margin: 0; font-size: 15px; white-space: pre-wrap;">${revokeReason || 'Your organizer status was revoked due to policy violations or account review.'}</p>
+              <p style="margin: 0; font-size: 15px; white-space: pre-wrap;">${revokeReason || "Your organizer status was revoked due to policy violations or account review."}</p>
             </div>
 
             <div class="info-box">
@@ -396,12 +418,14 @@ export const sendOrganizerRevokedEmail = async (user, application, revokeReason)
             <div class="info-box">
               <h3 style="margin-top: 0; color: #6b7280;">📋 Revocation Details</h3>
               <p><strong>Organization:</strong> ${application.organizationName}</p>
-              <p><strong>Revoked On:</strong> ${new Date(application.reviewedAt).toLocaleDateString('en-US', { 
-                year: 'numeric', 
-                month: 'long', 
-                day: 'numeric',
-                hour: '2-digit',
-                minute: '2-digit'
+              <p><strong>Revoked On:</strong> ${new Date(
+                application.reviewedAt,
+              ).toLocaleDateString("en-US", {
+                year: "numeric",
+                month: "long",
+                day: "numeric",
+                hour: "2-digit",
+                minute: "2-digit",
               })}</p>
             </div>
 
@@ -422,7 +446,7 @@ export const sendOrganizerRevokedEmail = async (user, application, revokeReason)
   };
 
   try {
-    await transporter.sendMail(mailOptions);
+    await getTransporter().sendMail(mailOptions);
     console.log(`✅ Organizer revoked email sent to ${user.email}`);
   } catch (error) {
     console.error("❌ Error sending organizer revoked email:", error);
@@ -436,8 +460,19 @@ export const sendOrganizerRevokedEmail = async (user, application, revokeReason)
  * @param {String} name - Organizer name
  * @param {Object} withdrawalInfo - Withdrawal details
  */
-export const sendWithdrawalStatusEmail = async (email, name, withdrawalInfo) => {
-  const { status, amount, campaignTitle, reviewNotes, rejectionReason, transactionReference } = withdrawalInfo;
+export const sendWithdrawalStatusEmail = async (
+  email,
+  name,
+  withdrawalInfo,
+) => {
+  const {
+    status,
+    amount,
+    campaignTitle,
+    reviewNotes,
+    rejectionReason,
+    transactionReference,
+  } = withdrawalInfo;
 
   let subject, headerColor, headerText, statusIcon, contentHtml;
 
@@ -477,7 +512,7 @@ export const sendWithdrawalStatusEmail = async (email, name, withdrawalInfo) => 
           <p><strong>Amount:</strong> $${amount.toFixed(2)}</p>
           <p><strong>Campaign:</strong> ${campaignTitle}</p>
           <p><strong>Status:</strong> Approved</p>
-          ${reviewNotes ? `<p><strong>Admin Notes:</strong> ${reviewNotes}</p>` : ''}
+          ${reviewNotes ? `<p><strong>Admin Notes:</strong> ${reviewNotes}</p>` : ""}
         </div>
         <div style="background: #d1fae5; border-left: 4px solid #10b981; padding: 15px; border-radius: 5px; margin: 20px 0;">
           <p style="margin: 0;"><strong>⏱️ Processing Time:</strong> Funds will be transferred to your bank account within 3-7 business days.</p>
@@ -495,14 +530,14 @@ export const sendWithdrawalStatusEmail = async (email, name, withdrawalInfo) => 
         <p>We regret to inform you that your withdrawal request could not be approved at this time.</p>
         <div class="warning-box">
           <h3 style="margin-top: 0; color: #dc2626;">📋 Reason for Rejection</h3>
-          <p style="margin: 0; font-size: 15px; white-space: pre-wrap;">${rejectionReason || 'Your request did not meet our verification requirements.'}</p>
+          <p style="margin: 0; font-size: 15px; white-space: pre-wrap;">${rejectionReason || "Your request did not meet our verification requirements."}</p>
         </div>
         <div class="info-box">
           <h3 style="margin-top: 0; color: #ef4444;">📋 Request Details</h3>
           <p><strong>Amount:</strong> $${amount.toFixed(2)}</p>
           <p><strong>Campaign:</strong> ${campaignTitle}</p>
           <p><strong>Status:</strong> Rejected</p>
-          ${reviewNotes ? `<p><strong>Admin Notes:</strong> ${reviewNotes}</p>` : ''}
+          ${reviewNotes ? `<p><strong>Admin Notes:</strong> ${reviewNotes}</p>` : ""}
         </div>
         <div class="info-box">
           <h3 style="margin-top: 0; color: #3b82f6;">🔄 What You Can Do</h3>
@@ -531,8 +566,8 @@ export const sendWithdrawalStatusEmail = async (email, name, withdrawalInfo) => 
           <p><strong>Amount:</strong> $${amount.toFixed(2)}</p>
           <p><strong>Campaign:</strong> ${campaignTitle}</p>
           <p><strong>Status:</strong> Completed</p>
-          ${transactionReference ? `<p><strong>Transaction Reference:</strong> ${transactionReference}</p>` : ''}
-          ${reviewNotes ? `<p><strong>Admin Notes:</strong> ${reviewNotes}</p>` : ''}
+          ${transactionReference ? `<p><strong>Transaction Reference:</strong> ${transactionReference}</p>` : ""}
+          ${reviewNotes ? `<p><strong>Admin Notes:</strong> ${reviewNotes}</p>` : ""}
         </div>
         <div style="background: #d1fae5; border-left: 4px solid #10b981; padding: 15px; border-radius: 5px; margin: 20px 0;">
           <p style="margin: 0;"><strong>💡 Note:</strong> It may take 1-2 business days for the funds to appear in your bank account depending on your bank's processing time.</p>
@@ -588,7 +623,7 @@ export const sendWithdrawalStatusEmail = async (email, name, withdrawalInfo) => 
   };
 
   try {
-    await transporter.sendMail(mailOptions);
+    await getTransporter().sendMail(mailOptions);
     console.log(`✅ Withdrawal status email sent to ${email}`);
   } catch (error) {
     console.error("❌ Error sending withdrawal status email:", error);
@@ -599,7 +634,7 @@ export const sendWithdrawalStatusEmail = async (email, name, withdrawalInfo) => 
 // Test email configuration
 export const testEmailConnection = async () => {
   try {
-    await transporter.verify();
+    await getTransporter().verify();
     console.log("✅ Email service is ready to send messages");
     return true;
   } catch (error) {
@@ -614,7 +649,11 @@ export const testEmailConnection = async () => {
  * @param {Object} campaign - Campaign object
  * @param {Object} withdrawalRequest - Withdrawal request object
  */
-export const sendWithdrawalRequestEmail = async (organizer, campaign, withdrawalRequest) => {
+export const sendWithdrawalRequestEmail = async (
+  organizer,
+  campaign,
+  withdrawalRequest,
+) => {
   const mailOptions = {
     from: process.env.EMAIL_USER,
     to: organizer.email,
@@ -694,7 +733,7 @@ export const sendWithdrawalRequestEmail = async (organizer, campaign, withdrawal
   };
 
   try {
-    await transporter.sendMail(mailOptions);
+    await getTransporter().sendMail(mailOptions);
     console.log(`✅ Withdrawal request email sent to ${organizer.email}`);
   } catch (error) {
     console.error("❌ Error sending withdrawal request email:", error);

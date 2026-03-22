@@ -59,11 +59,12 @@ export function CampaignList() {
 
   // Filter and sort campaigns
   const filteredAndSortedCampaigns = useMemo(() => {
-    if (!campaigns || !Array.isArray(campaigns) || campaigns.length === 0) return [];
+    if (!campaigns || !Array.isArray(campaigns) || campaigns.length === 0)
+      return [];
 
     const filtered = campaigns.filter((campaign) => {
       if (!campaign) return false;
-      
+
       const title = campaign.title || "";
       const description = campaign.description || "";
       const matchesSearch =
@@ -99,13 +100,13 @@ export function CampaignList() {
 
   // Calculate pagination values
   const totalPages = Math.ceil(
-    filteredAndSortedCampaigns.length / itemsPerPage
+    filteredAndSortedCampaigns.length / itemsPerPage,
   );
   const paginatedCampaigns = useMemo(() => {
     const startIndex = (currentPage - 1) * itemsPerPage;
     return filteredAndSortedCampaigns.slice(
       startIndex,
-      startIndex + itemsPerPage
+      startIndex + itemsPerPage,
     );
   }, [filteredAndSortedCampaigns, currentPage]);
 
@@ -142,7 +143,7 @@ export function CampaignList() {
   const getUrgencyBadge = (campaign) => {
     const progress = getProgressPercentage(
       campaign.raised || 0,
-      campaign.target
+      campaign.target,
     );
     const daysLeft = campaign.daysLeft || 30;
 
@@ -351,8 +352,10 @@ export function CampaignList() {
             {paginatedCampaigns.map((campaign) => {
               const progress = getProgressPercentage(
                 campaign.raised || 0,
-                campaign.target
+                campaign.target,
               );
+              const isEnded =
+                campaign.status === "expired" || campaign.status === "inactive";
 
               return (
                 <Card
@@ -378,6 +381,11 @@ export function CampaignList() {
                       {campaign.category && (
                         <Badge className={getCategoryColor(campaign.category)}>
                           {campaign.category}
+                        </Badge>
+                      )}
+                      {isEnded && (
+                        <Badge className="bg-slate-800 text-white border-slate-700">
+                          Ended
                         </Badge>
                       )}
                       {getUrgencyBadge(campaign)}
@@ -447,17 +455,28 @@ export function CampaignList() {
                     </div>
 
                     {/* Action Button */}
-                    <Link to={`/donate/${campaign._id}`} className="block">
+                    {isEnded ? (
                       <FundraisingButton
-                        variant="donate"
+                        variant="ghost-trust"
                         size="lg"
                         fullWidth
-                        className="group"
+                        disabled
                       >
-                        <Heart className="h-5 w-5 group-hover:scale-110 transition-transform" />
-                        Support This Cause
+                        Campaign Ended
                       </FundraisingButton>
-                    </Link>
+                    ) : (
+                      <Link to={`/donate/${campaign._id}`} className="block">
+                        <FundraisingButton
+                          variant="donate"
+                          size="lg"
+                          fullWidth
+                          className="group"
+                        >
+                          <Heart className="h-5 w-5 group-hover:scale-110 transition-transform" />
+                          Support This Cause
+                        </FundraisingButton>
+                      </Link>
+                    )}
                   </div>
                 </Card>
               );

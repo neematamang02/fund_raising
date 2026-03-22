@@ -176,11 +176,32 @@ import Campaign from "../Models/Campaign.js";
 
 const router = Router();
 
+async function expireDueCampaigns() {
+  const now = new Date();
+  await Campaign.updateMany(
+    {
+      status: "active",
+      isDonationEnabled: true,
+      deadlineAt: { $lte: now },
+    },
+    {
+      $set: {
+        status: "expired",
+        isDonationEnabled: false,
+        endedAt: now,
+        expiresProcessedAt: now,
+      },
+    },
+  );
+}
+
 /**
  * GET /api/campaigns?owner=<userId>&page=1&limit=10
  */
 router.get("/", async (req, res) => {
   try {
+    await expireDueCampaigns();
+
     const filter = {};
     if (req.query.owner) {
       if (!mongoose.isValidObjectId(req.query.owner)) {
@@ -188,12 +209,23 @@ router.get("/", async (req, res) => {
       }
       filter.owner = req.query.owner;
     }
-    
+
+    if (req.query.status) {
+      const allowedStatuses = ["active", "expired", "inactive"];
+      if (!allowedStatuses.includes(req.query.status)) {
+        return res.status(400).json({ message: "Invalid status filter." });
+      }
+      filter.status = req.query.status;
+    } else {
+      // Public campaign list should not include manually inactivated campaigns by default.
+      filter.status = { $ne: "inactive" };
+    }
+
     // Pagination
     const page = parseInt(req.query.page) || 1;
     const limit = Math.min(parseInt(req.query.limit) || 20, 100); // Max 100 per page
     const skip = (page - 1) * limit;
-    
+
     const [campaigns, total] = await Promise.all([
       Campaign.find(filter)
         .populate("owner", "name email")
@@ -203,7 +235,7 @@ router.get("/", async (req, res) => {
         .lean(),
       Campaign.countDocuments(filter),
     ]);
-    
+
     return res.json({
       campaigns,
       pagination: {
@@ -256,14 +288,34 @@ router.get(
         .populate("donor", "name email")
         .sort({ createdAt: -1 }); // newest first
 
-      return res.json(donations);
+      const sanitizedDonations = donations.map((donation) => {
+        const item = donation.toObject();
+
+        if (item.isAnonymous) {
+          item.payerName = "Anonymous Donor";
+          item.payerEmail = null;
+          item.donorEmail = null;
+
+          if (item.donor) {
+            item.donor = {
+              ...item.donor,
+              name: "Anonymous Donor",
+              email: null,
+            };
+          }
+        }
+
+        return item;
+      });
+
+      return res.json(sanitizedDonations);
     } catch (err) {
       console.error("Fetch Donors Error:", err);
       return res
         .status(500)
         .json({ message: "Server error fetching donor list." });
     }
-  }
+  },
 );
 
 /**
@@ -271,6 +323,8 @@ router.get(
  */
 router.get("/:campaignId", async (req, res) => {
   try {
+    await expireDueCampaigns();
+
     const { campaignId } = req.params;
 
     if (!mongoose.isValidObjectId(campaignId)) {
@@ -279,7 +333,7 @@ router.get("/:campaignId", async (req, res) => {
 
     const campaign = await Campaign.findById(campaignId).populate(
       "owner",
-      "name email"
+      "name email",
     );
     if (!campaign) {
       return res.status(404).json({ message: "Campaign not found." });
@@ -296,15 +350,30 @@ router.get("/:campaignId", async (req, res) => {
  */
 router.post("/", requireAuth, requireRole("organizer"), async (req, res) => {
   try {
-    const { title, description, imageURL, target } = req.body;
+    const { title, description, imageURL, target, deadlineAt, duration } =
+      req.body;
     if (!title || !description || !imageURL || !target) {
       return res.status(400).json({ message: "All fields are required." });
     }
+
+    let parsedDeadline = null;
+    if (deadlineAt) {
+      parsedDeadline = new Date(deadlineAt);
+      if (Number.isNaN(parsedDeadline.getTime())) {
+        return res.status(400).json({ message: "Invalid deadlineAt value." });
+      }
+    } else if (Number.isFinite(Number(duration)) && Number(duration) > 0) {
+      parsedDeadline = new Date(
+        Date.now() + Number(duration) * 24 * 60 * 60 * 1000,
+      );
+    }
+
     const campaign = await Campaign.create({
       title,
       description,
       imageURL,
       target,
+      ...(parsedDeadline ? { deadlineAt: parsedDeadline } : {}),
       owner: req.user.userId,
     });
     return res.status(201).json(campaign);
@@ -331,7 +400,7 @@ router.patch(
       const updated = await Campaign.findOneAndUpdate(
         { _id: campaignId, owner: req.user.userId },
         { $set: req.body },
-        { new: true, runValidators: true }
+        { new: true, runValidators: true },
       );
       if (!updated) {
         return res
@@ -343,7 +412,7 @@ router.patch(
       console.error("Update Campaign Error:", err);
       return res.status(500).json({ message: "Could not update campaign." });
     }
-  }
+  },
 );
 
 /**
@@ -360,21 +429,31 @@ router.delete(
         return res.status(400).json({ message: "Invalid campaign ID." });
       }
 
-      const deleted = await Campaign.findOneAndDelete({
-        _id: campaignId,
-        owner: req.user.userId,
-      });
+      const deleted = await Campaign.findOneAndUpdate(
+        {
+          _id: campaignId,
+          owner: req.user.userId,
+        },
+        {
+          $set: {
+            status: "inactive",
+            isDonationEnabled: false,
+            endedAt: new Date(),
+          },
+        },
+        { new: true },
+      );
       if (!deleted) {
         return res
           .status(403)
           .json({ message: "Not authorized or campaign not found." });
       }
-      return res.json({ message: "Campaign deleted." });
+      return res.json({ message: "Campaign marked as inactive." });
     } catch (err) {
       console.error("Delete Campaign Error:", err);
       return res.status(500).json({ message: "Could not delete campaign." });
     }
-  }
+  },
 );
 
 export default router;

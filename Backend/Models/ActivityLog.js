@@ -44,18 +44,27 @@ const ActivityLogSchema = new mongoose.Schema(
     relatedEntity: {
       entityType: {
         type: String,
-        enum: ["Campaign", "Donation", "WithdrawalRequest", "OrganizerApplication"],
+        enum: [
+          "Campaign",
+          "Donation",
+          "WithdrawalRequest",
+          "OrganizerApplication",
+          "OrganizerProfile",
+        ],
       },
       entityId: mongoose.Types.ObjectId,
     },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
 // Indexes for performance
 ActivityLogSchema.index({ user: 1, createdAt: -1 });
 ActivityLogSchema.index({ activityType: 1, createdAt: -1 });
-ActivityLogSchema.index({ "relatedEntity.entityType": 1, "relatedEntity.entityId": 1 });
+ActivityLogSchema.index({
+  "relatedEntity.entityType": 1,
+  "relatedEntity.entityId": 1,
+});
 ActivityLogSchema.index({ createdAt: -1 });
 
 const ActivityLog = mongoose.model("ActivityLog", ActivityLogSchema);

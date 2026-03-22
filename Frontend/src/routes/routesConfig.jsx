@@ -5,11 +5,15 @@ import RegisterPage from "@/Pages/Authentication/Registerpage";
 import Donate from "@/Pages/Donate";
 import MyDonations from "@/Pages/MyDonations";
 import ApplyOrganizer from "@/Pages/ApplyOrganizer";
+import ApplicationStatus from "@/Pages/Donor/ApplicationStatus";
 import WithdrawalRequest from "@/Pages/WithdrawalRequest";
+import OrganizerProfile from "@/Pages/Organizer/OrganizerProfile";
+import OrganizerDashboard from "@/Pages/Organizer/OrganizerDashboard";
 import About from "@/Pages/About";
 import RequireRole from "@/components/RequireRole";
 import ROUTES from "./routes";
 import Dashboard from "@/Pages/Dashboard";
+import Notifications from "@/Pages/Notifications";
 import CreateCampaign from "@/Pages/Campagincreation/CreateCampaign";
 import { CampaignList } from "@/Pages/CampaignList";
 import MyCampaigns from "@/Pages/MyCampaigns";
@@ -24,6 +28,9 @@ const AdminUsers = lazy(() => import("@/Pages/AdminUsers"));
 const AdminDonations = lazy(() => import("@/Pages/AdminDonations"));
 const AdminApplications = lazy(() => import("@/Pages/AdminApplications"));
 const AdminWithdrawals = lazy(() => import("@/Pages/AdminWithdrawals"));
+const AdminOrganizerProfiles = lazy(
+  () => import("@/Pages/AdminOrganizerProfiles"),
+);
 
 const routesConfig = [
   // Public pages
@@ -70,6 +77,22 @@ const routesConfig = [
     Component: () => (
       <RequireRole role="organizer">
         <CreateCampaign />
+      </RequireRole>
+    ),
+  },
+  {
+    path: ROUTES.ORGANIZER_DASHBOARD,
+    Component: () => (
+      <RequireRole role="organizer">
+        <OrganizerDashboard />
+      </RequireRole>
+    ),
+  },
+  {
+    path: ROUTES.ORGANIZER_PROFILE,
+    Component: () => (
+      <RequireRole role="organizer">
+        <OrganizerProfile />
       </RequireRole>
     ),
   },
@@ -124,6 +147,14 @@ const routesConfig = [
     ),
   },
   {
+    path: ROUTES.ADMIN_ORGANIZER_PROFILES,
+    Component: () => (
+      <RequireRole role="admin">
+        <AdminOrganizerProfiles />
+      </RequireRole>
+    ),
+  },
+  {
     path: ROUTES.ADMIN_WITHDRAWALS,
     Component: () => (
       <RequireRole role="admin">
@@ -152,12 +183,24 @@ const routesConfig = [
     ),
   },
   {
+    path: ROUTES.APPLICATION_STATUS,
+    Component: () => (
+      <RequireRole role="donor">
+        <ApplicationStatus />
+      </RequireRole>
+    ),
+  },
+  {
     path: ROUTES.DASHBOARD,
     Component: () => (
       <RequireRole role="donor">
         <Dashboard />
       </RequireRole>
     ),
+  },
+  {
+    path: ROUTES.NOTIFICATIONS,
+    Component: Notifications,
   },
 ];
 

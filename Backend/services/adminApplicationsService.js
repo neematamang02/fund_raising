@@ -1,6 +1,20 @@
 import OrganizerApplication from "../Models/OrganizerApplication.js";
 import User from "../Models/User.js";
 
+function appendStatusHistory(
+  application,
+  { fromStatus, toStatus, changedBy, reason = null },
+) {
+  application.statusHistory = application.statusHistory || [];
+  application.statusHistory.push({
+    fromStatus,
+    toStatus,
+    changedBy,
+    reason,
+    changedAt: new Date(),
+  });
+}
+
 export async function listSubmittedApplications() {
   return OrganizerApplication.find({
     status: { $ne: "draft" },
@@ -21,9 +35,15 @@ export async function approveApplication({ applicationId, adminUserId }) {
     };
   }
 
+  const previousStatus = application.status;
   application.status = "approved";
   application.reviewedBy = adminUserId;
   application.reviewedAt = new Date();
+  appendStatusHistory(application, {
+    fromStatus: previousStatus,
+    toStatus: "approved",
+    changedBy: adminUserId,
+  });
   await application.save();
 
   const userToApprove = await User.findById(application.user);
@@ -52,10 +72,17 @@ export async function rejectApplication({
     };
   }
 
+  const previousStatus = application.status;
   application.status = "rejected";
   application.reviewedBy = adminUserId;
   application.reviewedAt = new Date();
   application.rejectionReason = rejectionReason?.trim() || null;
+  appendStatusHistory(application, {
+    fromStatus: previousStatus,
+    toStatus: "rejected",
+    changedBy: adminUserId,
+    reason: application.rejectionReason,
+  });
   await application.save();
 
   const userToNotify = await User.findById(application.user);
@@ -79,12 +106,19 @@ export async function revokeApplication({
     };
   }
 
+  const previousStatus = application.status;
   application.status = "revoked";
   application.reviewedBy = adminUserId;
   application.reviewedAt = new Date();
   if (reason) {
     application.rejectionReason = reason.trim();
   }
+  appendStatusHistory(application, {
+    fromStatus: previousStatus,
+    toStatus: "revoked",
+    changedBy: adminUserId,
+    reason: application.rejectionReason,
+  });
   await application.save();
 
   const userToRevoke = await User.findById(application.user);

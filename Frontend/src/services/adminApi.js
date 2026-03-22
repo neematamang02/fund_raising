@@ -92,6 +92,13 @@ export const adminQueryKeys = {
     "details",
     withdrawalId,
   ],
+  organizerProfiles: ({ page = 1, status = "all", search = "" } = {}) => [
+    "admin",
+    "organizerProfiles",
+    page,
+    status,
+    search,
+  ],
 };
 
 export function getAdminDashboardStats(options = {}) {
@@ -226,6 +233,34 @@ export function updateAdminWithdrawalStatus(
   options = {},
 ) {
   return request(`/withdrawal-requests/${withdrawalId}/status`, {
+    ...options,
+    method: "PATCH",
+    body: payload,
+  });
+}
+
+export function getAdminOrganizerProfiles({
+  page = 1,
+  status = "all",
+  search = "",
+  ...options
+} = {}) {
+  return request("/admin/organizer-profiles", {
+    ...options,
+    queryParams: {
+      page,
+      status: status === "all" ? undefined : status,
+      search,
+    },
+  });
+}
+
+export function verifyAdminOrganizerProfile(
+  organizerProfileId,
+  payload,
+  options = {},
+) {
+  return request(`/admin/organizer-profiles/${organizerProfileId}/verify`, {
     ...options,
     method: "PATCH",
     body: payload,

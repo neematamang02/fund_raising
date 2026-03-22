@@ -256,25 +256,23 @@ export async function deleteCampaign({ campaignId, adminUserId }) {
     return { status: 404, message: "Campaign not found" };
   }
 
-  const donationCount = await Donation.countDocuments({
-    campaign: campaign._id,
-    status: "COMPLETED",
+  await Campaign.findByIdAndUpdate(campaignId, {
+    $set: {
+      status: "inactive",
+      isDonationEnabled: false,
+      endedAt: campaign.endedAt || new Date(),
+    },
   });
-
-  if (donationCount > 0) {
-    return {
-      status: 400,
-      message: "Cannot delete campaign with completed donations",
-    };
-  }
-
-  await Campaign.findByIdAndDelete(campaignId);
 
   await ActivityLog.create({
     user: adminUserId,
     activityType: "campaign_deleted",
-    description: `Admin deleted campaign "${campaign.title}"`,
-    metadata: { campaignId: campaign._id, campaignTitle: campaign.title },
+    description: `Admin marked campaign "${campaign.title}" as inactive`,
+    metadata: {
+      campaignId: campaign._id,
+      campaignTitle: campaign.title,
+      status: "inactive",
+    },
   });
 
   return {};

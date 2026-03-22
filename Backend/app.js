@@ -10,10 +10,10 @@ import authRouter from "./Routes/auth.js";
 import campaignRouter from "./Routes/campaigns.js";
 import donationRouter from "./Routes/donations.js";
 import paypalrouter from "./Routes/paypal.js";
-import applicationRoutes from "./Routes/applications.js";
 import organizerRouter from "./Routes/organizer.js";
 import withdrawalRouter from "./Routes/withdrawals.js";
 import adminRouter from "./Routes/admin.js";
+import notificationsRouter from "./Routes/notifications.js";
 
 // Load environment variables
 dotenv.config();
@@ -33,9 +33,16 @@ for (const envVar of requiredEnvVars) {
   }
 }
 
-// Warn about optional but recommended variables
+// ENCRYPTION_KEY is mandatory in production to avoid insecure fallback crypto.
 if (!process.env.ENCRYPTION_KEY) {
-  console.warn("⚠️  WARNING: ENCRYPTION_KEY not set. Sensitive data encryption will use default key.");
+  if (process.env.NODE_ENV === "production") {
+    console.error("❌ Missing required environment variable: ENCRYPTION_KEY");
+    process.exit(1);
+  }
+
+  console.warn(
+    "⚠️  WARNING: ENCRYPTION_KEY not set. Sensitive data encryption will use default key.",
+  );
 }
 
 // Connect to database
@@ -53,14 +60,22 @@ app.use(
       directives: {
         defaultSrc: ["'self'"],
         styleSrc: ["'self'", "'unsafe-inline'"],
-        scriptSrc: ["'self'", "https://www.paypal.com", "https://www.sandbox.paypal.com"],
+        scriptSrc: [
+          "'self'",
+          "https://www.paypal.com",
+          "https://www.sandbox.paypal.com",
+        ],
         frameSrc: ["https://www.paypal.com", "https://www.sandbox.paypal.com"],
         imgSrc: ["'self'", "data:", "https:"],
-        connectSrc: ["'self'", "https://api.paypal.com", "https://api.sandbox.paypal.com"],
+        connectSrc: [
+          "'self'",
+          "https://api.paypal.com",
+          "https://api.sandbox.paypal.com",
+        ],
       },
     },
     crossOriginEmbedderPolicy: false,
-  })
+  }),
 );
 
 // CORS configuration
@@ -75,7 +90,7 @@ app.use(
     origin: (origin, callback) => {
       // Allow requests with no origin (mobile apps, Postman, etc.)
       if (!origin) return callback(null, true);
-      
+
       if (allowedOrigins.includes(origin)) {
         callback(null, true);
       } else {
@@ -85,7 +100,7 @@ app.use(
     },
     credentials: true,
     maxAge: 86400, // 24 hours
-  })
+  }),
 );
 
 // Body parsing with size limits
@@ -93,7 +108,10 @@ app.use(express.json({ limit: "5mb" })); // Reduced from 10mb
 app.use(express.urlencoded({ extended: true, limit: "5mb" }));
 
 // Apply rate limiting to all API routes (only in production or if explicitly enabled)
-if (process.env.NODE_ENV === "production" || process.env.ENABLE_RATE_LIMITING === "true") {
+if (
+  process.env.NODE_ENV === "production" ||
+  process.env.ENABLE_RATE_LIMITING === "true"
+) {
   app.use("/api", apiRateLimiter);
   logInfo("Rate limiting enabled for API routes");
 } else {
@@ -102,11 +120,13 @@ if (process.env.NODE_ENV === "production" || process.env.ENABLE_RATE_LIMITING ==
 
 // Health check endpoint (no auth required)
 app.get("/health", (req, res) => {
-  res.json({ 
-    status: "ok", 
+  res.json({
+    status: "ok",
     timestamp: new Date().toISOString(),
     environment: process.env.NODE_ENV || "development",
-    rateLimiting: process.env.NODE_ENV === "production" || process.env.ENABLE_RATE_LIMITING === "true"
+    rateLimiting:
+      process.env.NODE_ENV === "production" ||
+      process.env.ENABLE_RATE_LIMITING === "true",
   });
 });
 
@@ -116,9 +136,9 @@ app.use("/api/campaigns", campaignRouter);
 app.use("/api/donations", donationRouter);
 app.use("/api", paypalrouter);
 app.use("/api", organizerRouter);
-app.use("/api", applicationRoutes);
 app.use("/api", withdrawalRouter);
 app.use("/api", adminRouter);
+app.use("/api", notificationsRouter);
 
 // 404 handler
 app.use((req, res) => {
@@ -135,7 +155,7 @@ app.use((err, req, res, next) => {
 
   // Don't leak error details in production
   const isDevelopment = process.env.NODE_ENV !== "production";
-  
+
   res.status(err.status || 500).json({
     message: isDevelopment ? err.message : "Internal server error",
     ...(isDevelopment && { stack: err.stack }),
