@@ -173,6 +173,7 @@ import mongoose from "mongoose";
 import { requireAuth, requireRole } from "../middleware/auth.js";
 import Donation from "../Models/Donation.js";
 import Campaign from "../Models/Campaign.js";
+import WithdrawalRequest from "../Models/WithdrawalRequest.js";
 
 const router = Router();
 
@@ -193,6 +194,37 @@ async function expireDueCampaigns() {
       },
     },
   );
+}
+
+function getDonorFacingPayoutStatus(status) {
+  switch (status) {
+    case "pending":
+    case "under_review":
+      return "processing";
+    case "approved":
+      return "scheduled";
+    case "completed":
+      return "paid_out";
+    default:
+      return "unknown";
+  }
+}
+
+function maskTransactionReference(reference) {
+  if (!reference || typeof reference !== "string") {
+    return null;
+  }
+
+  const trimmed = reference.trim();
+  if (!trimmed) {
+    return null;
+  }
+
+  if (trimmed.length <= 4) {
+    return "****";
+  }
+
+  return `${"*".repeat(Math.max(4, trimmed.length - 4))}${trimmed.slice(-4)}`;
 }
 
 /**
@@ -317,6 +349,106 @@ router.get(
     }
   },
 );
+
+/**
+ * GET /api/campaigns/:campaignId/payout-history
+ * Public donor-safe payout timeline for campaign transparency.
+ */
+router.get("/:campaignId/payout-history", async (req, res) => {
+  try {
+    await expireDueCampaigns();
+
+    const { campaignId } = req.params;
+    if (!mongoose.isValidObjectId(campaignId)) {
+      return res.status(400).json({ message: "Invalid campaign ID." });
+    }
+
+    const campaign = await Campaign.findById(campaignId).select(
+      "title target raised status isDonationEnabled",
+    );
+    if (!campaign) {
+      return res.status(404).json({ message: "Campaign not found." });
+    }
+
+    const payoutStatuses = ["pending", "under_review", "approved", "completed"];
+    const withdrawals = await WithdrawalRequest.find({
+      campaign: campaignId,
+      status: { $in: payoutStatuses },
+    })
+      .select(
+        "status amount createdAt reviewedAt completedAt transactionReference",
+      )
+      .sort({ createdAt: -1 })
+      .lean();
+
+    const summary = withdrawals.reduce(
+      (acc, withdrawal) => {
+        const amount = Number(withdrawal.amount || 0);
+
+        if (withdrawal.status === "completed") {
+          acc.totalPaidOut += amount;
+          if (
+            !acc.lastTransferDate ||
+            withdrawal.completedAt > acc.lastTransferDate
+          ) {
+            acc.lastTransferDate = withdrawal.completedAt;
+          }
+        }
+
+        acc.totalCommitted += amount;
+        return acc;
+      },
+      {
+        totalRaised: Number(campaign.raised || 0),
+        totalCommitted: 0,
+        totalPaidOut: 0,
+        lastTransferDate: null,
+      },
+    );
+
+    const timeline = withdrawals.map((withdrawal) => {
+      const eventDate =
+        withdrawal.completedAt || withdrawal.reviewedAt || withdrawal.createdAt;
+
+      return {
+        id: withdrawal._id,
+        status: getDonorFacingPayoutStatus(withdrawal.status),
+        amount: Number(withdrawal.amount || 0),
+        eventDate,
+        createdAt: withdrawal.createdAt,
+        transferReferenceMasked:
+          withdrawal.status === "completed"
+            ? maskTransactionReference(withdrawal.transactionReference)
+            : null,
+      };
+    });
+
+    return res.json({
+      campaign: {
+        _id: campaign._id,
+        title: campaign.title,
+        target: campaign.target,
+        raised: campaign.raised,
+        status: campaign.status,
+        isDonationEnabled: campaign.isDonationEnabled,
+      },
+      summary: {
+        totalRaised: summary.totalRaised,
+        totalCommitted: summary.totalCommitted,
+        totalPaidOut: summary.totalPaidOut,
+        availableBalance: Math.max(
+          0,
+          summary.totalRaised - summary.totalCommitted,
+        ),
+        lastTransferDate: summary.lastTransferDate,
+      },
+      timeline,
+    });
+  } catch (err) {
+    console.error("Fetch Campaign Payout History Error:", err);
+    return res.status(500).json({ message: "Could not fetch payout history." });
+  }
+});
 
 /**
  * GET /api/campaigns/:campaignId

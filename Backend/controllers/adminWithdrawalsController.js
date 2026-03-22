@@ -1,11 +1,38 @@
-import { sendWithdrawalStatusEmail } from "../services/emailService.js";
+import {
+  sendDonorCampaignPayoutUpdateEmail,
+  sendWithdrawalStatusEmail,
+} from "../services/emailService.js";
 import {
   getWithdrawalRequestDetails,
   listWithdrawalRequests,
   updateWithdrawalStatus,
   verifyWithdrawalDocument,
 } from "../services/adminWithdrawalsService.js";
-import { createInAppNotification } from "../services/notificationService.js";
+import Donation from "../Models/Donation.js";
+import ActivityLog from "../Models/ActivityLog.js";
+import {
+  createInAppNotification,
+  notifyCampaignDonorsInApp,
+} from "../services/notificationService.js";
+
+const DONOR_TRANSPARENCY_STATUSES = new Set(["approved", "completed"]);
+
+function maskTransactionReference(reference) {
+  if (!reference || typeof reference !== "string") {
+    return null;
+  }
+
+  const trimmed = reference.trim();
+  if (!trimmed) {
+    return null;
+  }
+
+  if (trimmed.length <= 4) {
+    return "****";
+  }
+
+  return `${"*".repeat(Math.max(4, trimmed.length - 4))}${trimmed.slice(-4)}`;
+}
 
 export async function listAdminWithdrawalRequests(req, res) {
   try {
@@ -102,6 +129,99 @@ export async function updateAdminWithdrawalRequestStatus(req, res) {
       });
     } catch (emailError) {
       console.error("Error sending withdrawal status email:", emailError);
+    }
+
+    if (DONOR_TRANSPARENCY_STATUSES.has(status)) {
+      try {
+        const donorIds = await Donation.distinct("donor", {
+          campaign: result.withdrawalRequest.campaign._id,
+          status: "COMPLETED",
+        });
+
+        let donorEmailCount = 0;
+
+        if (donorIds.length) {
+          const User = (await import("../Models/User.js")).default;
+          const donors = await User.find({ _id: { $in: donorIds } }).select(
+            "name email",
+          );
+
+          const transferReferenceMasked =
+            status === "completed"
+              ? maskTransactionReference(transactionReference)
+              : null;
+
+          const eventDate =
+            status === "completed"
+              ? result.withdrawalRequest.completedAt
+              : result.withdrawalRequest.reviewedAt;
+
+          const donorEmailResults = await Promise.all(
+            donors.map(async (donor) => {
+              if (!donor.email) {
+                return false;
+              }
+
+              try {
+                await sendDonorCampaignPayoutUpdateEmail(
+                  donor.email,
+                  donor.name,
+                  {
+                    campaignTitle: result.withdrawalRequest.campaign.title,
+                    status,
+                    amount: result.withdrawalRequest.amount,
+                    eventDate,
+                    transferReferenceMasked,
+                  },
+                );
+                return true;
+              } catch (donorEmailError) {
+                console.error(
+                  `Error sending donor payout update email to ${donor.email}:`,
+                  donorEmailError,
+                );
+                return false;
+              }
+            }),
+          );
+
+          donorEmailCount = donorEmailResults.filter(Boolean).length;
+        }
+
+        const inAppResult = await notifyCampaignDonorsInApp({
+          campaignId: result.withdrawalRequest.campaign._id,
+          withdrawalRequestId: result.withdrawalRequest._id,
+          campaignTitle: result.withdrawalRequest.campaign.title,
+          status,
+          amount: result.withdrawalRequest.amount,
+          eventDate:
+            status === "completed"
+              ? result.withdrawalRequest.completedAt
+              : result.withdrawalRequest.reviewedAt,
+        });
+
+        await ActivityLog.create({
+          user: req.user.userId,
+          activityType: "donor_transparency_notified",
+          description: `Donor transparency notifications sent for campaign "${result.withdrawalRequest.campaign.title}"`,
+          metadata: {
+            campaignId: result.withdrawalRequest.campaign._id,
+            withdrawalRequestId: result.withdrawalRequest._id,
+            status,
+            donorEmailCount,
+            donorInAppCount: inAppResult.notifiedCount,
+          },
+          relatedEntity: {
+            entityType: "WithdrawalRequest",
+            entityId: result.withdrawalRequest._id,
+          },
+        });
+      } catch (donorNotificationError) {
+        console.error(
+          "Error sending donor transparency notifications:",
+          donorNotificationError,
+        );
+      }
     }
 
     return res.json({

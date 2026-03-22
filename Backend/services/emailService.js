@@ -631,6 +631,90 @@ export const sendWithdrawalStatusEmail = async (
   }
 };
 
+export const sendDonorCampaignPayoutUpdateEmail = async (
+  email,
+  name,
+  payoutInfo,
+) => {
+  const { campaignTitle, status, amount, eventDate, transferReferenceMasked } =
+    payoutInfo;
+
+  if (!email || !campaignTitle || !status) {
+    return;
+  }
+
+  const isCompleted = status === "completed";
+  const subject = isCompleted
+    ? "Campaign Update: Funds Paid Out"
+    : "Campaign Update: Fund Transfer Scheduled";
+
+  const statusLabel = isCompleted ? "Paid Out" : "Scheduled";
+  const headerColor = isCompleted
+    ? "linear-gradient(135deg, #10b981 0%, #059669 100%)"
+    : "linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)";
+
+  const mailOptions = {
+    from: process.env.EMAIL_USER,
+    to: email,
+    subject,
+    html: `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <style>
+          body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+          .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+          .header { background: ${headerColor}; color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
+          .content { background: #f9fafb; padding: 30px; border-radius: 0 0 10px 10px; }
+          .info-box { background: white; padding: 20px; border-left: 4px solid #3b82f6; margin: 20px 0; border-radius: 5px; }
+          .footer { text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #e5e7eb; color: #6b7280; font-size: 14px; }
+          .button { display: inline-block; padding: 12px 30px; background: #2563eb; color: white; text-decoration: none; border-radius: 5px; margin: 20px 0; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            <h1 style="margin: 0; font-size: 28px;">Campaign Fund Update</h1>
+          </div>
+          <div class="content">
+            <p style="font-size: 16px;">Dear <strong>${name || "Supporter"}</strong>,</p>
+            <p>Thank you for supporting <strong>${campaignTitle}</strong>. Here is your latest transparency update:</p>
+            <div class="info-box">
+              <p><strong>Status:</strong> ${statusLabel}</p>
+              <p><strong>Amount:</strong> $${Number(amount || 0).toFixed(2)}</p>
+              <p><strong>Date:</strong> ${new Date(
+                eventDate || Date.now(),
+              ).toLocaleDateString("en-US", {
+                year: "numeric",
+                month: "long",
+                day: "numeric",
+              })}</p>
+              ${transferReferenceMasked ? `<p><strong>Transfer Reference:</strong> ${transferReferenceMasked}</p>` : ""}
+            </div>
+            <p>For privacy and security, sensitive bank account details are never shared publicly.</p>
+            <div style="text-align: center; margin: 30px 0;">
+              <a href="${process.env.FRONTEND_URL}/my-donations" class="button">View My Donations</a>
+            </div>
+          </div>
+          <div class="footer">
+            <p>This is an automated message. Please do not reply to this email.</p>
+            <p>© ${new Date().getFullYear()} Fundraising Platform. All rights reserved.</p>
+          </div>
+        </div>
+      </body>
+      </html>
+    `,
+  };
+
+  try {
+    await getTransporter().sendMail(mailOptions);
+    console.log(`✅ Donor payout update email sent to ${email}`);
+  } catch (error) {
+    console.error("❌ Error sending donor payout update email:", error);
+    throw error;
+  }
+};
+
 // Test email configuration
 export const testEmailConnection = async () => {
   try {

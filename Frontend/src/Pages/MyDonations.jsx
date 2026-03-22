@@ -1,5 +1,5 @@
 import { useContext, useState, useMemo } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueries } from "@tanstack/react-query";
 import { AuthContext } from "@/Context/AuthContext";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -81,6 +81,39 @@ export default function MyDonations() {
   // Extract donations array from response
   const donations = donationsData?.donations || [];
   const pagination = donationsData?.pagination;
+
+  const campaignIds = useMemo(
+    () => [
+      ...new Set(donations.map((item) => item.campaign?._id).filter(Boolean)),
+    ],
+    [donations],
+  );
+
+  const campaignPayoutQueries = useQueries({
+    queries: campaignIds.map((id) => ({
+      queryKey: ["campaignPayoutHistory", id],
+      queryFn: async () => {
+        const res = await fetch(`/api/campaigns/${id}/payout-history`);
+        if (!res.ok) {
+          throw new Error(`Failed to load payout history for campaign ${id}`);
+        }
+
+        const data = await res.json();
+        return { campaignId: id, ...data };
+      },
+      staleTime: 1000 * 60,
+      retry: 1,
+    })),
+  });
+
+  const payoutHistoryByCampaign = useMemo(() => {
+    return campaignPayoutQueries.reduce((acc, queryResult) => {
+      if (queryResult.data?.campaignId) {
+        acc[queryResult.data.campaignId] = queryResult.data;
+      }
+      return acc;
+    }, {});
+  }, [campaignPayoutQueries]);
 
   // If not logged in, show login prompt
   if (!user) {
@@ -247,6 +280,35 @@ export default function MyDonations() {
         Campaign Ended
       </Badge>
     );
+  };
+
+  const getPayoutStatusBadge = (status) => {
+    switch (status) {
+      case "paid_out":
+        return (
+          <Badge className="bg-emerald-100 text-emerald-800 border-emerald-200">
+            Paid Out
+          </Badge>
+        );
+      case "scheduled":
+        return (
+          <Badge className="bg-blue-100 text-blue-800 border-blue-200">
+            Scheduled
+          </Badge>
+        );
+      case "processing":
+        return (
+          <Badge className="bg-amber-100 text-amber-800 border-amber-200">
+            Processing
+          </Badge>
+        );
+      default:
+        return (
+          <Badge className="bg-gray-100 text-gray-800 border-gray-200">
+            No Payout Yet
+          </Badge>
+        );
+    }
   };
 
   if (isLoading) {
@@ -569,75 +631,137 @@ export default function MyDonations() {
               className="bg-white shadow-lg border-0 hover:shadow-xl transition-all duration-300"
             >
               <CardContent className="p-6">
-                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-                  {/* Campaign Info */}
-                  <div className="flex-1">
-                    <div className="flex items-start gap-4">
-                      <img
-                        src={donation.campaign?.imageURL || "/placeholder.svg"}
-                        alt={donation.campaign?.title || "Campaign"}
-                        className="w-16 h-16 rounded-xl object-cover flex-shrink-0"
-                      />
-                      <div className="flex-1">
-                        <h3 className="font-bold text-lg text-gray-900 mb-2 line-clamp-1">
-                          {donation.campaign?.title || "Unknown Campaign"}
-                        </h3>
-                        <div className="flex flex-wrap items-center gap-3 text-sm text-gray-600">
-                          <div className="flex items-center gap-1">
-                            <Calendar className="h-4 w-4" />
-                            <span>
-                              {new Date(donation.createdAt).toLocaleDateString(
-                                "en-US",
-                                {
-                                  year: "numeric",
-                                  month: "short",
-                                  day: "numeric",
-                                },
-                              )}
-                            </span>
+                {(() => {
+                  const campaignTransparency =
+                    payoutHistoryByCampaign[donation.campaign?._id];
+                  const latestPayout =
+                    campaignTransparency?.timeline?.[0] || null;
+
+                  return (
+                    <>
+                      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                        {/* Campaign Info */}
+                        <div className="flex-1">
+                          <div className="flex items-start gap-4">
+                            <img
+                              src={
+                                donation.campaign?.imageURL ||
+                                "/placeholder.svg"
+                              }
+                              alt={donation.campaign?.title || "Campaign"}
+                              className="w-16 h-16 rounded-xl object-cover flex-shrink-0"
+                            />
+                            <div className="flex-1">
+                              <h3 className="font-bold text-lg text-gray-900 mb-2 line-clamp-1">
+                                {donation.campaign?.title || "Unknown Campaign"}
+                              </h3>
+                              <div className="flex flex-wrap items-center gap-3 text-sm text-gray-600">
+                                <div className="flex items-center gap-1">
+                                  <Calendar className="h-4 w-4" />
+                                  <span>
+                                    {new Date(
+                                      donation.createdAt,
+                                    ).toLocaleDateString("en-US", {
+                                      year: "numeric",
+                                      month: "short",
+                                      day: "numeric",
+                                    })}
+                                  </span>
+                                </div>
+                                <div className="flex items-center gap-1">
+                                  <Clock className="h-4 w-4" />
+                                  <span>
+                                    {new Date(
+                                      donation.createdAt,
+                                    ).toLocaleTimeString("en-US", {
+                                      hour: "2-digit",
+                                      minute: "2-digit",
+                                    })}
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
                           </div>
-                          <div className="flex items-center gap-1">
-                            <Clock className="h-4 w-4" />
-                            <span>
-                              {new Date(donation.createdAt).toLocaleTimeString(
-                                "en-US",
-                                {
-                                  hour: "2-digit",
-                                  minute: "2-digit",
-                                },
-                              )}
-                            </span>
+                        </div>
+
+                        {/* Donation Details */}
+                        <div className="flex flex-col lg:flex-row lg:items-center gap-4">
+                          <div className="text-center lg:text-right">
+                            <div className="text-2xl font-bold text-gray-900">
+                              ${(donation.amount || 0).toFixed(2)}
+                            </div>
+                            <div className="text-sm text-gray-500">
+                              Transaction ID: {donation.transactionId || "N/A"}
+                            </div>
+                          </div>
+
+                          <div className="flex flex-col items-center lg:items-end gap-2">
+                            {getStatusBadge(donation.status)}
+                            {getCampaignLifecycleBadge(donation.campaign)}
+                            {donation.campaign?._id && (
+                              <Link to={`/donate/${donation.campaign._id}`}>
+                                <FundraisingButton
+                                  variant="ghost-trust"
+                                  size="sm"
+                                >
+                                  <ArrowUpRight className="h-4 w-4" />
+                                  View Campaign
+                                </FundraisingButton>
+                              </Link>
+                            )}
                           </div>
                         </div>
                       </div>
-                    </div>
-                  </div>
 
-                  {/* Donation Details */}
-                  <div className="flex flex-col lg:flex-row lg:items-center gap-4">
-                    <div className="text-center lg:text-right">
-                      <div className="text-2xl font-bold text-gray-900">
-                        ${(donation.amount || 0).toFixed(2)}
-                      </div>
-                      <div className="text-sm text-gray-500">
-                        Transaction ID: {donation.transactionId || "N/A"}
-                      </div>
-                    </div>
+                      <div className="mt-5 pt-5 border-t border-slate-100">
+                        <div className="flex flex-wrap items-center justify-between gap-3">
+                          <p className="text-sm font-semibold text-slate-700">
+                            Campaign fund transparency
+                          </p>
+                          {getPayoutStatusBadge(latestPayout?.status)}
+                        </div>
 
-                    <div className="flex flex-col items-center lg:items-end gap-2">
-                      {getStatusBadge(donation.status)}
-                      {getCampaignLifecycleBadge(donation.campaign)}
-                      {donation.campaign?._id && (
-                        <Link to={`/donate/${donation.campaign._id}`}>
-                          <FundraisingButton variant="ghost-trust" size="sm">
-                            <ArrowUpRight className="h-4 w-4" />
-                            View Campaign
-                          </FundraisingButton>
-                        </Link>
-                      )}
-                    </div>
-                  </div>
-                </div>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mt-3 text-sm">
+                          <div className="rounded-lg bg-slate-50 p-3">
+                            <p className="text-slate-500">Raised</p>
+                            <p className="font-semibold text-slate-800">
+                              $
+                              {Number(
+                                campaignTransparency?.summary?.totalRaised ||
+                                  donation.campaign?.raised ||
+                                  0,
+                              ).toLocaleString()}
+                            </p>
+                          </div>
+                          <div className="rounded-lg bg-slate-50 p-3">
+                            <p className="text-slate-500">Paid Out</p>
+                            <p className="font-semibold text-slate-800">
+                              $
+                              {Number(
+                                campaignTransparency?.summary?.totalPaidOut ||
+                                  0,
+                              ).toLocaleString()}
+                            </p>
+                          </div>
+                          <div className="rounded-lg bg-slate-50 p-3">
+                            <p className="text-slate-500">Last Transfer</p>
+                            <p className="font-semibold text-slate-800">
+                              {latestPayout?.eventDate
+                                ? new Date(
+                                    latestPayout.eventDate,
+                                  ).toLocaleDateString("en-US", {
+                                    year: "numeric",
+                                    month: "short",
+                                    day: "numeric",
+                                  })
+                                : "Not yet"}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    </>
+                  );
+                })()}
               </CardContent>
             </Card>
           ))}

@@ -76,6 +76,23 @@ export default function Donate() {
     retry: false,
   });
 
+  const { data: campaignPayoutHistory, isLoading: loadingPayoutHistory } =
+    useQuery({
+      queryKey: ["campaignPayoutHistory", campaignId],
+      queryFn: async () => {
+        const res = await fetch(
+          `${API_BASE_URL}/campaigns/${campaignId}/payout-history`,
+        );
+        if (!res.ok) {
+          throw new Error("Could not fetch campaign payout history");
+        }
+        return res.json();
+      },
+      enabled: !!campaignId,
+      retry: 1,
+      staleTime: 1000 * 60,
+    });
+
   const createOrderMutation = useMutation({
     mutationFn: async (amountValue) => {
       try {
@@ -186,6 +203,21 @@ export default function Donate() {
       campaign.isDonationEnabled === false
     );
   }, [campaign]);
+
+  const latestPayoutEvent = campaignPayoutHistory?.timeline?.[0] || null;
+
+  const payoutStatusLabel = useMemo(() => {
+    switch (latestPayoutEvent?.status) {
+      case "paid_out":
+        return "Paid Out";
+      case "scheduled":
+        return "Scheduled";
+      case "processing":
+        return "Processing";
+      default:
+        return "No Payout Yet";
+    }
+  }, [latestPayoutEvent]);
 
   // If campaignId is missing or loading
   if (!campaignId || loadingCampaign || loadingPaypalConfig) {
@@ -442,6 +474,76 @@ export default function Donate() {
                     </div>
                   )}
                 </div>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-lg">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-semibold text-gray-900">
+                    Fund Transparency
+                  </h3>
+                  <Badge className="bg-blue-100 text-blue-800 border-blue-200">
+                    {payoutStatusLabel}
+                  </Badge>
+                </div>
+
+                {loadingPayoutHistory ? (
+                  <p className="text-sm text-gray-500">
+                    Loading payout timeline...
+                  </p>
+                ) : (
+                  <>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
+                      <div className="rounded-xl bg-slate-50 p-4">
+                        <p className="text-xs uppercase tracking-wide text-slate-500">
+                          Raised
+                        </p>
+                        <p className="text-lg font-semibold text-slate-900">
+                          $
+                          {Number(
+                            campaignPayoutHistory?.summary?.totalRaised ||
+                              campaign?.raised ||
+                              0,
+                          ).toLocaleString()}
+                        </p>
+                      </div>
+                      <div className="rounded-xl bg-slate-50 p-4">
+                        <p className="text-xs uppercase tracking-wide text-slate-500">
+                          Paid Out
+                        </p>
+                        <p className="text-lg font-semibold text-slate-900">
+                          $
+                          {Number(
+                            campaignPayoutHistory?.summary?.totalPaidOut || 0,
+                          ).toLocaleString()}
+                        </p>
+                      </div>
+                      <div className="rounded-xl bg-slate-50 p-4">
+                        <p className="text-xs uppercase tracking-wide text-slate-500">
+                          Last Transfer
+                        </p>
+                        <p className="text-lg font-semibold text-slate-900">
+                          {latestPayoutEvent?.eventDate
+                            ? new Date(
+                                latestPayoutEvent.eventDate,
+                              ).toLocaleDateString("en-US", {
+                                year: "numeric",
+                                month: "short",
+                                day: "numeric",
+                              })
+                            : "Not yet"}
+                        </p>
+                      </div>
+                    </div>
+
+                    <p className="text-sm text-gray-600">
+                      We share payout status, date, and amount with donors to
+                      improve transparency while keeping sensitive bank details
+                      private.
+                    </p>
+                  </>
+                )}
               </CardContent>
             </Card>
           </div>
