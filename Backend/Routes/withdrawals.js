@@ -7,7 +7,11 @@ import ActivityLog from "../Models/ActivityLog.js";
 import { authenticateToken, requireRole } from "../middleware/auth.js";
 import { sendWithdrawalRequestEmail } from "../services/emailService.js";
 import { createInAppNotification } from "../services/notificationService.js";
-import { upload } from "../config/s3.js";
+import {
+  applyFileMetadataForResponse,
+  handleDocumentUploadError,
+  uploadSingleDocument,
+} from "../config/localDocumentUpload.js";
 import {
   buildRequestHash,
   getStoredIdempotentResponse,
@@ -22,12 +26,23 @@ import {
 
 const router = express.Router();
 
-// Upload document for withdrawal request (S3)
+function singleDocumentUploadMiddleware(req, res, next) {
+  uploadSingleDocument.single("document")(req, res, (error) => {
+    if (error) {
+      return handleDocumentUploadError(error, res);
+    }
+
+    applyFileMetadataForResponse(req);
+    return next();
+  });
+}
+
+// Upload document for withdrawal request (local storage)
 router.post(
   "/withdrawal-requests/upload-document",
   authenticateToken,
   requireRole(["organizer"]),
-  upload.single("document"),
+  singleDocumentUploadMiddleware,
   async (req, res) => {
     try {
       if (!req.file) {

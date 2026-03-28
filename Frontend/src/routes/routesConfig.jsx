@@ -20,6 +20,7 @@ import MyCampaigns from "@/Pages/MyCampaigns";
 import ForgotPasswordPage from "@/Pages/Authentication/ForgotPasswordPage";
 import ResetPasswordPage from "@/Pages/Authentication/ResetPasswordPage";
 import Otpverification from "@/Pages/Authentication/Otpverification";
+import ImageUploadDemo from "@/Pages/ImageUploadDemo";
 
 const AdminDashboard = lazy(() => import("@/Pages/AdminDashboard"));
 const AdminCampaigns = lazy(() => import("@/Pages/AdminCampaigns"));
@@ -41,6 +42,7 @@ const routesConfig = [
   { path: ROUTES.FORGOT_PASSWORD, Component: ForgotPasswordPage },
   { path: ROUTES.RESET_PASSWORD, Component: ResetPasswordPage },
   { path: ROUTES.OTP_VERIFICATION, Component: Otpverification },
+  { path: ROUTES.IMAGE_UPLOAD_DEMO, Component: ImageUploadDemo },
   {
     path: ROUTES.DONATE, // "/donate"
     Component: CampaignList,

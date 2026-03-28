@@ -26,6 +26,7 @@ const ROUTES = {
   FORGOT_PASSWORD: "/forgot-password",
   RESET_PASSWORD: "/reset-password",
   OTP_VERIFICATION: "/otp-verification",
+  IMAGE_UPLOAD_DEMO: "/image-upload-demo",
 };
 
 export default ROUTES;

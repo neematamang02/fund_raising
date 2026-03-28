@@ -2,6 +2,7 @@ import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
 import helmet from "helmet";
+import path from "node:path";
 import connectDB from "./dbconnection.js";
 import { apiRateLimiter } from "./middleware/rateLimiter.js";
 import { logError, logInfo } from "./utils/logger.js";
@@ -14,6 +15,7 @@ import organizerRouter from "./Routes/organizer.js";
 import withdrawalRouter from "./Routes/withdrawals.js";
 import adminRouter from "./Routes/admin.js";
 import notificationsRouter from "./Routes/notifications.js";
+import uploadRouter from "./Routes/upload.js";
 
 // Load environment variables
 dotenv.config();
@@ -49,6 +51,8 @@ if (!process.env.ENCRYPTION_KEY) {
 connectDB();
 
 const app = express();
+const uploadDirName = process.env.UPLOAD_DIR || "uploads";
+const uploadDirPath = path.resolve(process.cwd(), uploadDirName);
 
 // Trust proxy (for rate limiting and IP detection behind reverse proxy)
 app.set("trust proxy", 1);
@@ -75,6 +79,9 @@ app.use(
       },
     },
     crossOriginEmbedderPolicy: false,
+    crossOriginResourcePolicy: {
+      policy: "cross-origin",
+    },
   }),
 );
 
@@ -130,6 +137,14 @@ app.get("/health", (req, res) => {
   });
 });
 
+// Expose uploaded files as static assets.
+app.use(
+  "/uploads",
+  express.static(uploadDirPath, {
+    index: false,
+  }),
+);
+
 // API Routes
 app.use("/api/auth", authRouter);
 app.use("/api/campaigns", campaignRouter);
@@ -139,6 +154,7 @@ app.use("/api", organizerRouter);
 app.use("/api", withdrawalRouter);
 app.use("/api", adminRouter);
 app.use("/api", notificationsRouter);
+app.use("/api", uploadRouter);
 
 // 404 handler
 app.use((req, res) => {

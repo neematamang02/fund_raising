@@ -3,7 +3,12 @@ import { requireAuth, requireRole } from "../middleware/auth.js";
 import OrganizerApplication from "../Models/OrganizerApplication.js";
 import OrganizerProfile from "../Models/OrganizerProfile.js";
 import ActivityLog from "../Models/ActivityLog.js";
-import { upload } from "../config/s3.js";
+import {
+  applyFileMetadataForResponse,
+  handleDocumentUploadError,
+  uploadMultipleDocuments,
+  uploadSingleDocument,
+} from "../config/localDocumentUpload.js";
 import { sendApplicationSubmittedEmail } from "../services/emailService.js";
 import { createInAppNotification } from "../services/notificationService.js";
 import {
@@ -14,6 +19,35 @@ import {
 } from "../controllers/adminApplicationsController.js";
 
 const router = Router();
+
+function singleDocumentUploadMiddleware(req, res, next) {
+  uploadSingleDocument.single("document")(req, res, (error) => {
+    if (error) {
+      return handleDocumentUploadError(error, res);
+    }
+
+    applyFileMetadataForResponse(req);
+    return next();
+  });
+}
+
+function organizerDocumentsUploadMiddleware(req, res, next) {
+  uploadMultipleDocuments.fields([
+    { name: "governmentId", maxCount: 1 },
+    { name: "selfieWithId", maxCount: 1 },
+    { name: "registrationCertificate", maxCount: 1 },
+    { name: "taxId", maxCount: 1 },
+    { name: "addressProof", maxCount: 1 },
+    { name: "additionalDocuments", maxCount: 5 },
+  ])(req, res, (error) => {
+    if (error) {
+      return handleDocumentUploadError(error, res);
+    }
+
+    applyFileMetadataForResponse(req);
+    return next();
+  });
+}
 
 function buildReusableDocumentsFromApplication(application) {
   if (!application?.documents) {
@@ -149,7 +183,7 @@ router.post(
   "/organizer/profile/upload-document",
   requireAuth,
   requireRole("organizer"),
-  upload.single("document"),
+  singleDocumentUploadMiddleware,
   async (req, res) => {
     try {
       if (!req.file) {
@@ -673,14 +707,7 @@ router.patch(
 router.post(
   "/organizer/upload-documents/:applicationId",
   requireAuth,
-  upload.fields([
-    { name: "governmentId", maxCount: 1 },
-    { name: "selfieWithId", maxCount: 1 },
-    { name: "registrationCertificate", maxCount: 1 },
-    { name: "taxId", maxCount: 1 },
-    { name: "addressProof", maxCount: 1 },
-    { name: "additionalDocuments", maxCount: 5 },
-  ]),
+  organizerDocumentsUploadMiddleware,
   async (req, res) => {
     try {
       const { applicationId } = req.params;
@@ -709,50 +736,51 @@ router.post(
 
       // 4) Process uploaded files
       const documents = {};
+      const files = req.files || {};
 
-      if (req.files.governmentId) {
+      if (files.governmentId) {
         documents["documents.governmentId"] = {
-          url: req.files.governmentId[0].location,
-          key: req.files.governmentId[0].key,
+          url: files.governmentId[0].location,
+          key: files.governmentId[0].key,
           uploadedAt: new Date(),
         };
       }
 
-      if (req.files.selfieWithId) {
+      if (files.selfieWithId) {
         documents["documents.selfieWithId"] = {
-          url: req.files.selfieWithId[0].location,
-          key: req.files.selfieWithId[0].key,
+          url: files.selfieWithId[0].location,
+          key: files.selfieWithId[0].key,
           uploadedAt: new Date(),
         };
       }
 
-      if (req.files.registrationCertificate) {
+      if (files.registrationCertificate) {
         documents["documents.registrationCertificate"] = {
-          url: req.files.registrationCertificate[0].location,
-          key: req.files.registrationCertificate[0].key,
+          url: files.registrationCertificate[0].location,
+          key: files.registrationCertificate[0].key,
           uploadedAt: new Date(),
         };
       }
 
-      if (req.files.taxId) {
+      if (files.taxId) {
         documents["documents.taxId"] = {
-          url: req.files.taxId[0].location,
-          key: req.files.taxId[0].key,
+          url: files.taxId[0].location,
+          key: files.taxId[0].key,
           uploadedAt: new Date(),
         };
       }
 
-      if (req.files.addressProof) {
+      if (files.addressProof) {
         documents["documents.addressProof"] = {
-          url: req.files.addressProof[0].location,
-          key: req.files.addressProof[0].key,
+          url: files.addressProof[0].location,
+          key: files.addressProof[0].key,
           uploadedAt: new Date(),
         };
       }
 
       // Handle additional documents
-      if (req.files.additionalDocuments) {
-        const additionalDocs = req.files.additionalDocuments.map((file) => ({
+      if (files.additionalDocuments) {
+        const additionalDocs = files.additionalDocuments.map((file) => ({
           name: file.originalname,
           url: file.location,
           key: file.key,

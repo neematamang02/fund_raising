@@ -174,8 +174,71 @@ import { requireAuth, requireRole } from "../middleware/auth.js";
 import Donation from "../Models/Donation.js";
 import Campaign from "../Models/Campaign.js";
 import WithdrawalRequest from "../Models/WithdrawalRequest.js";
+import { handleUploadError, uploadSingleImage } from "../config/localUpload.js";
 
 const router = Router();
+
+function buildAbsoluteImageUrl(req, imagePath) {
+  return `${req.protocol}://${req.get("host")}${imagePath}`;
+}
+
+function normalizeCampaignImageUrl(req, imageURL) {
+  if (!imageURL || typeof imageURL !== "string") {
+    return imageURL;
+  }
+
+  if (imageURL.startsWith("http://") || imageURL.startsWith("https://")) {
+    return imageURL;
+  }
+
+  if (imageURL.startsWith("/uploads/")) {
+    return buildAbsoluteImageUrl(req, imageURL);
+  }
+
+  if (imageURL.startsWith("uploads/")) {
+    return buildAbsoluteImageUrl(req, `/${imageURL}`);
+  }
+
+  return imageURL;
+}
+
+function normalizeCampaignResponse(req, campaign) {
+  const plainCampaign = campaign?.toObject ? campaign.toObject() : campaign;
+  if (!plainCampaign) return plainCampaign;
+
+  return {
+    ...plainCampaign,
+    imageURL: normalizeCampaignImageUrl(req, plainCampaign.imageURL),
+  };
+}
+
+function parseImageUrlInput(rawImageURL) {
+  const imageURL = typeof rawImageURL === "string" ? rawImageURL.trim() : "";
+  if (!imageURL) return "";
+
+  let parsed;
+  try {
+    parsed = new URL(imageURL);
+  } catch {
+    return null;
+  }
+
+  if (!["http:", "https:"].includes(parsed.protocol)) {
+    return null;
+  }
+
+  return parsed.toString();
+}
+
+function campaignImageUploadMiddleware(req, res, next) {
+  uploadSingleImage.single("imageFile")(req, res, (error) => {
+    if (error) {
+      return handleUploadError(error, res);
+    }
+
+    return next();
+  });
+}
 
 async function expireDueCampaigns() {
   const now = new Date();
@@ -269,7 +332,9 @@ router.get("/", async (req, res) => {
     ]);
 
     return res.json({
-      campaigns,
+      campaigns: campaigns.map((campaign) =>
+        normalizeCampaignResponse(req, campaign),
+      ),
       pagination: {
         page,
         limit,
@@ -470,7 +535,7 @@ router.get("/:campaignId", async (req, res) => {
     if (!campaign) {
       return res.status(404).json({ message: "Campaign not found." });
     }
-    return res.json(campaign);
+    return res.json(normalizeCampaignResponse(req, campaign));
   } catch (err) {
     console.error("Fetch Campaign Error:", err);
     return res.status(500).json({ message: "Could not fetch campaign." });
@@ -480,40 +545,72 @@ router.get("/:campaignId", async (req, res) => {
 /**
  * POST /api/campaigns
  */
-router.post("/", requireAuth, requireRole("organizer"), async (req, res) => {
-  try {
-    const { title, description, imageURL, target, deadlineAt, duration } =
-      req.body;
-    if (!title || !description || !imageURL || !target) {
-      return res.status(400).json({ message: "All fields are required." });
-    }
+router.post(
+  "/",
+  requireAuth,
+  requireRole("organizer"),
+  campaignImageUploadMiddleware,
+  async (req, res) => {
+    try {
+      const { title, description, imageURL, target, deadlineAt, duration } =
+        req.body;
+      const parsedImageURL = parseImageUrlInput(imageURL);
+      const hasUploadedFile = Boolean(req.file);
+      const hasImageURL = Boolean(parsedImageURL);
 
-    let parsedDeadline = null;
-    if (deadlineAt) {
-      parsedDeadline = new Date(deadlineAt);
-      if (Number.isNaN(parsedDeadline.getTime())) {
-        return res.status(400).json({ message: "Invalid deadlineAt value." });
+      if (!title || !description || !target) {
+        return res.status(400).json({ message: "All fields are required." });
       }
-    } else if (Number.isFinite(Number(duration)) && Number(duration) > 0) {
-      parsedDeadline = new Date(
-        Date.now() + Number(duration) * 24 * 60 * 60 * 1000,
-      );
-    }
 
-    const campaign = await Campaign.create({
-      title,
-      description,
-      imageURL,
-      target,
-      ...(parsedDeadline ? { deadlineAt: parsedDeadline } : {}),
-      owner: req.user.userId,
-    });
-    return res.status(201).json(campaign);
-  } catch (err) {
-    console.error("Create Campaign Error:", err);
-    return res.status(500).json({ message: "Could not create campaign." });
-  }
-});
+      if (hasUploadedFile === hasImageURL) {
+        return res.status(400).json({
+          message:
+            "Provide exactly one image source: upload a file or provide an image URL.",
+        });
+      }
+
+      if (parsedImageURL === null) {
+        return res.status(400).json({ message: "Invalid image URL." });
+      }
+
+      const parsedTarget = Number(target);
+      if (!Number.isFinite(parsedTarget) || parsedTarget <= 0) {
+        return res
+          .status(400)
+          .json({ message: "Target must be a positive number." });
+      }
+
+      let parsedDeadline = null;
+      if (deadlineAt) {
+        parsedDeadline = new Date(deadlineAt);
+        if (Number.isNaN(parsedDeadline.getTime())) {
+          return res.status(400).json({ message: "Invalid deadlineAt value." });
+        }
+      } else if (Number.isFinite(Number(duration)) && Number(duration) > 0) {
+        parsedDeadline = new Date(
+          Date.now() + Number(duration) * 24 * 60 * 60 * 1000,
+        );
+      }
+
+      const resolvedImageURL = hasUploadedFile
+        ? buildAbsoluteImageUrl(req, `/uploads/${req.file.filename}`)
+        : parsedImageURL;
+
+      const campaign = await Campaign.create({
+        title,
+        description,
+        imageURL: resolvedImageURL,
+        target: parsedTarget,
+        ...(parsedDeadline ? { deadlineAt: parsedDeadline } : {}),
+        owner: req.user.userId,
+      });
+      return res.status(201).json(normalizeCampaignResponse(req, campaign));
+    } catch (err) {
+      console.error("Create Campaign Error:", err);
+      return res.status(500).json({ message: "Could not create campaign." });
+    }
+  },
+);
 
 /**
  * PATCH /api/campaigns/:campaignId
@@ -522,6 +619,7 @@ router.patch(
   "/:campaignId",
   requireAuth,
   requireRole("organizer"),
+  campaignImageUploadMiddleware,
   async (req, res) => {
     try {
       const { campaignId } = req.params;
@@ -529,9 +627,75 @@ router.patch(
         return res.status(400).json({ message: "Invalid campaign ID." });
       }
 
+      const { title, description, imageURL, target, deadlineAt, duration } =
+        req.body;
+
+      const updates = {};
+
+      if (typeof title === "string") {
+        updates.title = title.trim();
+      }
+
+      if (typeof description === "string") {
+        updates.description = description.trim();
+      }
+
+      if (target !== undefined) {
+        const parsedTarget = Number(target);
+        if (!Number.isFinite(parsedTarget) || parsedTarget <= 0) {
+          return res
+            .status(400)
+            .json({ message: "Target must be a positive number." });
+        }
+        updates.target = parsedTarget;
+      }
+
+      const parsedImageURL = parseImageUrlInput(imageURL);
+      const hasUploadedFile = Boolean(req.file);
+      const imageURLProvided =
+        typeof imageURL === "string" && imageURL.trim().length > 0;
+
+      if (hasUploadedFile && imageURLProvided) {
+        return res.status(400).json({
+          message:
+            "Provide exactly one image source: upload a file or provide an image URL.",
+        });
+      }
+
+      if (imageURLProvided && parsedImageURL === null) {
+        return res.status(400).json({ message: "Invalid image URL." });
+      }
+
+      if (hasUploadedFile) {
+        updates.imageURL = buildAbsoluteImageUrl(
+          req,
+          `/uploads/${req.file.filename}`,
+        );
+      } else if (parsedImageURL) {
+        updates.imageURL = parsedImageURL;
+      }
+
+      if (deadlineAt) {
+        const parsedDeadline = new Date(deadlineAt);
+        if (Number.isNaN(parsedDeadline.getTime())) {
+          return res.status(400).json({ message: "Invalid deadlineAt value." });
+        }
+        updates.deadlineAt = parsedDeadline;
+      } else if (Number.isFinite(Number(duration)) && Number(duration) > 0) {
+        updates.deadlineAt = new Date(
+          Date.now() + Number(duration) * 24 * 60 * 60 * 1000,
+        );
+      }
+
+      if (Object.keys(updates).length === 0) {
+        return res
+          .status(400)
+          .json({ message: "No valid fields provided for update." });
+      }
+
       const updated = await Campaign.findOneAndUpdate(
         { _id: campaignId, owner: req.user.userId },
-        { $set: req.body },
+        { $set: updates },
         { new: true, runValidators: true },
       );
       if (!updated) {
@@ -539,7 +703,7 @@ router.patch(
           .status(403)
           .json({ message: "Not authorized or campaign not found." });
       }
-      return res.json(updated);
+      return res.json(normalizeCampaignResponse(req, updated));
     } catch (err) {
       console.error("Update Campaign Error:", err);
       return res.status(500).json({ message: "Could not update campaign." });

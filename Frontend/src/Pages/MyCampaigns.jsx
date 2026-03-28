@@ -484,10 +484,9 @@ const updateCampaign = async ({ campaignId, token, data }) => {
   const response = await fetch(`/api/campaigns/${campaignId}`, {
     method: "PATCH",
     headers: {
-      "Content-Type": "application/json",
       Authorization: `Bearer ${token}`,
     },
-    body: JSON.stringify(data),
+    body: data,
   });
   if (!response.ok) {
     const err = await response.json().catch(() => ({}));
@@ -539,6 +538,8 @@ export default function MyCampaigns() {
 
   const [editingCampaign, setEditingCampaign] = useState(null);
   const [showDonorsFor, setShowDonorsFor] = useState(null);
+  const [editImageFile, setEditImageFile] = useState(null);
+  const [editImagePreview, setEditImagePreview] = useState("");
   const [editForm, setEditForm] = useState({
     title: "",
     description: "",
@@ -605,6 +606,8 @@ export default function MyCampaigns() {
 
   const handleEdit = useCallback((campaign) => {
     setEditingCampaign(campaign);
+    setEditImageFile(null);
+    setEditImagePreview(campaign.imageURL || "");
     setEditForm({
       title: campaign.title,
       description: campaign.description,
@@ -614,20 +617,84 @@ export default function MyCampaigns() {
     });
   }, []);
 
+  useEffect(() => {
+    if (!editingCampaign) {
+      setEditImagePreview("");
+      return;
+    }
+
+    if (editImageFile) {
+      const objectUrl = URL.createObjectURL(editImageFile);
+      setEditImagePreview(objectUrl);
+
+      return () => {
+        URL.revokeObjectURL(objectUrl);
+      };
+    }
+
+    setEditImagePreview(editForm.imageURL || "");
+  }, [editImageFile, editForm.imageURL, editingCampaign]);
+
+  const normalizeImageUrl = (value) => {
+    if (!value || !value.trim()) return "";
+
+    try {
+      const parsed = new URL(value.trim());
+      if (!["http:", "https:"].includes(parsed.protocol)) {
+        return null;
+      }
+      return parsed.toString();
+    } catch {
+      return null;
+    }
+  };
+
+  const handleEditImageFileChange = (event) => {
+    const nextFile = event.target.files?.[0] || null;
+    setEditImageFile(nextFile);
+
+    if (nextFile) {
+      setEditForm((prev) => ({ ...prev, imageURL: "" }));
+    }
+  };
+
   const handleUpdate = () => {
     if (!editingCampaign) return;
+
+    const normalizedImageUrl = normalizeImageUrl(editForm.imageURL);
+    const hasImageFile = Boolean(editImageFile);
+    const hasImageUrl = Boolean(normalizedImageUrl);
+
+    if (normalizedImageUrl === null) {
+      toast.error("Please provide a valid image URL (http/https).");
+      return;
+    }
+
+    if (hasImageFile === hasImageUrl) {
+      toast.error(
+        "Choose exactly one image source: upload a file or provide an image URL.",
+      );
+      return;
+    }
+
+    const payload = new FormData();
+    payload.append("title", editForm.title);
+    payload.append("description", editForm.description);
+    payload.append("target", String(Number(editForm.target)));
+    if (editForm.deadlineAt) {
+      payload.append("deadlineAt", new Date(editForm.deadlineAt).toISOString());
+    }
+
+    if (hasImageFile) {
+      payload.append("imageFile", editImageFile);
+    } else {
+      payload.append("imageURL", normalizedImageUrl);
+    }
+
     updateMutation.mutate({
       campaignId: editingCampaign._id,
       token,
-      data: {
-        title: editForm.title,
-        description: editForm.description,
-        imageURL: editForm.imageURL,
-        target: Number(editForm.target),
-        ...(editForm.deadlineAt
-          ? { deadlineAt: new Date(editForm.deadlineAt).toISOString() }
-          : {}),
-      },
+      data: payload,
     });
   };
 
@@ -913,11 +980,38 @@ export default function MyCampaigns() {
                 <Input
                   id="imageURL"
                   value={editForm.imageURL}
-                  onChange={(e) =>
-                    setEditForm({ ...editForm, imageURL: e.target.value })
-                  }
+                  onChange={(e) => {
+                    setEditImageFile(null);
+                    setEditForm({ ...editForm, imageURL: e.target.value });
+                  }}
                   placeholder="https://example.com/image.jpg"
                 />
+                <div className="flex items-center gap-3 py-1">
+                  <div className="h-px flex-1 bg-gray-200" />
+                  <span className="text-xs font-semibold text-gray-500">
+                    OR
+                  </span>
+                  <div className="h-px flex-1 bg-gray-200" />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="imageFile">Upload Image</Label>
+                  <Input
+                    id="imageFile"
+                    type="file"
+                    accept=".jpg,.jpeg,.png,.gif,.webp"
+                    onChange={handleEditImageFileChange}
+                  />
+                </div>
+                {editImagePreview && (
+                  <img
+                    src={editImagePreview}
+                    alt="Campaign preview"
+                    className="w-full h-36 object-cover rounded-lg border"
+                  />
+                )}
+                <p className="text-xs text-gray-500">
+                  Choose one source only. Uploaded file or image URL.
+                </p>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="target">Target Amount ($)</Label>

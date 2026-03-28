@@ -41,16 +41,20 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 
+const API_BASE_URL = import.meta.env.VITE_BACKEND_URL
+  ? `${import.meta.env.VITE_BACKEND_URL}/api`
+  : "/api";
+
 const campaignSchema = z.object({
   title: z
     .string()
     .min(5, "Title must be at least 5 characters")
-    .max(20, "Title must be less than 20 characters"),
+    .max(100, "Title must be less than 100 characters"),
   description: z
     .string()
     .min(20, "Description must be at least 20 characters")
     .max(2000, "Description must be less than 2000 characters"),
-  imageUrl: z.string().url("Must be a valid image URL"),
+  imageUrl: z.string().optional().or(z.literal("")),
   target: z
     .number()
     .min(10, "Target must be at least $10")
@@ -68,6 +72,7 @@ export default function CreateCampaign() {
   const { user, token } = useContext(AuthContext);
   const navigate = useNavigate();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [imageFile, setImageFile] = useState(null);
   const [imagePreview, setImagePreview] = useState("");
 
   const form = useForm({
@@ -85,11 +90,7 @@ export default function CreateCampaign() {
     },
   });
 
-  const {
-    handleSubmit,
-    watch,
-    formState: { errors },
-  } = form;
+  const { handleSubmit, watch, setValue } = form;
 
   const watchedImageUrl = watch("imageUrl");
   const watchedTitle = watch("title");
@@ -99,17 +100,140 @@ export default function CreateCampaign() {
   const watchedDuration = watch("duration");
   const watchedDeadlineAt = watch("deadlineAt");
 
-  // Update image preview when URL changes
+  // Keep a live image preview from either selected file or image URL input.
   useEffect(() => {
-    if (
-      watchedImageUrl &&
-      watchedImageUrl.match(/\.(jpeg|jpg|gif|png|webp)$/i)
-    ) {
-      setImagePreview(watchedImageUrl);
-    } else {
-      setImagePreview("");
+    if (imageFile) {
+      const objectUrl = URL.createObjectURL(imageFile);
+      setImagePreview(objectUrl);
+
+      return () => {
+        URL.revokeObjectURL(objectUrl);
+      };
     }
-  }, [watchedImageUrl]);
+
+    const trimmedUrl = (watchedImageUrl || "").trim();
+    if (trimmedUrl) {
+      setImagePreview(trimmedUrl);
+      return;
+    }
+
+    setImagePreview("");
+  }, [imageFile, watchedImageUrl]);
+
+  const onFileChange = (event) => {
+    const nextFile = event.target.files?.[0] || null;
+    setImageFile(nextFile);
+
+    if (nextFile) {
+      setValue("imageUrl", "", {
+        shouldDirty: true,
+        shouldValidate: true,
+      });
+    }
+  };
+
+  const onImageUrlChange = (fieldOnChange, value) => {
+    fieldOnChange(value);
+    if (value.trim()) {
+      setImageFile(null);
+    }
+  };
+
+  const normalizeImageUrl = (value) => {
+    if (!value || !value.trim()) return "";
+
+    try {
+      const parsed = new URL(value.trim());
+      if (!["http:", "https:"].includes(parsed.protocol)) {
+        return null;
+      }
+      return parsed.toString();
+    } catch {
+      return null;
+    }
+  };
+
+  const onSubmit = async (data) => {
+    setIsSubmitting(true);
+
+    const normalizedImageUrl = normalizeImageUrl(data.imageUrl);
+    const hasImageFile = Boolean(imageFile);
+    const hasImageUrl = Boolean(normalizedImageUrl);
+
+    if (hasImageFile === hasImageUrl) {
+      toast.error(
+        "Choose exactly one image source: upload a file or provide an image URL.",
+      );
+      setIsSubmitting(false);
+      return;
+    }
+
+    if (normalizedImageUrl === null) {
+      toast.error("Please provide a valid image URL (http/https).");
+      setIsSubmitting(false);
+      return;
+    }
+
+    if (data.expiryMode === "date") {
+      if (!data.deadlineAt) {
+        toast.error("Please select a campaign end date.");
+        setIsSubmitting(false);
+        return;
+      }
+
+      const parsedDeadline = new Date(data.deadlineAt);
+      if (
+        Number.isNaN(parsedDeadline.getTime()) ||
+        parsedDeadline <= new Date()
+      ) {
+        toast.error("Campaign end date must be in the future.");
+        setIsSubmitting(false);
+        return;
+      }
+    }
+
+    const payload = new FormData();
+    payload.append("title", data.title);
+    payload.append("description", data.description);
+    payload.append("target", String(data.target));
+    payload.append("category", data.category || "");
+    payload.append("urgency", data.urgency || "medium");
+
+    if (data.expiryMode === "date") {
+      payload.append("deadlineAt", new Date(data.deadlineAt).toISOString());
+    } else {
+      payload.append("duration", String(data.duration));
+    }
+
+    if (hasImageFile) {
+      payload.append("imageFile", imageFile);
+    } else {
+      payload.append("imageURL", normalizedImageUrl);
+    }
+
+    try {
+      const res = await fetch(`${API_BASE_URL}/campaigns`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        body: payload,
+      });
+
+      if (res.ok) {
+        toast.success("Campaign created successfully! 🎉");
+        navigate(ROUTES.MY_CAMPAIGNS);
+      } else {
+        const errorData = await res.json().catch(() => ({}));
+        toast.error(errorData.message || "Failed to create campaign");
+      }
+    } catch (error) {
+      console.error("Error submitting form:", error);
+      toast.error("An error occurred while creating the campaign");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   if (!user) {
     return (
@@ -145,67 +269,6 @@ export default function CreateCampaign() {
       </div>
     );
   }
-
-  const onSubmit = async (data) => {
-    setIsSubmitting(true);
-
-    if (data.expiryMode === "date") {
-      if (!data.deadlineAt) {
-        toast.error("Please select a campaign end date.");
-        setIsSubmitting(false);
-        return;
-      }
-
-      const parsedDeadline = new Date(data.deadlineAt);
-      if (
-        Number.isNaN(parsedDeadline.getTime()) ||
-        parsedDeadline <= new Date()
-      ) {
-        toast.error("Campaign end date must be in the future.");
-        setIsSubmitting(false);
-        return;
-      }
-    }
-
-    const payloadExpiry =
-      data.expiryMode === "date"
-        ? { deadlineAt: new Date(data.deadlineAt).toISOString() }
-        : { duration: data.duration };
-
-    const payload = {
-      title: data.title,
-      description: data.description,
-      imageURL: data.imageUrl,
-      target: data.target,
-      category: data.category,
-      ...payloadExpiry,
-      urgency: data.urgency,
-    };
-
-    try {
-      const res = await fetch("/api/campaigns", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(payload),
-      });
-
-      if (res.ok) {
-        toast.success("Campaign created successfully! 🎉");
-        navigate(ROUTES.MY_CAMPAIGNS);
-      } else {
-        const errorData = await res.json().catch(() => ({}));
-        toast.error(errorData.message || "Failed to create campaign");
-      }
-    } catch (error) {
-      console.error("Error submitting form:", error);
-      toast.error("An error occurred while creating the campaign");
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 py-12 px-4">
@@ -320,19 +383,57 @@ export default function CreateCampaign() {
                         render={({ field }) => (
                           <FormItem>
                             <FormLabel className="text-sm font-medium text-gray-700">
-                              Campaign Image URL *
+                              Campaign Image *
                             </FormLabel>
-                            <FormControl>
-                              <Input
-                                {...field}
-                                placeholder="https://example.com/your-campaign-image.jpg"
-                                className="h-11 border-2 border-gray-200 focus:border-green-500 rounded-xl"
-                              />
-                            </FormControl>
+                            <div className="space-y-4">
+                              <div className="space-y-2">
+                                <p className="text-sm font-medium text-gray-700">
+                                  Upload Image
+                                </p>
+                                <Input
+                                  type="file"
+                                  accept=".jpg,.jpeg,.png,.gif,.webp"
+                                  onChange={onFileChange}
+                                  disabled={Boolean((field.value || "").trim())}
+                                />
+                                <p className="text-xs text-gray-500">
+                                  Upload one image file up to 5MB.
+                                </p>
+                              </div>
+
+                              <div className="flex items-center gap-3">
+                                <div className="h-px flex-1 bg-gray-200" />
+                                <span className="text-xs font-semibold text-gray-500">
+                                  OR
+                                </span>
+                                <div className="h-px flex-1 bg-gray-200" />
+                              </div>
+
+                              <div className="space-y-2">
+                                <p className="text-sm font-medium text-gray-700">
+                                  Provide Image URL
+                                </p>
+                                <FormControl>
+                                  <Input
+                                    {...field}
+                                    value={field.value || ""}
+                                    onChange={(event) =>
+                                      onImageUrlChange(
+                                        field.onChange,
+                                        event.target.value,
+                                      )
+                                    }
+                                    disabled={Boolean(imageFile)}
+                                    placeholder="https://example.com/your-campaign-image.jpg"
+                                    className="h-11 border-2 border-gray-200 focus:border-green-500 rounded-xl"
+                                  />
+                                </FormControl>
+                              </div>
+                            </div>
                             <FormMessage />
                             <p className="text-xs text-gray-500">
-                              Use a high-quality image that represents your
-                              cause (recommended: 1200x600px)
+                              Choose one source only. Uploaded file or image
+                              URL.
                             </p>
                           </FormItem>
                         )}
