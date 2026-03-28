@@ -41,7 +41,7 @@ const About = () => {
           </h1>
 
           <p className="text-xl text-gray-600 max-w-3xl mx-auto leading-relaxed mb-8">
-            Fund-Raising connects compassionate donors with meaningful causes,
+            HopeOn connects compassionate donors with meaningful causes,
             creating a transparent platform where every contribution makes a
             measurable impact in communities worldwide.
           </p>
@@ -154,7 +154,7 @@ const About = () => {
               </h2>
 
               <p className="text-lg text-gray-600 leading-relaxed">
-                At Fund-Raising, we believe that meaningful change happens when
+                At HopeOn, we believe that meaningful change happens when
                 compassionate people come together. Our platform bridges the gap
                 between those who want to help and those who need support,
                 creating a transparent ecosystem where every donation creates

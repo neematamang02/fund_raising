@@ -166,7 +166,7 @@ export default function NavigationBar() {
               className="text-2xl font-bold text-white hover:text-amber-300 transition-colors duration-300 flex items-center gap-2"
             >
               <Heart size={24} variant="Broken" className="text-amber-300" />
-              Fund-Raising
+              HopeOn
             </Link>
 
             {/* Desktop Menu */}

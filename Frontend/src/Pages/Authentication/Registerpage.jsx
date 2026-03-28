@@ -77,9 +77,7 @@ export default function RegisterPage() {
       return res.json();
     },
     onSuccess: (data, variables) => {
-      toast.success(
-        "Otp send to your email"
-      );
+      toast.success("Otp send to your email");
       setEmail(variables.email);
       try {
         sessionStorage.setItem(
@@ -88,7 +86,7 @@ export default function RegisterPage() {
             name: variables.name,
             email: variables.email,
             password: variables.password,
-          })
+          }),
         );
       } catch {}
       navigate(ROUTES.OTP_VERIFICATION, { replace: true });
@@ -168,9 +166,7 @@ export default function RegisterPage() {
           <div className="lg:hidden text-center mb-8">
             <div className="flex items-center justify-center gap-2 mb-4">
               <Heart className="h-8 w-8 text-emerald-600" />
-              <span className="text-2xl font-bold text-gray-900">
-                Fund-Raising
-              </span>
+              <span className="text-2xl font-bold text-gray-900">HopeOn</span>
             </div>
             <h2 className="text-2xl font-bold text-gray-900">
               Join Our Community

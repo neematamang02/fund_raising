@@ -30,6 +30,20 @@ import { AuthContext } from "@/Context/AuthContext";
 import ROUTES from "@/routes/routes";
 import { toast } from "sonner";
 
+function getDefaultRouteByRole(role) {
+  if (role === "admin") return ROUTES.ADMIN_DASHBOARD;
+  if (role === "organizer") return ROUTES.ORGANIZER_DASHBOARD;
+  return ROUTES.DASHBOARD;
+}
+
+function sanitizeRedirectPath(pathname) {
+  if (!pathname || typeof pathname !== "string") return null;
+  // Allow only internal absolute paths.
+  if (!pathname.startsWith("/")) return null;
+  if (pathname.startsWith("//")) return null;
+  return pathname;
+}
+
 const loginSchema = z.object({
   email: z.string().email({ message: "Please enter a valid email address." }),
   password: z
@@ -43,9 +57,7 @@ export default function LoginPage() {
   const location = useLocation();
   const [showPassword, setShowPassword] = useState(false);
 
-  // Preserve redirect path if provided
-  const redirectTo =
-    new URLSearchParams(location.search).get("redirect") || "/";
+  const redirectParam = new URLSearchParams(location.search).get("redirect");
 
   const form = useForm({
     resolver: zodResolver(loginSchema),
@@ -67,9 +79,14 @@ export default function LoginPage() {
     },
     onSuccess: async (data) => {
       const { token: jwt } = data;
-      await setTokenAndFetchUser(jwt);
+      const currentUser = await setTokenAndFetchUser(jwt);
+      const safeRedirect = sanitizeRedirectPath(redirectParam);
+      const fallbackRoute = getDefaultRouteByRole(currentUser?.role);
+      const targetRoute =
+        safeRedirect && safeRedirect !== "/" ? safeRedirect : fallbackRoute;
+
       toast.success("Welcome back! 🎉");
-      navigate(redirectTo, { replace: true });
+      navigate(targetRoute, { replace: true });
     },
     onError: (error) => {
       toast.error(error.message || "Login failed");
@@ -142,9 +159,7 @@ export default function LoginPage() {
           <div className="lg:hidden text-center mb-8">
             <div className="flex items-center justify-center gap-2 mb-4">
               <Heart className="h-8 w-8 text-blue-600" />
-              <span className="text-2xl font-bold text-gray-900">
-                Fund-Raising
-              </span>
+              <span className="text-2xl font-bold text-gray-900">HopeOn</span>
             </div>
             <h2 className="text-2xl font-bold text-gray-900">Welcome Back</h2>
             <p className="text-gray-600">
@@ -264,7 +279,7 @@ export default function LoginPage() {
                     </div>
                     <div className="relative flex justify-center text-sm">
                       <span className="px-4 bg-white text-gray-500">
-                        New to Fund-Raising?
+                        New to HopeOn?
                       </span>
                     </div>
                   </div>

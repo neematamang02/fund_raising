@@ -43,8 +43,10 @@ export function AuthProvider({ children }) {
       if (!res.ok) throw new Error();
       const data = await res.json();
       setUser(data);
+      return data;
     } catch {
       clearSession();
+      return null;
     }
   };
 
@@ -62,7 +64,7 @@ export function AuthProvider({ children }) {
   // A helper to set token + fetch user, without needing email/password again
   const setTokenAndFetchUser = async (jwt) => {
     saveToken(jwt);
-    await fetchCurrentUser(jwt);
+    return fetchCurrentUser(jwt);
   };
 
   // The old login(email, password) can remain if you still need it elsewhere:
