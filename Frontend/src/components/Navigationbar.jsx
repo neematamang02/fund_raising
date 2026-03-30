@@ -136,21 +136,16 @@ export default function NavigationBar() {
                 path: ROUTES.MY_DONATIONS,
                 icon: MoneyRecive,
               },
-              // Only show "Apply Organizer" if user is not already approved as an organizer
-              ...(user.isOrganizerApproved !== true
-                ? [
-                    {
-                      name: "Apply Organizer",
-                      path: ROUTES.APPLY_ORGANIZER,
-                      icon: UserEdit,
-                    },
-                    {
-                      name: "Application Status",
-                      path: ROUTES.APPLICATION_STATUS,
-                      icon: Setting2,
-                    },
-                  ]
-                : []),
+              {
+                name: "Apply Organizer",
+                path: ROUTES.APPLY_ORGANIZER,
+                icon: UserEdit,
+              },
+              {
+                name: "Application Status",
+                path: ROUTES.APPLICATION_STATUS,
+                icon: Setting2,
+              },
             ]
           : []),
   ];

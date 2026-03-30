@@ -104,6 +104,16 @@ export function getTopNavItems(user) {
       ...base,
       { label: "Dashboard", to: ROUTES.DASHBOARD, icon: LayoutDashboard },
       { label: "My Donations", to: ROUTES.MY_DONATIONS, icon: HandCoins },
+      {
+        label: "Apply Organizer",
+        to: ROUTES.APPLY_ORGANIZER,
+        icon: ClipboardList,
+      },
+      {
+        label: "Application Status",
+        to: ROUTES.APPLICATION_STATUS,
+        icon: Shield,
+      },
       { label: "Notifications", to: ROUTES.NOTIFICATIONS, icon: Bell },
     ];
   }

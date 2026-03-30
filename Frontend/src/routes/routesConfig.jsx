@@ -187,7 +187,7 @@ const routesConfig = [
   {
     path: ROUTES.APPLICATION_STATUS,
     Component: () => (
-      <RequireRole role="donor">
+      <RequireRole role={["donor", "organizer"]}>
         <ApplicationStatus />
       </RequireRole>
     ),

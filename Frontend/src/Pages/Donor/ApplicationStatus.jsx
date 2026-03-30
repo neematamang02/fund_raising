@@ -1,4 +1,4 @@
-import { useContext } from "react";
+import { useContext, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { AuthContext } from "@/Context/AuthContext";
@@ -21,11 +21,11 @@ function statusBadgeClass(status) {
 
 export default function ApplicationStatus() {
   const navigate = useNavigate();
-  const { user } = useContext(AuthContext);
+  const { user, refreshUser } = useContext(AuthContext);
 
   const statusQuery = useQuery({
     queryKey: ["organizerApplicationStatus"],
-    enabled: Boolean(user?.role === "donor"),
+    enabled: Boolean(user),
     queryFn: async () => {
       const res = await fetch(`${API_BASE_URL}/organizer/application-status`, {
         headers: {
@@ -46,6 +46,13 @@ export default function ApplicationStatus() {
     },
     refetchOnWindowFocus: true,
   });
+
+  useEffect(() => {
+    if (statusQuery.data?.currentUserRole === "organizer") {
+      refreshUser?.();
+      navigate(ROUTES.ORGANIZER_DASHBOARD, { replace: true });
+    }
+  }, [statusQuery.data?.currentUserRole, refreshUser, navigate]);
 
   if (statusQuery.isLoading) {
     return (

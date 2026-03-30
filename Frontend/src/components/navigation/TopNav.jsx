@@ -45,7 +45,7 @@ export default function TopNav() {
 
   return (
     <header className="sticky top-0 z-50 border-b border-blue-900/40 bg-gradient-to-r from-slate-900 via-blue-900 to-cyan-900 text-white shadow-lg">
-      <div className="mx-auto flex h-16 w-full max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
+      <div className="flex h-16 w-full items-center justify-between pl-2 pr-4 sm:pl-3 sm:pr-6">
         <Link
           to={getRoleHomePath(user?.role)}
           className="text-lg font-semibold tracking-tight"
@@ -54,7 +54,7 @@ export default function TopNav() {
         </Link>
 
         <nav
-          className="hidden items-center gap-1 lg:flex"
+          className="hidden items-center gap-1 xl:flex"
           aria-label="Primary navigation"
         >
           {items.map(({ label, to, icon }) => (
@@ -101,7 +101,7 @@ export default function TopNav() {
 
         <button
           type="button"
-          className="inline-flex items-center justify-center rounded-md p-2 hover:bg-white/15 lg:hidden"
+          className="inline-flex items-center justify-center rounded-md p-2 hover:bg-white/15 xl:hidden"
           onClick={() => setMobileOpen((prev) => !prev)}
           aria-expanded={mobileOpen}
           aria-controls="mobile-primary-nav"
@@ -118,7 +118,7 @@ export default function TopNav() {
       {mobileOpen ? (
         <div
           id="mobile-primary-nav"
-          className="border-t border-white/15 px-4 py-3 lg:hidden"
+          className="border-t border-white/15 px-4 py-3 xl:hidden"
         >
           <nav
             className="flex flex-col gap-2"
@@ -141,13 +141,21 @@ export default function TopNav() {
               </NavLink>
             ))}
 
+            {user?.role === "donor" ? <ToggleRole mobile /> : null}
+
             {user ? (
-              <Button variant="secondary" onClick={handleLogout}>
-                <LogOut className="h-4 w-4" aria-hidden="true" />
-                Logout
-              </Button>
+              <div className="pt-2">
+                <Button
+                  variant="secondary"
+                  className="w-full"
+                  onClick={handleLogout}
+                >
+                  <LogOut className="h-4 w-4" aria-hidden="true" />
+                  Logout
+                </Button>
+              </div>
             ) : (
-              <div className="flex gap-2">
+              <div className="flex gap-2 pt-2">
                 <Button asChild variant="secondary" className="flex-1">
                   <Link to={ROUTES.LOGIN} onClick={() => setMobileOpen(false)}>
                     <LogIn className="h-4 w-4" aria-hidden="true" />

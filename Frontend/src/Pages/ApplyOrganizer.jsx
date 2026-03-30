@@ -2,7 +2,7 @@ import { useContext, useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { AuthContext } from "@/Context/AuthContext";
 import { Input } from "@/components/ui/input";
@@ -73,6 +73,7 @@ export default function ApplyOrganizer() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const resubmitId = searchParams.get("resubmit");
+  const isResubmissionMode = Boolean(resubmitId);
   const [step, setStep] = useState(1); // 1 = Basic Info, 2 = Documents
   const [applicationId, setApplicationId] = useState(null);
 
@@ -86,6 +87,51 @@ export default function ApplyOrganizer() {
     additionalDocuments: [],
   });
 
+  const statusQuery = useQuery({
+    queryKey: ["organizerApplicationStatus", user?.userId],
+    enabled: Boolean(user && !loading),
+    queryFn: async () => {
+      const res = await fetch(`${API_BASE_URL}/organizer/application-status`, {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+      });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.message || "Failed to load organizer status");
+      }
+
+      return res.json();
+    },
+    refetchOnWindowFocus: true,
+  });
+
+  const resubmitApplicationQuery = useQuery({
+    queryKey: ["organizerApplicationForResubmit", resubmitId],
+    enabled: Boolean(user?.role === "donor" && isResubmissionMode),
+    queryFn: async () => {
+      const res = await fetch(
+        `${API_BASE_URL}/organizer/applications/${resubmitId}`,
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+        },
+      );
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(
+          err.message || "Failed to load application for resubmission",
+        );
+      }
+
+      return res.json();
+    },
+    refetchOnWindowFocus: false,
+  });
+
   useEffect(() => {
     if (!loading) {
       if (!user) {
@@ -95,6 +141,13 @@ export default function ApplyOrganizer() {
       }
     }
   }, [user, loading, navigate]);
+
+  useEffect(() => {
+    if (statusQuery.data?.currentUserRole === "organizer") {
+      toast.info("Your organizer access is active. Redirecting to dashboard.");
+      navigate(ROUTES.ORGANIZER_DASHBOARD);
+    }
+  }, [statusQuery.data?.currentUserRole, navigate]);
 
   const form = useForm({
     resolver: zodResolver(applicationSchema),
@@ -107,6 +160,29 @@ export default function ApplyOrganizer() {
       organizationType: "other",
     },
   });
+
+  useEffect(() => {
+    if (!resubmitApplicationQuery.data?.application) {
+      return;
+    }
+
+    const app = resubmitApplicationQuery.data.application;
+    if (!["rejected", "revoked"].includes(app.status)) {
+      toast.info("Only rejected or revoked applications can be edited.");
+      navigate(ROUTES.APPLICATION_STATUS);
+      return;
+    }
+
+    setApplicationId(app._id);
+    form.reset({
+      organizationName: app.organizationName || "",
+      description: app.description || "",
+      website: app.website || "",
+      contactEmail: app.contactEmail || user?.email || "",
+      phoneNumber: app.phoneNumber || "",
+      organizationType: app.organizationType || "other",
+    });
+  }, [resubmitApplicationQuery.data, form, navigate, user?.email]);
 
   // Submit basic application
   const applicationMutation = useMutation({
@@ -186,6 +262,13 @@ export default function ApplyOrganizer() {
   });
 
   const onSubmitBasicInfo = (values) => {
+    const currentStatus = statusQuery.data?.application?.status;
+    if (!isResubmissionMode && currentStatus === "pending") {
+      toast.info("Your application is already pending admin review.");
+      navigate(ROUTES.APPLICATION_STATUS);
+      return;
+    }
+
     applicationMutation.mutate(values);
   };
 
@@ -235,14 +318,79 @@ export default function ApplyOrganizer() {
     );
   }
 
+  const pendingApplication =
+    !isResubmissionMode && statusQuery.data?.application?.status === "pending";
+  const rejectedApplication = resubmitApplicationQuery.data?.application;
+
+  if (pendingApplication) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 py-12 px-4">
+        <div className="max-w-3xl mx-auto">
+          <Card className="bg-white shadow-xl border-0 overflow-hidden">
+            <CardHeader className="bg-gradient-to-r from-amber-600 to-orange-600 text-white">
+              <CardTitle className="flex items-center gap-3 text-xl">
+                <Clock className="h-6 w-6" />
+                Application Under Review
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-8 space-y-5">
+              <p className="text-slate-700">
+                Your organizer application is currently pending admin review.
+                You cannot submit another application until the current one is
+                reviewed.
+              </p>
+              <div className="flex gap-3">
+                <FundraisingButton
+                  variant="trust"
+                  onClick={() => navigate(ROUTES.APPLICATION_STATUS)}
+                >
+                  View Application Status
+                </FundraisingButton>
+                <FundraisingButton
+                  variant="warm"
+                  onClick={() => statusQuery.refetch()}
+                >
+                  Refresh Status
+                </FundraisingButton>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 py-12 px-4">
       <div className="max-w-4xl mx-auto">
+        {isResubmissionMode &&
+          rejectedApplication?.rejectionReason &&
+          step === 1 && (
+            <Card className="bg-red-50 border border-red-200 mb-8">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-red-800 text-lg">
+                  <AlertCircle className="h-5 w-5" />
+                  Previous Review Feedback
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-red-700 whitespace-pre-wrap">
+                  {rejectedApplication.rejectionReason}
+                </p>
+                <p className="text-sm text-red-600 mt-3">
+                  Update your application based on this feedback, then resubmit.
+                </p>
+              </CardContent>
+            </Card>
+          )}
+
         {/* Header Section */}
         <div className="text-center mb-12">
           <Badge className="bg-gradient-to-r from-purple-600 to-indigo-600 text-white px-6 py-2 text-sm font-medium mb-6">
             <UserCheck className="h-4 w-4 mr-2" />
-            Organizer Application
+            {isResubmissionMode
+              ? "Organizer Application Resubmission"
+              : "Organizer Application"}
           </Badge>
           <h1 className="text-4xl md:text-5xl font-bold mb-6">
             <span className="bg-gradient-to-r from-purple-700 via-indigo-600 to-blue-600 bg-clip-text text-transparent">
@@ -437,9 +585,17 @@ export default function ApplyOrganizer() {
                   variant="support"
                   size="lg"
                   fullWidth
-                  loading={applicationMutation.isPending}
+                  loading={
+                    applicationMutation.isPending ||
+                    statusQuery.isFetching ||
+                    resubmitApplicationQuery.isLoading
+                  }
                   loadingText="Submitting..."
-                  disabled={applicationMutation.isPending}
+                  disabled={
+                    applicationMutation.isPending ||
+                    statusQuery.isFetching ||
+                    resubmitApplicationQuery.isLoading
+                  }
                 >
                   <ArrowRight className="h-5 w-5" />
                   Continue to Documents

@@ -12,6 +12,7 @@ export const AuthContext = createContext({
   login: async () => {},
   logout: () => {},
   switchRole: async () => {},
+  refreshUser: async () => {},
   loading: true,
 });
 
@@ -65,6 +66,11 @@ export function AuthProvider({ children }) {
   const setTokenAndFetchUser = async (jwt) => {
     saveToken(jwt);
     return fetchCurrentUser(jwt);
+  };
+
+  const refreshUser = async () => {
+    if (!token) return null;
+    return fetchCurrentUser(token);
   };
 
   // The old login(email, password) can remain if you still need it elsewhere:
@@ -128,6 +134,7 @@ export function AuthProvider({ children }) {
         logout,
         setTokenAndFetchUser,
         switchRole,
+        refreshUser,
         loading,
       }}
     >

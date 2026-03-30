@@ -3,6 +3,7 @@ import { requireAuth, requireRole } from "../middleware/auth.js";
 import OrganizerApplication from "../Models/OrganizerApplication.js";
 import OrganizerProfile from "../Models/OrganizerProfile.js";
 import ActivityLog from "../Models/ActivityLog.js";
+import User from "../Models/User.js";
 import {
   applyFileMetadataForResponse,
   handleDocumentUploadError,
@@ -115,6 +116,30 @@ function pushStatusHistory(
     reason,
     changedAt: new Date(),
   });
+}
+
+async function notifyAdminsAboutOrganizerApplication(application) {
+  const admins = await User.find({ role: "admin" }).select("_id");
+  if (!admins.length) {
+    return;
+  }
+
+  await Promise.all(
+    admins.map((admin) =>
+      createInAppNotification({
+        recipient: admin._id,
+        eventType: "organizer_application_pending_review",
+        title: "New Organizer Application",
+        message: "A donor submitted an organizer application for review.",
+        payload: {
+          applicationId: application._id,
+          userId: application.user,
+          organizationName: application.organizationName,
+          status: application.status,
+        },
+      }),
+    ),
+  );
 }
 
 /**
@@ -497,33 +522,69 @@ router.get(
  *   • Donor checks latest organizer application status.
  *   • Useful for polling on frontend while pending.
  */
+router.get("/organizer/application-status", requireAuth, async (req, res) => {
+  try {
+    const user = await User.findById(req.user.userId).select(
+      "role isOrganizerApproved",
+    );
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found." });
+    }
+
+    const latestApp = await OrganizerApplication.findOne({
+      user: req.user.userId,
+    }).sort({ createdAt: -1 });
+
+    if (!latestApp) {
+      return res.json({
+        hasApplication: false,
+        canResubmit: false,
+        application: null,
+        currentUserRole: user.role,
+        isOrganizerApproved: user.isOrganizerApproved,
+      });
+    }
+
+    const canResubmit = ["rejected", "revoked"].includes(latestApp.status);
+
+    return res.json({
+      hasApplication: true,
+      canResubmit,
+      application: latestApp,
+      currentUserRole: user.role,
+      isOrganizerApproved: user.isOrganizerApproved,
+    });
+  } catch (err) {
+    console.error("Application Status Error:", err);
+    return res.status(500).json({ message: "Server error." });
+  }
+});
+
+/**
+ * GET /api/organizer/applications/:applicationId
+ *   • Donor fetches own application details (used for resubmission UX).
+ */
 router.get(
-  "/organizer/application-status",
+  "/organizer/applications/:applicationId",
   requireAuth,
   requireRole("donor"),
   async (req, res) => {
     try {
-      const latestApp = await OrganizerApplication.findOne({
-        user: req.user.userId,
-      }).sort({ createdAt: -1 });
+      const { applicationId } = req.params;
 
-      if (!latestApp) {
-        return res.json({
-          hasApplication: false,
-          canResubmit: false,
-          application: null,
-        });
+      const application = await OrganizerApplication.findById(applicationId);
+      if (!application) {
+        return res.status(404).json({ message: "Application not found." });
       }
 
-      const canResubmit = ["rejected", "revoked"].includes(latestApp.status);
+      if (application.user.toString() !== req.user.userId) {
+        return res.status(403).json({ message: "Forbidden." });
+      }
 
-      return res.json({
-        hasApplication: true,
-        canResubmit,
-        application: latestApp,
-      });
+      return res.json({ application });
     } catch (err) {
-      console.error("Application Status Error:", err);
+      console.error("Get Organizer Application Error:", err);
       return res.status(500).json({ message: "Server error." });
     }
   },
@@ -707,6 +768,7 @@ router.patch(
 router.post(
   "/organizer/upload-documents/:applicationId",
   requireAuth,
+  requireRole("donor"),
   organizerDocumentsUploadMiddleware,
   async (req, res) => {
     try {
@@ -832,6 +894,15 @@ router.post(
           status: "pending",
         },
       });
+
+      try {
+        await notifyAdminsAboutOrganizerApplication(application);
+      } catch (notifyError) {
+        console.error(
+          "Failed to create admin notification for organizer application:",
+          notifyError,
+        );
+      }
 
       return res.json({
         message:

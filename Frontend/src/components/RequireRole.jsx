@@ -5,6 +5,7 @@ import { AuthContext } from "@/Context/AuthContext";
 export default function RequireRole({ role, children }) {
   const { user, loading } = useContext(AuthContext);
   const location = useLocation();
+  const allowedRoles = Array.isArray(role) ? role : [role];
 
   // While AuthContext is still loading, don’t render anything yet
   if (loading) {
@@ -22,7 +23,7 @@ export default function RequireRole({ role, children }) {
   }
 
   // If the user’s role does not match, take them back to home
-  if (user.role !== role) {
+  if (!allowedRoles.includes(user.role)) {
     return <Navigate to="/" replace />;
   }
 
