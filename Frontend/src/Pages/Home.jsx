@@ -13,10 +13,11 @@ import {
   Sparkles,
 } from "lucide-react";
 import { Link } from "react-router-dom";
-import { FundraisingButton } from "@/components/ui/fundraising-button";
+import ROUTES from "@/routes/routes";
+import { Button } from "@/components/ui/button";
 
-const API_BASE_URL = import.meta.env.VITE_BACKEND_URL 
-  ? `${import.meta.env.VITE_BACKEND_URL}/api` 
+const API_BASE_URL = import.meta.env.VITE_BACKEND_URL
+  ? `${import.meta.env.VITE_BACKEND_URL}/api`
   : "/api";
 
 export default function Home() {
@@ -33,7 +34,9 @@ export default function Home() {
         }
         const data = await response.json();
         // Handle both old format (array) and new format (object with campaigns array)
-        const campaignsArray = Array.isArray(data) ? data : data.campaigns || [];
+        const campaignsArray = Array.isArray(data)
+          ? data
+          : data.campaigns || [];
         setCampaigns(campaignsArray.slice(0, 3));
       } catch (err) {
         setError(err instanceof Error ? err.message : "An error occurred");
@@ -45,109 +48,106 @@ export default function Home() {
     fetchCampaigns();
   }, []);
 
+  const impactStats = [
+    {
+      icon: Target,
+      value: "120+",
+      label: "Campaigns Funded",
+      tone: "text-secondary",
+    },
+    {
+      icon: Users,
+      value: "2.5K+",
+      label: "Lives Impacted",
+      tone: "text-primary",
+    },
+    {
+      icon: Heart,
+      value: "$210K+",
+      label: "Total Raised",
+      tone: "text-accent",
+    },
+    {
+      icon: TrendingUp,
+      value: "95%",
+      label: "Success Rate",
+      tone: "text-secondary",
+    },
+  ];
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
+    <div className="surface-page min-h-screen">
       <HeroSection />
 
-      {/* Impact Stats Section */}
-      <section className="py-16 bg-white/80 backdrop-blur-sm">
-        <div className="max-w-6xl mx-auto px-4">
-          <div className="text-center mb-12">
-            <Badge className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-6 py-2 text-sm font-medium mb-4">
+      <section className="border-b border-slate-200 bg-white py-14 sm:py-16">
+        <div className="mx-auto w-full max-w-7xl px-4 sm:px-6">
+          <div className="mx-auto mb-10 max-w-2xl text-center">
+            <Badge className="mb-4 bg-blue-100 px-4 py-1.5 text-blue-800">
               <Sparkles className="h-4 w-4 mr-2" />
               Our Impact Together
             </Badge>
-            <h2 className="text-3xl font-bold text-gray-900 mb-4">
+            <h2 className="text-3xl font-bold text-slate-900 sm:text-4xl">
               Making a Real Difference
             </h2>
-            <p className="text-gray-600 max-w-2xl mx-auto">
-              Every donation creates ripples of positive change across
-              communities worldwide
+            <p className="mt-3 text-slate-600">
+              Every donation contributes to transparent, measurable progress in
+              communities that need support.
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
-            {[
-              {
-                icon: Target,
-                value: "120+",
-                label: "Campaigns Funded",
-                color: "text-blue-600",
-              },
-              {
-                icon: Users,
-                value: "2.5K+",
-                label: "Lives Impacted",
-                color: "text-emerald-600",
-              },
-              {
-                icon: Heart,
-                value: "$210K+",
-                label: "Total Raised",
-                color: "text-rose-600",
-              },
-              {
-                icon: TrendingUp,
-                value: "95%",
-                label: "Success Rate",
-                color: "text-amber-600",
-              },
-            ].map((stat, index) => (
-              <div key={index} className="text-center group">
-                <div className="bg-white rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105">
-                  <stat.icon className={`h-8 w-8 ${stat.color} mx-auto mb-4`} />
-                  <div className="text-3xl font-bold text-gray-900 mb-2">
-                    {stat.value}
-                  </div>
-                  <div className="text-gray-600 font-medium">{stat.label}</div>
-                </div>
-              </div>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {impactStats.map((stat) => (
+              <article
+                key={stat.label}
+                className="surface-card rounded-xl p-6 text-center transition-colors duration-200 hover:border-blue-200"
+              >
+                <stat.icon className={`mx-auto mb-3 h-7 w-7 ${stat.tone}`} />
+                <p className="text-3xl font-bold text-slate-900">
+                  {stat.value}
+                </p>
+                <p className="mt-1 font-medium text-slate-600">{stat.label}</p>
+              </article>
             ))}
           </div>
         </div>
       </section>
 
-      {/* Featured Campaigns Section */}
-      <section className="py-16">
-        <div className="max-w-6xl mx-auto px-4">
-          <div className="text-center mb-12">
-            <Badge className="bg-gradient-to-r from-orange-500 to-amber-500 text-white px-6 py-2 text-sm font-medium mb-4">
+      <section className="py-14 sm:py-16">
+        <div className="mx-auto w-full max-w-7xl px-4 sm:px-6">
+          <div className="mx-auto mb-10 max-w-2xl text-center">
+            <Badge className="mb-4 bg-amber-100 px-4 py-1.5 text-amber-800">
               <Heart className="h-4 w-4 mr-2" />
               Featured Campaigns
             </Badge>
-            <h2 className="text-3xl font-bold text-gray-900 mb-4">
+            <h2 className="text-3xl font-bold text-slate-900 sm:text-4xl">
               Urgent Causes Need Your Help
             </h2>
-            <p className="text-gray-600 max-w-2xl mx-auto">
-              These campaigns are making immediate impact in communities that
-              need it most
+            <p className="mt-3 text-slate-600">
+              Support campaigns with immediate needs and verified impact goals.
             </p>
           </div>
 
           {isLoading ? (
-            <div className="grid gap-8 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+            <div className="grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
               {Array.from({ length: 3 }).map((_, i) => (
-                <div key={i} className="bg-white rounded-2xl p-6 shadow-lg">
-                  <Skeleton className="h-48 w-full rounded-xl mb-4" />
-                  <Skeleton className="h-6 w-3/4 mb-2" />
-                  <Skeleton className="h-4 w-full mb-4" />
-                  <Skeleton className="h-3 w-full mb-2" />
+                <div key={i} className="surface-card rounded-xl p-5">
+                  <Skeleton className="mb-4 h-44 w-full rounded-lg" />
+                  <Skeleton className="mb-2 h-5 w-3/4" />
+                  <Skeleton className="mb-4 h-4 w-full" />
+                  <Skeleton className="mb-2 h-3 w-full" />
                   <Skeleton className="h-10 w-full" />
                 </div>
               ))}
             </div>
           ) : error ? (
-            <Alert
-              variant="destructive"
-              className="text-center max-w-xl mx-auto bg-red-50 border-red-200"
-            >
-              <AlertDescription className="text-red-800">
+            <Alert variant="destructive" className="mx-auto max-w-xl">
+              <AlertDescription>
                 Error loading campaigns: {error}
               </AlertDescription>
             </Alert>
           ) : campaigns.length > 0 ? (
             <>
-              <div className="grid gap-8 grid-cols-1 md:grid-cols-2 lg:grid-cols-3 mb-12">
+              <div className="grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3 mb-10">
                 {campaigns.map((campaign) => (
                   <CampaignCard
                     key={campaign._id}
@@ -164,56 +164,59 @@ export default function Home() {
               </div>
 
               <div className="text-center">
-                <Link to="/donate">
-                  <FundraisingButton variant="outline-donate" size="lg">
+                <Button asChild size="lg">
+                  <Link to={ROUTES.DONATE}>
                     View All Campaigns
                     <ArrowRight className="h-5 w-5" />
-                  </FundraisingButton>
-                </Link>
+                  </Link>
+                </Button>
               </div>
             </>
           ) : (
-            <div className="text-center py-12">
-              <Heart className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-              <p className="text-gray-500 text-lg">
-                No campaigns available at the moment.
+            <div className="surface-card rounded-xl py-12 text-center">
+              <Heart className="mx-auto mb-4 h-12 w-12 text-slate-300" />
+              <p className="text-lg font-semibold text-slate-700">
+                No campaigns available right now.
               </p>
-              <p className="text-gray-400">
-                Check back soon for new opportunities to make a difference!
+              <p className="mt-1 text-slate-500">
+                Please check back soon for new causes.
               </p>
             </div>
           )}
         </div>
       </section>
 
-      {/* Call to Action Section */}
-      <section className="py-16 bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600">
-        <div className="max-w-4xl mx-auto px-4 text-center">
-          <h2 className="text-3xl font-bold text-white mb-4">
+      <section className="bg-secondary py-14 sm:py-16">
+        <div className="mx-auto w-full max-w-5xl px-4 text-center sm:px-6">
+          <h2 className="text-3xl font-bold text-white sm:text-4xl">
             Ready to Make a Difference?
           </h2>
-          <p className="text-blue-100 text-lg mb-8 max-w-2xl mx-auto">
-            Join thousands of donors who are creating positive change in
-            communities worldwide. Every contribution, no matter the size, makes
-            a meaningful impact.
+          <p className="mx-auto mt-3 max-w-2xl text-blue-100">
+            Join a growing community of donors creating meaningful outcomes
+            through trusted campaigns.
           </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Link to="/donate">
-              <FundraisingButton variant="warm" size="xl">
-                <Heart className="h-6 w-6" />
+          <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
+            <Button
+              asChild
+              size="lg"
+              className="bg-primary hover:bg-primary/90"
+            >
+              <Link to={ROUTES.DONATE}>
+                <Heart className="h-5 w-5" />
                 Start Donating Today
-              </FundraisingButton>
-            </Link>
-            <Link to="/campaign/new">
-              <FundraisingButton
-                variant="outline-trust"
-                size="xl"
-                className="bg-white/10 border-white/30 text-white hover:bg-white hover:text-blue-600"
-              >
-                <Target className="h-6 w-6" />
+              </Link>
+            </Button>
+            <Button
+              asChild
+              size="lg"
+              variant="outline"
+              className="border-white bg-transparent text-white hover:bg-white hover:text-secondary"
+            >
+              <Link to={ROUTES.CREATE_CAMPAIGN}>
+                <Target className="h-5 w-5" />
                 Start a Campaign
-              </FundraisingButton>
-            </Link>
+              </Link>
+            </Button>
           </div>
         </div>
       </section>

@@ -1,4 +1,4 @@
-import React, { useContext, useEffect, useState } from "react";
+import { useContext, useEffect, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { AuthContext } from "@/Context/AuthContext";
@@ -12,6 +12,7 @@ import {
 } from "@/services/adminApi";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { FundraisingButton } from "@/components/ui/fundraising-button";
+import { AdminPageSkeleton } from "@/components/admin/AdminSkeletons";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -219,69 +220,56 @@ export default function AdminApplications() {
   const statusCounts = getStatusCounts();
 
   if (loading || isAppsLoading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading applications...</p>
-        </div>
-      </div>
-    );
+    return <AdminPageSkeleton statCount={5} listCount={3} />;
   }
 
   if (appsError) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 flex items-center justify-center">
+      <div className="surface-page min-h-screen flex items-center justify-center">
         <div className="text-center">
           <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
             <AlertTriangle className="h-8 w-8 text-red-600" />
           </div>
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">
+          <h2 className="text-2xl font-bold text-slate-900 mb-2">
             Error Loading Applications
           </h2>
-          <p className="text-gray-600">Please try refreshing the page</p>
+          <p className="text-slate-600">Please try refreshing the page</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 py-8 px-4">
+    <div className="surface-page min-h-screen py-8 px-4">
       <div className="max-w-6xl mx-auto">
-        {/* Header */}
         <div className="text-center mb-8">
-          <Badge className="bg-gradient-to-r from-red-600 to-pink-600 text-white px-6 py-2 text-sm font-medium mb-6">
+          <Badge className="bg-blue-100 text-blue-800 px-4 py-1.5 text-sm font-medium mb-5">
             <Settings className="h-4 w-4 mr-2" />
             Admin Dashboard
           </Badge>
-          <h1 className="text-4xl md:text-5xl font-bold mb-6">
-            <span className="bg-gradient-to-r from-red-700 via-pink-600 to-purple-600 bg-clip-text text-transparent">
-              Organizer
-            </span>
-            <br />
-            <span className="text-gray-800">Applications</span>
+          <h1 className="text-4xl md:text-5xl font-bold mb-4 text-slate-900">
+            Organizer Applications
           </h1>
-          <p className="text-xl text-gray-600 max-w-2xl mx-auto leading-relaxed">
+          <p className="text-lg text-slate-600 max-w-2xl mx-auto leading-relaxed">
             Review and manage organizer applications to maintain platform
             quality and trust.
           </p>
         </div>
 
-        {/* Stats Overview */}
         <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
-          <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-lg">
+          <Card className="surface-card shadow-sm">
             <CardContent className="p-4 text-center">
               <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-2">
                 <FileText className="h-5 w-5 text-blue-600" />
               </div>
-              <div className="text-2xl font-bold text-gray-900">
+              <div className="text-2xl font-bold text-slate-900">
                 {statusCounts.total}
               </div>
-              <div className="text-sm text-gray-600">Total</div>
+              <div className="text-sm text-slate-600">Total</div>
             </CardContent>
           </Card>
 
-          <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-lg">
+          <Card className="surface-card shadow-sm">
             <CardContent className="p-4 text-center">
               <div className="w-10 h-10 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-2">
                 <Clock className="h-5 w-5 text-amber-600" />
@@ -289,11 +277,11 @@ export default function AdminApplications() {
               <div className="text-2xl font-bold text-amber-600">
                 {statusCounts.pending}
               </div>
-              <div className="text-sm text-gray-600">Pending</div>
+              <div className="text-sm text-slate-600">Pending</div>
             </CardContent>
           </Card>
 
-          <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-lg">
+          <Card className="surface-card shadow-sm">
             <CardContent className="p-4 text-center">
               <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-2">
                 <CheckCircle className="h-5 w-5 text-green-600" />
@@ -301,11 +289,11 @@ export default function AdminApplications() {
               <div className="text-2xl font-bold text-green-600">
                 {statusCounts.approved}
               </div>
-              <div className="text-sm text-gray-600">Approved</div>
+              <div className="text-sm text-slate-600">Approved</div>
             </CardContent>
           </Card>
 
-          <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-lg">
+          <Card className="surface-card shadow-sm">
             <CardContent className="p-4 text-center">
               <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-2">
                 <XCircle className="h-5 w-5 text-red-600" />
@@ -313,11 +301,11 @@ export default function AdminApplications() {
               <div className="text-2xl font-bold text-red-600">
                 {statusCounts.rejected}
               </div>
-              <div className="text-sm text-gray-600">Rejected</div>
+              <div className="text-sm text-slate-600">Rejected</div>
             </CardContent>
           </Card>
 
-          <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-lg">
+          <Card className="surface-card shadow-sm">
             <CardContent className="p-4 text-center">
               <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-2">
                 <XCircle className="h-5 w-5 text-gray-600" />
@@ -325,17 +313,16 @@ export default function AdminApplications() {
               <div className="text-2xl font-bold text-gray-600">
                 {statusCounts.revoked}
               </div>
-              <div className="text-sm text-gray-600">Revoked</div>
+              <div className="text-sm text-slate-600">Revoked</div>
             </CardContent>
           </Card>
         </div>
 
-        {/* Filters */}
-        <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-lg mb-8">
+        <Card className="surface-card shadow-sm mb-8">
           <CardContent className="p-6">
             <div className="grid md:grid-cols-2 gap-4">
               <div>
-                <Label className="text-sm font-medium text-gray-700 mb-2 block">
+                <Label className="text-sm font-medium text-slate-700 mb-2 block">
                   <Search className="h-4 w-4 inline mr-2" />
                   Search Applications
                 </Label>
@@ -343,16 +330,16 @@ export default function AdminApplications() {
                   placeholder="Search by name, email, or organization..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="h-11 border-2 border-gray-200 focus:border-blue-500 rounded-xl"
+                  className="h-11 rounded-lg border-slate-300"
                 />
               </div>
               <div>
-                <Label className="text-sm font-medium text-gray-700 mb-2 block">
+                <Label className="text-sm font-medium text-slate-700 mb-2 block">
                   <Filter className="h-4 w-4 inline mr-2" />
                   Filter by Status
                 </Label>
                 <Select value={statusFilter} onValueChange={setStatusFilter}>
-                  <SelectTrigger className="h-11 border-2 border-gray-200 focus:border-blue-500 rounded-xl">
+                  <SelectTrigger className="h-11 rounded-lg border-slate-300">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -368,17 +355,16 @@ export default function AdminApplications() {
           </CardContent>
         </Card>
 
-        {/* Applications List */}
         {filteredApplications.length === 0 ? (
-          <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-lg">
+          <Card className="surface-card shadow-sm">
             <CardContent className="p-12 text-center">
               <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
                 <Users className="h-8 w-8 text-gray-400" />
               </div>
-              <h3 className="text-xl font-semibold text-gray-900 mb-2">
+              <h3 className="text-xl font-semibold text-slate-900 mb-2">
                 No Applications Found
               </h3>
-              <p className="text-gray-600">
+              <p className="text-slate-600">
                 {searchTerm || statusFilter !== "all"
                   ? "Try adjusting your search or filter criteria"
                   : "No organizer applications have been submitted yet"}
@@ -390,15 +376,15 @@ export default function AdminApplications() {
             {filteredApplications.map((app) => (
               <Card
                 key={app._id}
-                className="bg-white shadow-xl border-0 overflow-hidden hover:shadow-2xl transition-all duration-300"
+                className="surface-card shadow-sm overflow-hidden"
               >
-                <CardHeader className="bg-gradient-to-r from-gray-50 to-blue-50 border-b">
+                <CardHeader className="bg-slate-50 border-b border-slate-200">
                   <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                     <div>
-                      <CardTitle className="text-xl text-gray-900 mb-2">
+                      <CardTitle className="text-xl text-slate-900 mb-2">
                         {app.user?.name || app.user?.email || "Unknown User"}
                       </CardTitle>
-                      <div className="flex items-center gap-2 text-gray-600">
+                      <div className="flex items-center gap-2 text-slate-600">
                         <Users className="h-4 w-4" />
                         <span className="font-medium">
                           {app.organizationName || "N/A"}
@@ -407,7 +393,7 @@ export default function AdminApplications() {
                     </div>
                     <div className="flex items-center gap-3">
                       {getStatusBadge(app.status)}
-                      <div className="text-sm text-gray-500 flex items-center gap-1">
+                      <div className="text-sm text-slate-500 flex items-center gap-1">
                         <Calendar className="h-4 w-4" />
                         {new Date(app.createdAt).toLocaleDateString()}
                       </div>
@@ -419,11 +405,11 @@ export default function AdminApplications() {
                   {/* Contact Information */}
                   <div className="grid md:grid-cols-2 gap-6">
                     <div className="space-y-3">
-                      <h4 className="font-semibold text-gray-900 flex items-center gap-2">
+                      <h4 className="font-semibold text-slate-900 flex items-center gap-2">
                         <Mail className="h-4 w-4 text-blue-600" />
                         Contact Information
                       </h4>
-                      <div className="space-y-2 text-sm">
+                      <div className="space-y-2 text-sm text-slate-700">
                         <div className="flex items-center gap-2">
                           <Mail className="h-3 w-3 text-gray-400" />
                           <span>
@@ -454,11 +440,11 @@ export default function AdminApplications() {
 
                     {app.experience && (
                       <div className="space-y-3">
-                        <h4 className="font-semibold text-gray-900 flex items-center gap-2">
+                        <h4 className="font-semibold text-slate-900 flex items-center gap-2">
                           <TrendingUp className="h-4 w-4 text-green-600" />
                           Experience
                         </h4>
-                        <p className="text-sm text-gray-700 bg-gray-50 p-3 rounded-lg">
+                        <p className="text-sm text-slate-700 bg-slate-50 p-3 rounded-lg border border-slate-200">
                           {app.experience}
                         </p>
                       </div>
@@ -467,12 +453,12 @@ export default function AdminApplications() {
 
                   {/* Description */}
                   <div className="space-y-3">
-                    <h4 className="font-semibold text-gray-900 flex items-center gap-2">
+                    <h4 className="font-semibold text-slate-900 flex items-center gap-2">
                       <FileText className="h-4 w-4 text-purple-600" />
                       Organization Description
                     </h4>
                     <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
-                      <p className="text-gray-800 leading-relaxed">
+                      <p className="text-slate-800 leading-relaxed">
                         {app.description}
                       </p>
                     </div>
@@ -480,7 +466,7 @@ export default function AdminApplications() {
 
                   {/* Verification Documents */}
                   <div className="space-y-3">
-                    <h4 className="font-semibold text-gray-900 flex items-center gap-2">
+                    <h4 className="font-semibold text-slate-900 flex items-center gap-2">
                       <FileText className="h-4 w-4 text-indigo-600" />
                       Verification Documents
                     </h4>
@@ -489,8 +475,8 @@ export default function AdminApplications() {
                       <div className="grid gap-4 md:grid-cols-3">
                         {/* Government ID */}
                         {app.documents.governmentId?.url && (
-                          <div className="border rounded-lg p-3 bg-gray-50">
-                            <div className="text-sm font-medium text-gray-700 mb-2">
+                          <div className="border border-slate-200 rounded-lg p-3 bg-slate-50">
+                            <div className="text-sm font-medium text-slate-700 mb-2">
                               Government ID
                             </div>
                             {/\.(png|jpe?g|gif|webp)$/i.test(
@@ -522,8 +508,8 @@ export default function AdminApplications() {
 
                         {/* Selfie with ID */}
                         {app.documents.selfieWithId?.url && (
-                          <div className="border rounded-lg p-3 bg-gray-50">
-                            <div className="text-sm font-medium text-gray-700 mb-2">
+                          <div className="border border-slate-200 rounded-lg p-3 bg-slate-50">
+                            <div className="text-sm font-medium text-slate-700 mb-2">
                               Selfie with ID
                             </div>
                             {/\.(png|jpe?g|gif|webp)$/i.test(
@@ -555,8 +541,8 @@ export default function AdminApplications() {
 
                         {/* Registration Certificate */}
                         {app.documents.registrationCertificate?.url && (
-                          <div className="border rounded-lg p-3 bg-gray-50">
-                            <div className="text-sm font-medium text-gray-700 mb-2">
+                          <div className="border border-slate-200 rounded-lg p-3 bg-slate-50">
+                            <div className="text-sm font-medium text-slate-700 mb-2">
                               Registration Certificate
                             </div>
                             {/\.(png|jpe?g|gif|webp)$/i.test(
@@ -590,8 +576,8 @@ export default function AdminApplications() {
 
                         {/* Tax ID */}
                         {app.documents.taxId?.url && (
-                          <div className="border rounded-lg p-3 bg-gray-50">
-                            <div className="text-sm font-medium text-gray-700 mb-2">
+                          <div className="border border-slate-200 rounded-lg p-3 bg-slate-50">
+                            <div className="text-sm font-medium text-slate-700 mb-2">
                               Tax ID / EIN
                             </div>
                             {/\.(png|jpe?g|gif|webp)$/i.test(
@@ -623,8 +609,8 @@ export default function AdminApplications() {
 
                         {/* Address Proof */}
                         {app.documents.addressProof?.url && (
-                          <div className="border rounded-lg p-3 bg-gray-50">
-                            <div className="text-sm font-medium text-gray-700 mb-2">
+                          <div className="border border-slate-200 rounded-lg p-3 bg-slate-50">
+                            <div className="text-sm font-medium text-slate-700 mb-2">
                               Address Proof
                             </div>
                             {/\.(png|jpe?g|gif|webp)$/i.test(
@@ -655,7 +641,7 @@ export default function AdminApplications() {
                         )}
                       </div>
                     ) : (
-                      <div className="text-sm text-gray-600">
+                      <div className="text-sm text-slate-600">
                         No documents uploaded.
                       </div>
                     )}
@@ -663,14 +649,14 @@ export default function AdminApplications() {
                     {/* Additional Documents */}
                     {app.documents?.additionalDocuments?.length > 0 && (
                       <div className="space-y-2">
-                        <div className="text-sm font-medium text-gray-700">
+                        <div className="text-sm font-medium text-slate-700">
                           Additional Documents
                         </div>
                         <div className="grid gap-3 md:grid-cols-3">
                           {app.documents.additionalDocuments.map((doc, idx) => (
                             <div
                               key={idx}
-                              className="border rounded-lg p-3 bg-gray-50"
+                              className="border border-slate-200 rounded-lg p-3 bg-slate-50"
                             >
                               {/\.(png|jpe?g|gif|webp)$/i.test(doc.url) ? (
                                 <a
@@ -721,7 +707,7 @@ export default function AdminApplications() {
                     )}
 
                   {/* Action Buttons */}
-                  <div className="flex flex-col sm:flex-row gap-3 pt-4 border-t">
+                  <div className="flex flex-col sm:flex-row gap-3 pt-4 border-t border-slate-200">
                     {app.status === "pending" && (
                       <>
                         <FundraisingButton
@@ -789,7 +775,7 @@ export default function AdminApplications() {
 
         {/* Reject Dialog */}
         <Dialog open={showRejectDialog} onOpenChange={setShowRejectDialog}>
-          <DialogContent className="sm:max-w-md">
+          <DialogContent className="sm:max-w-md surface-card border-slate-200">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
                 <XCircle className="h-5 w-5 text-red-600" />
@@ -805,7 +791,7 @@ export default function AdminApplications() {
               <div>
                 <Label
                   htmlFor="rejection-reason"
-                  className="text-sm font-medium text-gray-700"
+                  className="text-sm font-medium text-slate-700"
                 >
                   Rejection Reason *
                 </Label>
@@ -815,7 +801,7 @@ export default function AdminApplications() {
                   value={rejectionReason}
                   onChange={(e) => setRejectionReason(e.target.value)}
                   placeholder="Please explain why this application is being rejected..."
-                  className="mt-2 border-2 border-gray-200 focus:border-red-500 rounded-xl resize-none"
+                  className="mt-2 rounded-xl border-slate-300 focus:border-red-500 resize-none"
                 />
               </div>
             </div>
@@ -847,7 +833,7 @@ export default function AdminApplications() {
 
         {/* Revoke Dialog */}
         <Dialog open={showRevokeDialog} onOpenChange={setShowRevokeDialog}>
-          <DialogContent className="sm:max-w-md">
+          <DialogContent className="sm:max-w-md surface-card border-slate-200">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
                 <XCircle className="h-5 w-5 text-red-600" />
@@ -863,7 +849,7 @@ export default function AdminApplications() {
               <div>
                 <Label
                   htmlFor="revoke-reason"
-                  className="text-sm font-medium text-gray-700"
+                  className="text-sm font-medium text-slate-700"
                 >
                   Revocation Reason (optional)
                 </Label>
@@ -873,7 +859,7 @@ export default function AdminApplications() {
                   value={revokeReason}
                   onChange={(e) => setRevokeReason(e.target.value)}
                   placeholder="Explain why you are revoking organizer status…"
-                  className="mt-2 border-2 border-gray-200 focus:border-red-500 rounded-xl resize-none"
+                  className="mt-2 rounded-xl border-slate-300 focus:border-red-500 resize-none"
                 />
               </div>
             </div>

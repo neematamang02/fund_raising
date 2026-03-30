@@ -5,6 +5,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { FundraisingButton } from "@/components/ui/fundraising-button";
+import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { PayPalScriptProvider, PayPalButtons } from "@paypal/react-paypal-js";
@@ -222,10 +223,10 @@ export default function Donate() {
   // If campaignId is missing or loading
   if (!campaignId || loadingCampaign || loadingPaypalConfig) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 flex items-center justify-center">
+      <div className="surface-page flex min-h-screen items-center justify-center px-4">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">
+          <div className="mx-auto mb-4 h-12 w-12 animate-spin rounded-full border-b-2 border-secondary"></div>
+          <p className="text-slate-600">
             {loadingPaypalConfig
               ? "Loading payment system..."
               : "Loading campaign..."}
@@ -238,15 +239,15 @@ export default function Donate() {
   // If campaign fetch failed
   if (campaignError || !campaign) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 flex items-center justify-center">
+      <div className="surface-page flex min-h-screen items-center justify-center px-4">
         <div className="text-center">
-          <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-red-100">
             <Heart className="h-8 w-8 text-red-600" />
           </div>
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">
+          <h2 className="mb-2 text-2xl font-bold text-slate-900">
             Campaign Not Found
           </h2>
-          <p className="text-gray-600 mb-6">
+          <p className="mb-6 text-slate-600">
             {campaignError?.message ||
               "The campaign you're looking for doesn't exist."}
           </p>
@@ -264,24 +265,22 @@ export default function Donate() {
   // If donation is successful
   if (bill) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-blue-50 to-indigo-50 py-12 px-4">
+      <div className="surface-page px-4 py-12">
         <div className="max-w-2xl mx-auto">
-          {/* Success Header */}
           <div className="text-center mb-8">
-            <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <div className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-green-100">
               <CheckCircle className="h-12 w-12 text-green-600" />
             </div>
-            <h1 className="text-4xl font-bold text-gray-900 mb-2">
+            <h1 className="mb-2 text-4xl font-bold text-slate-900">
               Thank You!
             </h1>
-            <p className="text-lg text-gray-600">
+            <p className="text-lg text-slate-600">
               Your donation has been successfully processed
             </p>
           </div>
 
-          {/* Receipt Card */}
-          <Card className="bg-white shadow-xl border-0 overflow-hidden">
-            <CardHeader className="bg-gradient-to-r from-green-500 to-emerald-500 text-white">
+          <Card className="surface-card overflow-hidden rounded-xl border-slate-200 shadow-[0_12px_30px_rgba(15,23,42,0.08)]">
+            <CardHeader className="bg-primary text-white">
               <CardTitle className="flex items-center gap-3 text-xl">
                 <Sparkles className="h-6 w-6" />
                 Donation Receipt
@@ -290,34 +289,34 @@ export default function Donate() {
             <CardContent className="p-8 space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                  <Label className="text-sm font-medium text-gray-500">
+                  <Label className="text-sm font-medium text-slate-500">
                     Campaign
                   </Label>
-                  <p className="text-lg font-semibold text-gray-900">
+                  <p className="text-lg font-semibold text-slate-900">
                     {bill.campaignTitle}
                   </p>
                 </div>
                 <div>
-                  <Label className="text-sm font-medium text-gray-500">
+                  <Label className="text-sm font-medium text-slate-500">
                     Amount
                   </Label>
-                  <p className="text-2xl font-bold text-green-600">
+                  <p className="text-2xl font-bold text-primary">
                     ${bill.amount} {bill.currency}
                   </p>
                 </div>
                 <div>
-                  <Label className="text-sm font-medium text-gray-500">
+                  <Label className="text-sm font-medium text-slate-500">
                     Transaction ID
                   </Label>
-                  <p className="text-sm font-mono text-gray-700 bg-gray-100 px-3 py-1 rounded">
+                  <p className="rounded bg-slate-100 px-3 py-1 font-mono text-sm text-slate-700">
                     {bill.transactionId}
                   </p>
                 </div>
                 <div>
-                  <Label className="text-sm font-medium text-gray-500">
+                  <Label className="text-sm font-medium text-slate-500">
                     Date & Time
                   </Label>
-                  <p className="text-sm text-gray-700">
+                  <p className="text-sm text-slate-700">
                     {new Date(bill.timestamp).toLocaleString("en-US", {
                       dateStyle: "medium",
                       timeStyle: "short",
@@ -327,11 +326,11 @@ export default function Donate() {
               </div>
 
               <div className="border-t pt-6">
-                <Label className="text-sm font-medium text-gray-500">
+                <Label className="text-sm font-medium text-slate-500">
                   Donor Information
                 </Label>
-                <p className="text-lg text-gray-900">{bill.payerName}</p>
-                <p className="text-sm text-gray-600">{bill.payerEmail}</p>
+                <p className="text-lg text-slate-900">{bill.payerName}</p>
+                <p className="text-sm text-slate-600">{bill.payerEmail}</p>
               </div>
 
               <div className="flex flex-col sm:flex-row gap-4 pt-6">
@@ -364,8 +363,7 @@ export default function Donate() {
 
   // MAIN RENDER: campaign loaded, no bill yet
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
-      {/* Navigation */}
+    <div className="surface-page min-h-screen">
       <div className="pt-6 pb-4 px-4">
         <div className="max-w-4xl mx-auto">
           <Link to="/donate">
@@ -377,79 +375,71 @@ export default function Donate() {
         </div>
       </div>
 
-      {/* Page Body */}
       <div className="max-w-4xl mx-auto py-8 px-4">
         <div className="grid lg:grid-cols-2 gap-8">
-          {/* ───────── Campaign Information ───────── */}
           <div className="space-y-6">
-            {/* Header & Badge */}
             <div>
               <Badge
                 className={
                   campaignEnded
-                    ? "bg-slate-700 text-white mb-4"
-                    : "bg-gradient-to-r from-blue-500 to-indigo-500 text-white mb-4"
+                    ? "mb-4 bg-slate-700 text-white"
+                    : "mb-4 bg-blue-100 text-blue-800"
                 }
               >
                 <Heart className="h-4 w-4 mr-2" />
                 {campaignEnded ? "Campaign Ended" : "Support This Cause"}
               </Badge>
-              <h1 className="text-3xl font-bold text-gray-900 mb-4">
+              <h1 className="mb-4 text-3xl font-bold text-slate-900">
                 {campaign.title}
               </h1>
             </div>
 
-            {/* Campaign Image */}
             <div className="relative group">
               <img
                 src={campaign.imageURL || "/placeholder.svg"}
                 alt={campaign.title}
-                className="w-full h-64 object-cover rounded-2xl shadow-lg group-hover:scale-[1.02] transition-transform duration-300"
+                className="h-64 w-full rounded-xl border border-slate-200 object-cover transition-transform duration-300 group-hover:scale-[1.01]"
               />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent rounded-2xl"></div>
+              <div className="absolute inset-0 rounded-xl bg-gradient-to-t from-black/20 to-transparent"></div>
             </div>
 
-            {/* Campaign Details & Progress */}
-            <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-lg">
+            <Card className="surface-card rounded-xl">
               <CardContent className="p-6">
-                <p className="text-gray-700 leading-relaxed mb-6">
+                <p className="mb-6 leading-relaxed text-slate-700">
                   {campaign.description}
                 </p>
 
-                {/* Progress Bar */}
                 <div className="space-y-4">
                   <div className="flex justify-between items-center">
-                    <span className="text-sm font-medium text-gray-600">
+                    <span className="text-sm font-medium text-slate-600">
                       Progress
                     </span>
-                    <span className="text-sm font-bold text-blue-600">
+                    <span className="text-sm font-bold text-secondary">
                       {progressPercentage}%
                     </span>
                   </div>
 
-                  <div className="relative">
-                    <div className="w-full bg-gray-200 rounded-full h-4 overflow-hidden">
+                  <div>
+                    <div className="h-4 w-full overflow-hidden rounded-full bg-slate-200">
                       <div
-                        className="bg-gradient-to-r from-blue-500 to-indigo-600 h-4 rounded-full transition-all duration-1000 ease-out relative overflow-hidden"
+                        className="h-4 rounded-full bg-primary transition-all duration-1000 ease-out"
                         style={{ width: `${progressPercentage}%` }}
-                      >
-                        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent animate-shimmer"></div>
-                      </div>
+                      />
                     </div>
                   </div>
 
                   <div className="grid grid-cols-2 gap-4">
-                    <div className="text-center p-4 bg-blue-50 rounded-xl">
-                      <div className="text-2xl font-bold text-blue-600">
+                    <div className="rounded-xl bg-blue-50 p-4 text-center">
+                      <div className="text-2xl font-bold text-secondary">
                         ${campaign.raised.toLocaleString()}
                       </div>
-                      <div className="text-sm text-gray-600">Raised</div>
+                      <div className="text-sm text-slate-600">Raised</div>
                     </div>
-                    <div className="text-center p-4 bg-gray-50 rounded-xl">
-                      <div className="text-2xl font-bold text-gray-900">
+                    <div className="rounded-xl bg-slate-50 p-4 text-center">
+                      <div className="text-2xl font-bold text-slate-900">
                         ${campaign.target.toLocaleString()}
                       </div>
-                      <div className="text-sm text-gray-600">Goal</div>
+                      <div className="text-sm text-slate-600">Goal</div>
                     </div>
                   </div>
 
@@ -548,10 +538,9 @@ export default function Donate() {
             </Card>
           </div>
 
-          {/* ───────── Donation Form ───────── */}
           <div className="space-y-6">
-            <Card className="bg-white shadow-xl border-0 overflow-hidden">
-              <CardHeader className="bg-gradient-to-r from-orange-500 to-amber-500 text-white">
+            <Card className="surface-card overflow-hidden rounded-xl">
+              <CardHeader className="bg-secondary text-white">
                 <CardTitle className="flex items-center gap-3">
                   <Heart className="h-6 w-6" />
                   Make Your Donation
@@ -559,12 +548,11 @@ export default function Donate() {
               </CardHeader>
               <CardContent className="p-6 space-y-6">
                 {errorMsg && (
-                  <div className="bg-red-50 border border-red-200 rounded-xl p-4">
+                  <div className="rounded-xl border border-red-200 bg-red-50 p-4">
                     <p className="text-red-800 text-sm">{errorMsg}</p>
                   </div>
                 )}
 
-                {/* If target is already met, show disabled button instead of the form */}
                 {campaignEnded ? (
                   <div className="text-center">
                     <FundraisingButton
@@ -589,9 +577,8 @@ export default function Donate() {
                   </div>
                 ) : (
                   <>
-                    {/* Preset Amounts */}
                     <div>
-                      <Label className="text-sm font-medium text-gray-700 mb-3 block">
+                      <Label className="mb-3 block text-sm font-medium text-slate-700">
                         Choose an amount or enter custom
                       </Label>
                       <div className="grid grid-cols-3 gap-3 mb-4">
@@ -599,10 +586,10 @@ export default function Donate() {
                           <button
                             key={preset}
                             onClick={() => handlePresetAmount(preset)}
-                            className={`p-3 rounded-xl border-2 transition-all duration-200 hover:scale-105 ${
+                            className={`rounded-lg border px-3 py-3 text-slate-700 transition-colors duration-200 ${
                               selectedPreset === preset
-                                ? "border-orange-500 bg-orange-50 text-orange-700"
-                                : "border-gray-200 hover:border-orange-300 text-gray-700"
+                                ? "border-primary bg-green-50 text-primary"
+                                : "border-slate-300 hover:border-primary/60"
                             }`}
                           >
                             <div className="text-lg font-bold">${preset}</div>
@@ -611,16 +598,15 @@ export default function Donate() {
                       </div>
                     </div>
 
-                    {/* Custom Amount */}
                     <div>
                       <Label
                         htmlFor="donation-amount"
-                        className="text-sm font-medium text-gray-700"
+                        className="text-sm font-medium text-slate-700"
                       >
                         Custom Amount (USD)
                       </Label>
                       <div className="relative mt-2">
-                        <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+                        <DollarSign className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" />
                         <Input
                           id="donation-amount"
                           type="number"
@@ -628,13 +614,12 @@ export default function Donate() {
                           placeholder="Enter amount"
                           value={amount}
                           onChange={(e) => handleCustomAmount(e.target.value)}
-                          className="pl-10 h-12 text-lg border-2 border-gray-200 focus:border-orange-500 rounded-xl"
+                          className="h-12 rounded-lg border-slate-300 pl-10 text-lg"
                         />
                       </div>
                     </div>
 
-                    {/* Security Notice */}
-                    <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
+                    <div className="rounded-xl border border-blue-200 bg-blue-50 p-4">
                       <div className="flex items-center gap-2 text-blue-800">
                         <Shield className="h-5 w-5" />
                         <span className="text-sm font-medium">
@@ -644,8 +629,7 @@ export default function Donate() {
                       </div>
                     </div>
 
-                    {/* Privacy Option */}
-                    <label className="flex items-start gap-3 rounded-xl border border-gray-200 p-4 bg-white">
+                    <label className="flex items-start gap-3 rounded-xl border border-slate-300 bg-white p-4">
                       <input
                         type="checkbox"
                         className="mt-1"
@@ -654,13 +638,12 @@ export default function Donate() {
                           setIsAnonymousDonation(e.target.checked)
                         }
                       />
-                      <span className="text-sm text-gray-700">
+                      <span className="text-sm text-slate-700">
                         Donate anonymously. Your identity will be hidden in
                         donor lists and shown as Anonymous Donor.
                       </span>
                     </label>
 
-                    {/* PayPal Buttons */}
                     <div className="space-y-4">
                       {paypalClientId ? (
                         <PayPalScriptProvider
@@ -722,7 +705,7 @@ export default function Donate() {
                           />
                         </PayPalScriptProvider>
                       ) : (
-                        <div className="bg-red-50 border border-red-200 rounded-xl p-4">
+                        <div className="rounded-xl border border-red-200 bg-red-50 p-4">
                           <p className="text-red-800 text-sm">
                             Payment system is currently unavailable. Please try
                             again later.
@@ -732,7 +715,7 @@ export default function Donate() {
                     </div>
 
                     {!user && (
-                      <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
+                      <div className="rounded-xl border border-amber-200 bg-amber-50 p-4">
                         <div className="flex items-center gap-2 text-amber-800">
                           <Clock className="h-5 w-5" />
                           <span className="text-sm">
@@ -753,11 +736,10 @@ export default function Donate() {
               </CardContent>
             </Card>
 
-            {/* Impact Message */}
-            <Card className="bg-gradient-to-r from-green-50 to-emerald-50 border-green-200">
+            <Card className="rounded-xl border-green-200 bg-green-50">
               <CardContent className="p-6">
                 <div className="flex items-center gap-3 mb-3">
-                  <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-green-100">
                     <Users className="h-5 w-5 text-green-600" />
                   </div>
                   <h3 className="font-semibold text-green-800">Your Impact</h3>

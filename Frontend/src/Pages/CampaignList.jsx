@@ -2,6 +2,7 @@ import { useState, useMemo } from "react";
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import { FundraisingButton } from "@/components/ui/fundraising-button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -48,14 +49,12 @@ export function CampaignList() {
         throw new Error("Failed to fetch campaigns");
       }
       const data = await response.json();
-      console.log("Campaigns data received:", data);
       return data;
     },
   });
 
   // Extract campaigns array from response
   const campaigns = campaignsData?.campaigns || [];
-  const pagination = campaignsData?.pagination;
 
   // Filter and sort campaigns
   const filteredAndSortedCampaigns = useMemo(() => {
@@ -78,18 +77,23 @@ export function CampaignList() {
     // Sort campaigns
     filtered.sort((a, b) => {
       switch (sortBy) {
-        case "newest":
+        case "newest": {
           return new Date(b.createdAt) - new Date(a.createdAt);
-        case "oldest":
+        }
+        case "oldest": {
           return new Date(a.createdAt) - new Date(b.createdAt);
-        case "target-high":
+        }
+        case "target-high": {
           return (b.target || 0) - (a.target || 0);
-        case "target-low":
+        }
+        case "target-low": {
           return (a.target || 0) - (b.target || 0);
-        case "progress":
+        }
+        case "progress": {
           const progressB = (b.raised || 0) / (b.target || 1);
           const progressA = (a.raised || 0) / (a.target || 1);
           return progressB - progressA;
+        }
         default:
           return 0;
       }
@@ -180,25 +184,21 @@ export function CampaignList() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 py-12 px-4">
+      <div className="surface-page min-h-screen px-4 py-12">
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-12">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-            <p className="text-gray-600">Loading campaigns...</p>
+            <div className="mx-auto mb-4 h-12 w-12 animate-spin rounded-full border-b-2 border-secondary"></div>
+            <p className="text-slate-600">Loading campaigns...</p>
           </div>
 
-          {/* Loading Skeleton */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {Array.from({ length: 6 }).map((_, i) => (
-              <Card
-                key={i}
-                className="bg-white shadow-lg border-0 overflow-hidden"
-              >
-                <div className="h-48 bg-gray-200 animate-pulse"></div>
+              <Card key={i} className="surface-card overflow-hidden rounded-xl">
+                <div className="h-48 animate-pulse bg-slate-200"></div>
                 <CardContent className="p-6 space-y-4">
-                  <div className="h-4 bg-gray-200 rounded animate-pulse"></div>
-                  <div className="h-3 bg-gray-200 rounded animate-pulse w-3/4"></div>
-                  <div className="h-8 bg-gray-200 rounded animate-pulse"></div>
+                  <div className="h-4 animate-pulse rounded bg-slate-200"></div>
+                  <div className="h-3 w-3/4 animate-pulse rounded bg-slate-200"></div>
+                  <div className="h-8 animate-pulse rounded bg-slate-200"></div>
                 </CardContent>
               </Card>
             ))}
@@ -210,55 +210,48 @@ export function CampaignList() {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 flex items-center justify-center">
+      <div className="surface-page flex min-h-screen items-center justify-center px-4">
         <div className="text-center">
-          <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-red-100">
             <AlertTriangle className="h-8 w-8 text-red-600" />
           </div>
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">
+          <h2 className="mb-2 text-2xl font-bold text-slate-900">
             Error Loading Campaigns
           </h2>
-          <p className="text-gray-600 mb-6">{error.message}</p>
-          <FundraisingButton
-            variant="trust"
+          <p className="mb-6 text-slate-600">{error.message}</p>
+          <Button
+            className="bg-primary hover:bg-primary/90"
             onClick={() => window.location.reload()}
           >
             Try Again
-          </FundraisingButton>
+          </Button>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 py-12 px-4">
+    <div className="surface-page min-h-screen px-4 py-12">
       <div className="max-w-6xl mx-auto">
-        {/* Header */}
         <div className="text-center mb-12">
-          <Badge className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-6 py-2 text-sm font-medium mb-6">
+          <Badge className="mb-5 bg-blue-100 px-4 py-1.5 text-blue-800">
             <Sparkles className="h-4 w-4 mr-2" />
             Explore Campaigns
           </Badge>
-          <h1 className="text-4xl md:text-5xl font-bold mb-6">
-            <span className="bg-gradient-to-r from-blue-700 via-indigo-600 to-purple-600 bg-clip-text text-transparent">
-              Make a Difference
-            </span>
-            <br />
-            <span className="text-gray-800">Today</span>
+          <h1 className="mb-4 text-4xl font-bold text-slate-900 md:text-5xl">
+            Support a Cause Today
           </h1>
-          <p className="text-xl text-gray-600 max-w-2xl mx-auto leading-relaxed">
+          <p className="mx-auto max-w-2xl text-lg leading-relaxed text-slate-600">
             Discover meaningful causes and support campaigns that are creating
             positive change in communities worldwide.
           </p>
         </div>
 
-        {/* Filters and Search */}
-        <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-lg mb-8">
+        <Card className="surface-card mb-8 rounded-xl">
           <CardContent className="p-6">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
-              {/* Search */}
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+                <Search className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" />
                 <Input
                   type="text"
                   placeholder="Search campaigns..."
@@ -267,11 +260,10 @@ export function CampaignList() {
                     setSearchTerm(e.target.value);
                     setCurrentPage(1);
                   }}
-                  className="pl-10 h-11 border-2 border-gray-200 focus:border-blue-500 rounded-xl"
+                  className="h-11 rounded-lg border-slate-300 pl-10"
                 />
               </div>
 
-              {/* Category Filter */}
               <Select
                 value={categoryFilter}
                 onValueChange={(value) => {
@@ -279,7 +271,7 @@ export function CampaignList() {
                   setCurrentPage(1);
                 }}
               >
-                <SelectTrigger className="h-11 border-2 border-gray-200 focus:border-blue-500 rounded-xl">
+                <SelectTrigger className="h-11 rounded-lg border-slate-300">
                   <Filter className="h-4 w-4 mr-2" />
                   <SelectValue placeholder="All Categories" />
                 </SelectTrigger>
@@ -293,9 +285,8 @@ export function CampaignList() {
                 </SelectContent>
               </Select>
 
-              {/* Sort */}
               <Select value={sortBy} onValueChange={setSortBy}>
-                <SelectTrigger className="h-11 border-2 border-gray-200 focus:border-blue-500 rounded-xl">
+                <SelectTrigger className="h-11 rounded-lg border-slate-300">
                   <TrendingUp className="h-4 w-4 mr-2" />
                   <SelectValue />
                 </SelectTrigger>
@@ -308,7 +299,6 @@ export function CampaignList() {
                 </SelectContent>
               </Select>
 
-              {/* View Mode */}
               <div className="flex gap-2">
                 <FundraisingButton
                   variant={viewMode === "grid" ? "trust" : "ghost-trust"}
@@ -329,8 +319,7 @@ export function CampaignList() {
               </div>
             </div>
 
-            {/* Results Summary */}
-            <div className="flex items-center justify-between text-sm text-gray-600">
+            <div className="flex items-center justify-between text-sm text-slate-600">
               <span>
                 Showing {paginatedCampaigns.length} of{" "}
                 {filteredAndSortedCampaigns.length} campaigns
@@ -360,11 +349,10 @@ export function CampaignList() {
               return (
                 <Card
                   key={campaign._id}
-                  className={`bg-white shadow-xl border-0 overflow-hidden hover:shadow-2xl transition-all duration-300 hover:scale-[1.02] group ${
+                  className={`surface-card group overflow-hidden rounded-xl transition-all duration-200 hover:-translate-y-0.5 hover:border-blue-200 hover:shadow-lg ${
                     viewMode === "list" ? "flex flex-col md:flex-row" : ""
                   }`}
                 >
-                  {/* Image */}
                   <div
                     className={`relative overflow-hidden ${
                       viewMode === "list" ? "md:w-1/3 h-48 md:h-auto" : "h-48"
@@ -373,10 +361,9 @@ export function CampaignList() {
                     <img
                       src={campaign.imageURL || "/placeholder.svg"}
                       alt={campaign.title}
-                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                      className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
                     />
 
-                    {/* Overlay Badges */}
                     <div className="absolute top-4 left-4 flex flex-col gap-2">
                       {campaign.category && (
                         <Badge className={getCategoryColor(campaign.category)}>
@@ -391,16 +378,14 @@ export function CampaignList() {
                       {getUrgencyBadge(campaign)}
                     </div>
 
-                    {/* Progress Overlay */}
-                    <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-4">
-                      <div className="flex items-center gap-2 text-white text-sm">
+                    <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-slate-900/75 to-transparent p-4">
+                      <div className="inline-flex items-center gap-2 rounded-full bg-white/20 px-2.5 py-1 text-xs font-semibold text-white backdrop-blur-sm">
                         <TrendingUp className="h-4 w-4" />
-                        <span className="font-medium">{progress}% funded</span>
+                        <span>{progress}% funded</span>
                       </div>
                     </div>
                   </div>
 
-                  {/* Content */}
                   <div
                     className={`p-6 space-y-4 ${
                       viewMode === "list"
@@ -409,44 +394,43 @@ export function CampaignList() {
                     }`}
                   >
                     <div className="space-y-3">
-                      <h2 className="font-bold text-xl text-gray-900 line-clamp-2 group-hover:text-blue-600 transition-colors">
+                      <h2 className="line-clamp-2 text-xl font-bold text-slate-900 transition-colors group-hover:text-blue-700">
                         {campaign.title}
                       </h2>
-                      <p className="text-gray-600 text-sm line-clamp-3 leading-relaxed">
+                      <p className="line-clamp-3 text-sm leading-relaxed text-slate-600">
                         {campaign.description}
                       </p>
                     </div>
 
-                    {/* Progress Section */}
                     <div className="space-y-3">
-                      <div className="relative">
-                        <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
+                      <div>
+                        <div className="h-2 w-full overflow-hidden rounded-full bg-slate-200">
                           <div
-                            className="bg-gradient-to-r from-blue-500 to-indigo-600 h-2 rounded-full transition-all duration-1000 ease-out"
+                            className="h-2 rounded-full bg-primary transition-all duration-700 ease-out"
                             style={{ width: `${progress}%` }}
-                          ></div>
+                          />
                         </div>
                       </div>
 
                       <div className="flex justify-between items-center text-sm">
                         <div>
-                          <div className="font-bold text-lg text-gray-900">
+                          <div className="text-lg font-bold text-slate-900">
                             ${(campaign.raised || 0).toLocaleString()}
                           </div>
-                          <div className="text-gray-500 flex items-center gap-1">
+                          <div className="flex items-center gap-1 text-slate-500">
                             <Target className="h-3 w-3" />
                             raised of ${campaign.target.toLocaleString()}
                           </div>
                         </div>
                         <div className="text-right">
-                          <div className="font-bold text-lg text-blue-600">
+                          <div className="text-lg font-bold text-secondary">
                             {progress}%
                           </div>
-                          <div className="text-gray-500 text-xs">complete</div>
+                          <div className="text-xs text-slate-500">complete</div>
                         </div>
                       </div>
 
-                      <div className="flex items-center gap-2 text-gray-600 text-sm">
+                      <div className="flex items-center gap-2 text-sm text-slate-600">
                         <Users className="h-4 w-4" />
                         <span>
                           {Math.floor((campaign.raised || 0) / 50)} supporters
@@ -454,27 +438,24 @@ export function CampaignList() {
                       </div>
                     </div>
 
-                    {/* Action Button */}
                     {isEnded ? (
-                      <FundraisingButton
-                        variant="ghost-trust"
+                      <Button
+                        variant="outline"
                         size="lg"
-                        fullWidth
+                        className="w-full"
                         disabled
                       >
                         Campaign Ended
-                      </FundraisingButton>
+                      </Button>
                     ) : (
                       <Link to={`/donate/${campaign._id}`} className="block">
-                        <FundraisingButton
-                          variant="donate"
+                        <Button
+                          className="w-full bg-primary hover:bg-primary/90"
                           size="lg"
-                          fullWidth
-                          className="group"
                         >
-                          <Heart className="h-5 w-5 group-hover:scale-110 transition-transform" />
+                          <Heart className="h-5 w-5" />
                           Support This Cause
-                        </FundraisingButton>
+                        </Button>
                       </Link>
                     )}
                   </div>
@@ -483,15 +464,15 @@ export function CampaignList() {
             })}
           </div>
         ) : (
-          <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-lg">
+          <Card className="surface-card rounded-xl">
             <CardContent className="p-12 text-center">
-              <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <Search className="h-8 w-8 text-gray-400" />
+              <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-slate-100">
+                <Search className="h-8 w-8 text-slate-400" />
               </div>
-              <h3 className="text-xl font-semibold text-gray-900 mb-2">
+              <h3 className="mb-2 text-xl font-semibold text-slate-900">
                 No Campaigns Found
               </h3>
-              <p className="text-gray-600 mb-6">
+              <p className="mb-6 text-slate-600">
                 {searchTerm || categoryFilter !== "all"
                   ? "Try adjusting your search or filter criteria"
                   : "No campaigns are available at the moment"}
@@ -512,12 +493,11 @@ export function CampaignList() {
           </Card>
         )}
 
-        {/* Pagination */}
         {totalPages > 1 && (
-          <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-lg">
+          <Card className="surface-card rounded-xl">
             <CardContent className="p-6">
               <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-                <div className="text-sm text-gray-600">
+                <div className="text-sm text-slate-600">
                   Page {currentPage} of {totalPages}
                 </div>
 
@@ -532,7 +512,6 @@ export function CampaignList() {
                     Previous
                   </FundraisingButton>
 
-                  {/* Page Numbers */}
                   <div className="flex gap-1">
                     {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
                       let pageNum;

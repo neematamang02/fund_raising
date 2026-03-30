@@ -10,8 +10,22 @@ import {
   Linkedin,
   ArrowUp,
 } from "lucide-react";
-import { FundraisingButton } from "./ui/fundraising-button";
+import { Button } from "@/components/ui/button";
 import ROUTES from "@/routes/routes";
+
+const QUICK_LINKS = [
+  { name: "Home", href: ROUTES.HOME },
+  { name: "About", href: ROUTES.ABOUT },
+  { name: "Donate", href: ROUTES.DONATE },
+  { name: "Login", href: ROUTES.LOGIN },
+  { name: "Register", href: ROUTES.REGISTER },
+];
+
+const SUPPORT_LINKS = [
+  { name: "My Donations", href: ROUTES.MY_DONATIONS },
+  { name: "Apply Organizer", href: ROUTES.APPLY_ORGANIZER },
+  { name: "Notifications", href: ROUTES.NOTIFICATIONS },
+];
 
 const Footer = () => {
   const scrollToTop = () => {
@@ -19,69 +33,50 @@ const Footer = () => {
   };
 
   return (
-    <footer className="bg-gradient-to-br from-slate-900 via-blue-900 to-indigo-900 text-white">
-      {/* Main Footer Grid */}
-      <div className="max-w-7xl mx-auto px-6 py-16">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12">
-          {/* 1) Brand & Description */}
-          <div className="space-y-6">
-            <Link
-              to={ROUTES.HOME}
-              className="flex items-center space-x-3 group"
-            >
-              <div className="relative">
-                <Heart className="h-10 w-10 text-amber-400 group-hover:scale-110 transition-transform duration-300" />
-                <div className="absolute inset-0 bg-amber-400/20 rounded-full blur-lg group-hover:blur-xl transition-all duration-300"></div>
-              </div>
-              <span className="text-2xl font-bold bg-gradient-to-r from-white to-blue-200 bg-clip-text text-transparent">
-                Fundzy
-              </span>
+    <footer className="border-t border-blue-900/20 bg-secondary text-blue-50">
+      <div className="mx-auto w-full max-w-7xl px-4 py-14 sm:px-6 sm:py-16">
+        <div className="grid grid-cols-1 gap-10 md:grid-cols-2 lg:grid-cols-4">
+          <div className="space-y-5">
+            <Link to={ROUTES.HOME} className="inline-flex items-center gap-2.5">
+              <Heart className="h-7 w-7 text-primary" />
+              <span className="text-2xl font-bold text-white">HopeOn</span>
             </Link>
-            <p className="text-blue-200 leading-relaxed">
-              Fundzy empowers communities by making fundraising transparent,
-              impactful, and accessible. Join us in creating lasting change, one
-              donation at a time.
+            <p className="max-w-sm text-sm leading-7 text-blue-100">
+              HopeOn empowers communities with transparent fundraising and clear
+              impact tracking. Give with confidence and create meaningful
+              change.
             </p>
-            {/* Social Icons */}
-            <div className="flex space-x-4">
+
+            <div className="flex gap-3">
               {[
-                { icon: Facebook, href: "#" },
-                { icon: Twitter, href: "#" },
-                { icon: Instagram, href: "#" },
-                { icon: Linkedin, href: "#" },
-              ].map((social, idx) => (
+                { icon: Facebook, href: "#", label: "Facebook" },
+                { icon: Twitter, href: "#", label: "Twitter" },
+                { icon: Instagram, href: "#", label: "Instagram" },
+                { icon: Linkedin, href: "#", label: "LinkedIn" },
+              ].map((social) => (
                 <a
-                  key={idx}
+                  key={social.label}
                   href={social.href}
-                  aria-label="social-link"
-                  className="w-10 h-10 bg-white/10 rounded-full flex items-center justify-center hover:bg-white/20 transition-all duration-300 group"
+                  aria-label={social.label}
+                  className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-blue-200/30 bg-blue-800/35 transition-colors duration-200 hover:bg-blue-800/55"
                 >
-                  <social.icon className="h-5 w-5 text-blue-200 group-hover:text-white transition-colors" />
+                  <social.icon className="h-4 w-4 text-blue-100" />
                 </a>
               ))}
             </div>
           </div>
 
-          {/* 2) Quick Links */}
           <div>
-            <h3 className="text-xl font-semibold text-white mb-4 relative">
+            <h3 className="mb-4 text-base font-semibold text-white">
               Quick Links
-              <div className="absolute bottom-0 left-0 w-12 h-0.5 bg-gradient-to-r from-amber-400 to-orange-400"></div>
             </h3>
-            <ul className="space-y-3">
-              {[
-                { name: "Home", href: ROUTES.HOME },
-                { name: "About Us", href: ROUTES.ABOUT },
-                { name: "How It Works", href: "/how-it-works" },
-                { name: "Success Stories", href: "/success" },
-                { name: "Impact Reports", href: "/reports" },
-              ].map((link, idx) => (
-                <li key={idx}>
+            <ul className="space-y-2.5">
+              {QUICK_LINKS.map((link) => (
+                <li key={link.name}>
                   <Link
                     to={link.href}
-                    className="text-blue-200 hover:text-white transition-colors duration-300 flex items-center group"
+                    className="text-sm text-blue-100 transition-colors duration-200 hover:text-white"
                   >
-                    <span className="w-0 group-hover:w-2 h-0.5 bg-amber-400 transition-all duration-300 mr-0 group-hover:mr-2"></span>
                     {link.name}
                   </Link>
                 </li>
@@ -89,25 +84,15 @@ const Footer = () => {
             </ul>
           </div>
 
-          {/* 3) Support */}
           <div>
-            <h3 className="text-xl font-semibold text-white mb-4 relative">
-              Support
-              <div className="absolute bottom-0 left-0 w-12 h-0.5 bg-gradient-to-r from-amber-400 to-orange-400"></div>
-            </h3>
-            <ul className="space-y-3">
-              {[
-                { name: "Help Center", href: "/help" },
-                { name: "Privacy Policy", href: "/privacy" },
-                { name: "Terms of Service", href: "/terms" },
-                { name: "Contact Us", href: "/contact" },
-              ].map((link, idx) => (
-                <li key={idx}>
+            <h3 className="mb-4 text-base font-semibold text-white">Support</h3>
+            <ul className="space-y-2.5">
+              {SUPPORT_LINKS.map((link) => (
+                <li key={link.name}>
                   <Link
                     to={link.href}
-                    className="text-blue-200 hover:text-white transition-colors duration-300 flex items-center group"
+                    className="text-sm text-blue-100 transition-colors duration-200 hover:text-white"
                   >
-                    <span className="w-0 group-hover:w-2 h-0.5 bg-amber-400 transition-all duration-300 mr-0 group-hover:mr-2"></span>
                     {link.name}
                   </Link>
                 </li>
@@ -115,69 +100,66 @@ const Footer = () => {
             </ul>
           </div>
 
-          {/* 4) Contact Info */}
-          <div className="space-y-6">
-            <h3 className="text-xl font-semibold text-white mb-4 relative">
-              Get In Touch
-              <div className="absolute bottom-0 left-0 w-12 h-0.5 bg-gradient-to-r from-amber-400 to-orange-400"></div>
-            </h3>
-            <div className="space-y-4">
-              <div className="flex items-center space-x-3 text-blue-200">
-                <Mail className="h-5 w-5 text-amber-400" />
+          <div className="space-y-5">
+            <h3 className="text-base font-semibold text-white">Get In Touch</h3>
+            <div className="space-y-3">
+              <div className="flex items-center gap-3 text-sm text-blue-100">
+                <Mail className="h-4 w-4 text-primary" />
                 <span>support@fundzy.com</span>
               </div>
-              <div className="flex items-center space-x-3 text-blue-200">
-                <Phone className="h-5 w-5 text-amber-400" />
+              <div className="flex items-center gap-3 text-sm text-blue-100">
+                <Phone className="h-4 w-4 text-primary" />
                 <span>+1 (555) 123-4567</span>
               </div>
-              <div className="flex items-center space-x-3 text-blue-200">
-                <MapPin className="h-5 w-5 text-amber-400" />
+              <div className="flex items-center gap-3 text-sm text-blue-100">
+                <MapPin className="h-4 w-4 text-primary" />
                 <span>123 Impact Street, Change City</span>
               </div>
             </div>
-            {/* Subscribe */}
-            <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-6 border border-white/20">
-              <h4 className="font-semibold text-white mb-3">Stay Updated</h4>
-              <p className="text-blue-200 text-sm mb-4">
+
+            <div className="rounded-xl border border-blue-200/20 bg-blue-800/35 p-4">
+              <h4 className="mb-2 text-sm font-semibold text-white">
+                Stay Updated
+              </h4>
+              <p className="mb-3 text-sm text-blue-100">
                 Get the latest impact stories and updates.
               </p>
-              <div className="flex flex-col space-y-3">
+              <div className="space-y-2.5">
                 <input
                   type="email"
                   placeholder="Enter your email"
-                  className="px-4 py-2 rounded-lg bg-white/20 border border-white/30 text-white placeholder-blue-200 focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent"
+                  className="w-full rounded-md border border-blue-200/40 bg-transparent px-3 py-2 text-sm text-white placeholder:text-blue-200"
+                  aria-label="Email address"
                 />
-                <FundraisingButton variant="warm" size="sm" fullWidth>
+                <Button
+                  type="button"
+                  className="w-full bg-primary hover:bg-primary/90"
+                >
                   Subscribe
-                </FundraisingButton>
+                </Button>
               </div>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Bottom Bar */}
-      <div className="border-t border-white/20">
-        <div className="max-w-7xl mx-auto px-6 py-6 flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0">
-          <div className="text-blue-200 text-sm">
+      <div className="border-t border-blue-200/20">
+        <div className="mx-auto flex w-full max-w-7xl flex-col items-center justify-between gap-3 px-4 py-5 text-sm text-blue-100 sm:flex-row sm:px-6">
+          <div>
             © 2025{" "}
             <Link
               to={ROUTES.HOME}
-              className="text-white hover:text-amber-400 transition-colors font-medium"
+              className="font-medium text-white transition-colors hover:text-primary"
             >
-              Fundzy
+              HopeOn
             </Link>
             . All Rights Reserved.
           </div>
-          <div className="text-blue-200 text-sm">
-            Created by{" "}
-            <span className="text-white font-semibold">Nipeshtamang</span>
-          </div>
           <button
             onClick={scrollToTop}
-            className="flex items-center space-x-1 text-sm text-blue-200 hover:text-white transition-colors group"
+            className="inline-flex items-center gap-1 text-blue-100 transition-colors hover:text-white"
           >
-            <ArrowUp className="h-4 w-4 group-hover:scale-110 transition-transform" />
+            <ArrowUp className="h-4 w-4" />
             <span>Back to top</span>
           </button>
         </div>

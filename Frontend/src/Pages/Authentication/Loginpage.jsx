@@ -10,7 +10,7 @@ import {
   Lock,
   Heart,
   ArrowRight,
-  Shield,
+  ShieldCheck,
   Users,
 } from "lucide-react";
 import { useNavigate, useLocation, Link } from "react-router-dom";
@@ -23,12 +23,16 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { FundraisingButton } from "@/components/ui/fundraising-button";
+import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { AuthContext } from "@/Context/AuthContext";
 import ROUTES from "@/routes/routes";
 import { toast } from "sonner";
+
+const API_BASE_URL = import.meta.env.VITE_BACKEND_URL
+  ? `${import.meta.env.VITE_BACKEND_URL}/api`
+  : "/api";
 
 function getDefaultRouteByRole(role) {
   if (role === "admin") return ROUTES.ADMIN_DASHBOARD;
@@ -66,7 +70,7 @@ export default function LoginPage() {
 
   const mutation = useMutation({
     mutationFn: async ({ email, password }) => {
-      const res = await fetch("/api/auth/login", {
+      const res = await fetch(`${API_BASE_URL}/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),
@@ -98,107 +102,88 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 flex">
-      {/* Left Side - Hero Section */}
-      <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-br from-blue-600/90 via-indigo-600/90 to-purple-600/90 z-10"></div>
+    <div className="surface-page min-h-screen lg:grid lg:grid-cols-2">
+      <aside className="relative hidden overflow-hidden bg-secondary p-10 text-white lg:flex lg:flex-col lg:justify-between xl:p-14">
+        <div className="pointer-events-none absolute -left-14 top-10 h-52 w-52 rounded-full bg-blue-300/20 blur-3xl" />
+        <div className="pointer-events-none absolute -right-20 bottom-8 h-56 w-56 rounded-full bg-primary/30 blur-3xl" />
         <img
           src="https://images.unsplash.com/photo-1488521787991-ed7bbaae773c?q=80&w=2940&auto=format&fit=crop&ixlib=rb-4.1.0"
           alt="People helping each other"
-          className="absolute inset-0 w-full h-full object-cover"
+          className="absolute inset-0 h-full w-full object-cover opacity-30"
         />
 
-        {/* Floating Elements */}
-        <div className="absolute top-20 left-10 w-20 h-20 bg-white/10 rounded-full blur-xl animate-pulse"></div>
-        <div className="absolute bottom-20 right-10 w-32 h-32 bg-purple-400/20 rounded-full blur-2xl animate-pulse delay-1000"></div>
-
-        <div className="relative z-20 flex flex-col justify-center px-12 text-white">
-          <div className="mb-8">
-            <Badge className="bg-white/20 text-white border-white/30 mb-6">
-              <Heart className="h-4 w-4 mr-2" />
-              Welcome Back
-            </Badge>
-            <h1 className="text-5xl font-bold mb-6 leading-tight">
-              Continue Your
-              <br />
-              <span className="bg-gradient-to-r from-yellow-300 to-orange-300 bg-clip-text text-transparent">
-                Impact Journey
-              </span>
-            </h1>
-            <p className="text-xl text-blue-100 leading-relaxed mb-8">
-              Sign in to access your dashboard, track your donations, and
-              continue making a difference in communities worldwide.
-            </p>
-          </div>
-
-          {/* Trust Indicators */}
-          <div className="space-y-4">
-            {[
-              { icon: Shield, text: "Secure & encrypted login" },
-              { icon: Users, text: "Join 2,500+ active donors" },
-              { icon: Heart, text: "Track your impact in real-time" },
-            ].map((item, index) => (
-              <div
-                key={index}
-                className="flex items-center gap-3 text-blue-100"
-              >
-                <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center">
-                  <item.icon className="h-4 w-4" />
-                </div>
-                <span>{item.text}</span>
-              </div>
-            ))}
-          </div>
+        <div className="relative z-10">
+          <Badge className="mb-6 border-blue-100/40 bg-blue-100/20 text-white">
+            Welcome Back
+          </Badge>
+          <h1 className="max-w-lg text-4xl font-bold leading-tight xl:text-5xl text-white">
+            Continue Supporting Campaigns That Matter
+          </h1>
+          <p className="mt-4 max-w-md text-base leading-7 text-blue-100">
+            Access your dashboard, monitor donations, and stay connected with
+            causes you care about.
+          </p>
         </div>
-      </div>
 
-      {/* Right Side - Login Form */}
-      <div className="w-full lg:w-1/2 flex items-center justify-center p-8">
-        <div className="w-full max-w-md">
-          {/* Mobile Header */}
-          <div className="lg:hidden text-center mb-8">
-            <div className="flex items-center justify-center gap-2 mb-4">
-              <Heart className="h-8 w-8 text-blue-600" />
-              <span className="text-2xl font-bold text-gray-900">HopeOn</span>
+        <div className="relative z-10 space-y-3">
+          {[
+            { icon: ShieldCheck, text: "Secure and encrypted login" },
+            { icon: Users, text: "2,500+ active donors on HopeOn" },
+            { icon: Heart, text: "Track your impact in real time" },
+          ].map((item) => (
+            <div
+              key={item.text}
+              className="flex items-center gap-3 rounded-lg border border-blue-100/20 bg-blue-100/10 p-3"
+            >
+              <item.icon className="h-5 w-5 text-primary" />
+              <span className="text-sm text-blue-50">{item.text}</span>
             </div>
-            <h2 className="text-2xl font-bold text-gray-900">Welcome Back</h2>
-            <p className="text-gray-600">
-              Sign in to continue your impact journey
-            </p>
+          ))}
+        </div>
+      </aside>
+
+      <main className="flex items-center justify-center px-4 py-10 sm:px-6 lg:px-10">
+        <div className="w-full max-w-md">
+          <div className="mb-7 text-center lg:hidden">
+            <div className="mb-3 inline-flex items-center gap-2">
+              <Heart className="h-4 w-4 mr-2" />
+              <span className="text-2xl font-bold text-secondary">HopeOn</span>
+            </div>
+            <h2 className="text-2xl font-bold text-slate-900">Sign In</h2>
+            <p className="text-slate-600">Welcome back to your dashboard.</p>
           </div>
 
-          <Card className="bg-white/80 backdrop-blur-sm shadow-2xl border-0">
-            <CardHeader className="text-center pb-6">
-              <CardTitle className="text-2xl font-bold text-gray-900 hidden lg:block">
+          <Card className="surface-card border-slate-200 shadow-[0_12px_30px_rgba(15,23,42,0.08)]">
+            <CardHeader className="pb-4 text-center">
+              <CardTitle className="hidden text-2xl font-bold text-slate-900 lg:block">
                 Sign In
               </CardTitle>
-              <p className="text-gray-600 hidden lg:block">
+              <p className="hidden text-slate-600 lg:block">
                 Access your fundraising dashboard
               </p>
             </CardHeader>
 
-            <CardContent className="px-8 pb-8">
+            <CardContent className="px-6 pb-6 sm:px-8 sm:pb-8">
               <Form {...form}>
                 <form
                   onSubmit={form.handleSubmit(onSubmit)}
-                  className="space-y-6"
+                  className="space-y-5"
                 >
-                  {/* Email Field */}
                   <FormField
                     control={form.control}
                     name="email"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="text-sm font-medium text-gray-700">
+                        <FormLabel className="text-sm font-medium text-slate-700">
                           Email Address
                         </FormLabel>
                         <FormControl>
                           <div className="relative">
-                            <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+                            <Mail className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" />
                             <Input
                               type="email"
                               placeholder="you@example.com"
-                              className="pl-10 h-12 border-2 border-gray-200 focus:border-blue-500 rounded-xl"
+                              className="h-11 rounded-lg border-slate-300 pl-10"
                               {...field}
                             />
                           </div>
@@ -208,28 +193,27 @@ export default function LoginPage() {
                     )}
                   />
 
-                  {/* Password Field */}
                   <FormField
                     control={form.control}
                     name="password"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="text-sm font-medium text-gray-700">
+                        <FormLabel className="text-sm font-medium text-slate-700">
                           Password
                         </FormLabel>
                         <FormControl>
                           <div className="relative">
-                            <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+                            <Lock className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" />
                             <Input
                               type={showPassword ? "text" : "password"}
                               placeholder="••••••••"
-                              className="pl-10 pr-12 h-12 border-2 border-gray-200 focus:border-blue-500 rounded-xl"
+                              className="h-11 rounded-lg border-slate-300 pl-10 pr-12"
                               {...field}
                             />
                             <button
                               type="button"
                               onClick={() => setShowPassword(!showPassword)}
-                              className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 transition-colors hover:text-slate-700"
                               aria-label={
                                 showPassword ? "Hide password" : "Show password"
                               }
@@ -247,50 +231,31 @@ export default function LoginPage() {
                     )}
                   />
 
-                  {/* Forgot Password Link */}
                   <div className="text-right">
                     <Link
                       to={ROUTES.FORGOT_PASSWORD}
-                      className="text-sm text-blue-600 hover:text-blue-700 font-medium transition-colors"
+                      className="text-sm font-medium text-secondary transition-colors hover:text-secondary/80"
                     >
                       Forgot your password?
                     </Link>
                   </div>
 
-                  {/* Submit Button */}
-                  <FundraisingButton
+                  <Button
                     type="submit"
-                    variant="trust"
                     size="lg"
-                    fullWidth
-                    loading={mutation.isPending}
-                    loadingText="Signing in..."
                     disabled={mutation.isPending}
-                    className="group"
+                    className="w-full bg-primary hover:bg-primary/90"
                   >
-                    <span>Sign In</span>
-                    <ArrowRight className="h-5 w-5 group-hover:translate-x-1 transition-transform" />
-                  </FundraisingButton>
+                    {mutation.isPending ? "Signing in..." : "Sign In"}
+                    <ArrowRight className="h-5 w-5" />
+                  </Button>
 
-                  {/* Divider */}
-                  <div className="relative my-6">
-                    <div className="absolute inset-0 flex items-center">
-                      <div className="w-full border-t border-gray-200"></div>
-                    </div>
-                    <div className="relative flex justify-center text-sm">
-                      <span className="px-4 bg-white text-gray-500">
-                        New to HopeOn?
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Register Link */}
                   <div className="text-center">
-                    <p className="text-gray-600">
+                    <p className="text-slate-600">
                       {"Don't have an account? "}
                       <Link
                         to={ROUTES.REGISTER}
-                        className="font-medium text-blue-600 hover:text-blue-700 transition-colors"
+                        className="font-medium text-secondary transition-colors hover:text-secondary/80"
                       >
                         Create one now
                       </Link>
@@ -301,15 +266,11 @@ export default function LoginPage() {
             </CardContent>
           </Card>
 
-          {/* Security Notice */}
-          <div className="mt-6 text-center">
-            <div className="flex items-center justify-center gap-2 text-sm text-gray-500">
-              <Shield className="h-4 w-4" />
-              <span>Your data is protected with enterprise-grade security</span>
-            </div>
-          </div>
+          {/* <div className="mt-5 text-center">
+            <div className="inline-flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1 text-sm text-slate-600"></div>
+          </div> */}
         </div>
-      </div>
+      </main>
     </div>
   );
 }

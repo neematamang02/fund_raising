@@ -14,6 +14,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
+  AdminDialogSkeleton,
+  AdminPageSkeleton,
+} from "@/components/admin/AdminSkeletons";
+import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -112,15 +116,11 @@ export default function AdminCampaigns() {
   };
 
   if (loading || isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    );
+    return <AdminPageSkeleton statCount={0} listCount={5} />;
   }
 
   return (
-    <div className="min-h-screen bg-[linear-gradient(120deg,#f8fafc_0%,#eff6ff_45%,#fefce8_100%)] px-4 py-8">
+    <div className="surface-page min-h-screen px-4 py-8">
       <div className="max-w-6xl mx-auto space-y-6">
         <section className="flex flex-wrap items-center justify-between gap-4">
           <div>
@@ -147,7 +147,7 @@ export default function AdminCampaigns() {
           </Button>
         </section>
 
-        <Card className="border-0 shadow-lg bg-white/90">
+        <Card className="surface-card shadow-sm">
           <CardContent className="pt-6">
             <form
               className="grid gap-3 md:grid-cols-[1fr_auto]"
@@ -160,6 +160,7 @@ export default function AdminCampaigns() {
                   value={searchInput}
                   onChange={(e) => setSearchInput(e.target.value)}
                   placeholder="Search by title or description"
+                  className="h-11 rounded-lg border-slate-300"
                 />
               </div>
               <div className="flex items-end">
@@ -174,14 +175,14 @@ export default function AdminCampaigns() {
 
         <div className="grid gap-3">
           {campaigns.length === 0 ? (
-            <Card className="border-dashed">
+            <Card className="border-dashed border-slate-300">
               <CardContent className="py-14 text-center text-slate-600">
                 No campaigns found.
               </CardContent>
             </Card>
           ) : (
             campaigns.map((campaign) => (
-              <Card key={campaign._id} className="shadow-sm">
+              <Card key={campaign._id} className="surface-card shadow-sm">
                 <CardContent className="py-4">
                   <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
                     <div className="space-y-1">
@@ -224,12 +225,10 @@ export default function AdminCampaigns() {
                           </DialogHeader>
 
                           {isDetailsLoading ? (
-                            <div className="py-14 flex items-center justify-center">
-                              <Loader2 className="h-6 w-6 animate-spin" />
-                            </div>
+                            <AdminDialogSkeleton />
                           ) : campaignDetails?.campaign ? (
                             <div className="space-y-5">
-                              <Card>
+                              <Card className="surface-card">
                                 <CardHeader className="pb-2">
                                   <CardTitle className="text-base">
                                     {campaignDetails.campaign.title}
@@ -253,7 +252,7 @@ export default function AdminCampaigns() {
                               </Card>
 
                               <div className="grid md:grid-cols-2 gap-3">
-                                <Card>
+                                <Card className="surface-card">
                                   <CardHeader className="pb-2">
                                     <CardTitle className="text-sm text-slate-500">
                                       Donations linked
@@ -263,7 +262,7 @@ export default function AdminCampaigns() {
                                     {campaignDetails.donations?.length || 0}
                                   </CardContent>
                                 </Card>
-                                <Card>
+                                <Card className="surface-card">
                                   <CardHeader className="pb-2">
                                     <CardTitle className="text-sm text-slate-500">
                                       Withdrawal requests linked
@@ -356,7 +355,7 @@ export default function AdminCampaigns() {
           )}
         </div>
 
-        <Card>
+        <Card className="surface-card">
           <CardContent className="py-4 flex items-center justify-between gap-3">
             <p className="text-sm text-slate-600">
               Page {page} of {totalPages}

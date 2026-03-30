@@ -7,6 +7,7 @@ import { adminQueryKeys, getAdminDashboardStats } from "@/services/adminApi";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { AdminPageSkeleton } from "@/components/admin/AdminSkeletons";
 import {
   Users,
   HandCoins,
@@ -28,15 +29,15 @@ const number = new Intl.NumberFormat("en-US");
 
 function StatCard({ title, value, subtitle, icon: Icon, tone }) {
   const toneMap = {
-    blue: "from-cyan-500 to-blue-600",
-    emerald: "from-emerald-500 to-green-600",
-    orange: "from-amber-500 to-orange-600",
-    rose: "from-rose-500 to-red-600",
-    violet: "from-indigo-500 to-violet-600",
+    blue: "bg-secondary",
+    emerald: "bg-primary",
+    orange: "bg-accent text-accent-foreground",
+    rose: "bg-destructive",
+    violet: "bg-secondary",
   };
 
   return (
-    <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
+    <Card className="surface-card shadow-sm">
       <CardContent className="p-5">
         <div className="flex items-start justify-between gap-4">
           <div>
@@ -45,7 +46,7 @@ function StatCard({ title, value, subtitle, icon: Icon, tone }) {
             <p className="text-xs text-slate-500 mt-1">{subtitle}</p>
           </div>
           <div
-            className={`h-10 w-10 rounded-xl bg-gradient-to-br ${toneMap[tone]} text-white flex items-center justify-center`}
+            className={`flex h-10 w-10 items-center justify-center rounded-xl text-white ${toneMap[tone]}`}
           >
             <Icon className="h-5 w-5" />
           </div>
@@ -76,11 +77,7 @@ export default function AdminDashboard() {
   });
 
   if (loading || isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
-      </div>
-    );
+    return <AdminPageSkeleton statCount={5} listCount={1} />;
   }
 
   if (isError) {
@@ -105,11 +102,11 @@ export default function AdminDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,_#dbeafe_0%,_#f8fafc_45%,_#fef9c3_100%)] py-8 px-4">
+    <div className="surface-page min-h-screen py-8 px-4">
       <div className="max-w-6xl mx-auto space-y-8">
         <section className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
-            <Badge className="bg-slate-900 text-white mb-3">
+            <Badge className="mb-3 bg-blue-100 text-blue-800">
               Admin Command Center
             </Badge>
             <h1 className="text-3xl md:text-4xl font-black text-slate-900 tracking-tight">
@@ -171,7 +168,7 @@ export default function AdminDashboard() {
         </section>
 
         <section>
-          <Card className="border-0 shadow-lg bg-white/85">
+          <Card className="surface-card shadow-sm">
             <CardHeader>
               <CardTitle>Quick actions</CardTitle>
             </CardHeader>

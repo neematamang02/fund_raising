@@ -14,6 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { FundraisingButton } from "@/components/ui/fundraising-button";
+import { AdminPageSkeleton } from "@/components/admin/AdminSkeletons";
 import {
   Select,
   SelectContent,
@@ -150,11 +151,7 @@ export default function AdminOrganizerProfiles() {
   };
 
   if (loading || listQuery.isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="h-10 w-10 rounded-full border-2 border-slate-300 border-t-slate-700 animate-spin" />
-      </div>
-    );
+    return <AdminPageSkeleton statCount={4} listCount={4} />;
   }
 
   if (listQuery.isError) {

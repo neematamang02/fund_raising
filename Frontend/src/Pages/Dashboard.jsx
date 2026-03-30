@@ -1,4 +1,4 @@
-import React, { useContext, useState } from "react";
+import { useContext, useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -7,7 +7,15 @@ import { AuthContext } from "@/Context/AuthContext";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
+import { toast } from "sonner";
+import { Calendar, HandCoins, Search, Settings, UserRound } from "lucide-react";
+
+const API_BASE_URL = import.meta.env.VITE_BACKEND_URL
+  ? `${import.meta.env.VITE_BACKEND_URL}/api`
+  : "/api";
 
 const profileSchema = z
   .object({
@@ -26,7 +34,7 @@ const profileSchema = z
     {
       message: "Passwords must match",
       path: ["confirmPassword"],
-    }
+    },
   );
 
 export default function Dashboard() {
@@ -37,12 +45,11 @@ export default function Dashboard() {
   const { data: donationsData, isLoading: isDonationsLoading } = useQuery({
     queryKey: ["myDonations"],
     queryFn: async () => {
-      const res = await fetch("/api/donations/me", {
+      const res = await fetch(`${API_BASE_URL}/donations/me`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (!res.ok) throw new Error("Failed to fetch donations");
       const data = await res.json();
-      console.log("Dashboard donations data:", data);
       return data;
     },
     enabled: !!token,
@@ -59,9 +66,11 @@ export default function Dashboard() {
   // Apply filters
   const filteredDonations = (donations || []).filter((d) => {
     if (!d || !d.campaign) return false;
-    
+
     const matchCampaign = filterText
-      ? (d.campaign.title || "").toLowerCase().includes(filterText.toLowerCase())
+      ? (d.campaign.title || "")
+          .toLowerCase()
+          .includes(filterText.toLowerCase())
       : true;
 
     const donationDate = new Date(d.createdAt);
@@ -92,7 +101,7 @@ export default function Dashboard() {
       const payload = { name: data.name, email: data.email };
       if (data.password) payload.password = data.password;
 
-      const res = await fetch("/api/auth/update-profile", {
+      const res = await fetch(`${API_BASE_URL}/auth/update-profile`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -107,10 +116,8 @@ export default function Dashboard() {
       return res.json();
     },
     onSuccess: (updatedUser) => {
-      alert("Profile updated");
-      queryClient.invalidateQueries(["myDonations"]);
-      // Update user in AuthContext
-      // (You could store a setter in AuthContext or just reload page)
+      toast.success("Profile updated successfully");
+      queryClient.invalidateQueries({ queryKey: ["myDonations"] });
       reset({
         name: updatedUser.name,
         email: updatedUser.email,
@@ -118,128 +125,228 @@ export default function Dashboard() {
         confirmPassword: "",
       });
     },
+    onError: (error) => {
+      toast.error(error.message || "Failed to update profile");
+    },
   });
 
   const onSubmitProfile = (data) => {
     profileMutation.mutate(data);
   };
 
+  const donationStats = useMemo(() => {
+    const count = filteredDonations.length;
+    const totalAmount = filteredDonations.reduce(
+      (sum, donation) => sum + Number(donation.amount || 0),
+      0,
+    );
+
+    return {
+      count,
+      totalAmount,
+    };
+  }, [filteredDonations]);
+
   return (
-    <div className="max-w-4xl mx-auto py-10 px-4 space-y-8">
-      <h1 className="text-3xl font-bold text-blue-700">Dashboard</h1>
-
-      {/* Profile Card */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-2xl">Edit Profile</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit(onSubmitProfile)} className="space-y-4">
+    <div className="surface-page min-h-screen px-4 py-8">
+      <div className="mx-auto max-w-5xl space-y-7">
+        <section className="rounded-xl border border-slate-200 bg-white px-5 py-6 sm:px-6">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <label>Name</label>
-              <Input {...register("name")} />
-              {errors.name && (
-                <p className="text-red-500">{errors.name.message}</p>
-              )}
+              <Badge className="mb-3 bg-blue-100 text-blue-800">
+                Donor Dashboard
+              </Badge>
+              <h1 className="text-3xl font-bold text-slate-900">
+                Welcome, {user?.name}
+              </h1>
+              <p className="mt-1 text-slate-600">
+                Manage profile details and review your donation activity.
+              </p>
             </div>
-            <div>
-              <label>Email</label>
-              <Input type="email" {...register("email")} />
-              {errors.email && (
-                <p className="text-red-500">{errors.email.message}</p>
-              )}
-            </div>
-            <div>
-              <label>New Password (leave blank to keep current)</label>
-              <Input type="password" {...register("password")} />
-              {errors.password && (
-                <p className="text-red-500">{errors.password.message}</p>
-              )}
-            </div>
-            <div>
-              <label>Confirm Password</label>
-              <Input type="password" {...register("confirmPassword")} />
-              {errors.confirmPassword && (
-                <p className="text-red-500">{errors.confirmPassword.message}</p>
-              )}
-            </div>
-            <Button type="submit" className="bg-green-600 text-white">
-              {profileMutation.isLoading ? "Updating…" : "Update Profile"}
-            </Button>
-          </form>
-        </CardContent>
-      </Card>
-
-      {/* Donation Filters */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-2xl">My Donations</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-            <div>
-              <label>Search Campaign</label>
-              <Input
-                placeholder="Campaign name"
-                value={filterText}
-                onChange={(e) => setFilterText(e.target.value)}
-              />
-            </div>
-            <div>
-              <label>From Date</label>
-              <Input
-                type="date"
-                value={dateFrom}
-                onChange={(e) => setDateFrom(e.target.value)}
-              />
-            </div>
-            <div>
-              <label>To Date</label>
-              <Input
-                type="date"
-                value={dateTo}
-                onChange={(e) => setDateTo(e.target.value)}
-              />
+            <div className="grid grid-cols-2 gap-3 sm:w-auto">
+              <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3">
+                <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
+                  Donations
+                </p>
+                <p className="text-lg font-bold text-slate-900">
+                  {donationStats.count}
+                </p>
+              </div>
+              <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3">
+                <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
+                  Total Given
+                </p>
+                <p className="text-lg font-bold text-primary">
+                  ${donationStats.totalAmount.toLocaleString()}
+                </p>
+              </div>
             </div>
           </div>
+        </section>
 
-          {isDonationsLoading ? (
-            <p>Loading...</p>
-          ) : filteredDonations.length === 0 ? (
-            <p>No donations found.</p>
-          ) : (
-            <div className="space-y-4">
-              {filteredDonations.map((donation) => (
-                <Card key={donation._id} className="bg-gray-50">
-                  <CardHeader>
-                    <CardTitle>
-                      {donation.campaign?.title || "Unknown Campaign"} —{" "}
-                      <span className="font-semibold">
-                        ${(donation.amount || 0).toLocaleString()}
-                      </span>
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="flex justify-between items-center">
+        <Card className="surface-card rounded-xl">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-xl">
+              <Settings className="h-5 w-5 text-secondary" />
+              Edit Profile
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <form
+              onSubmit={handleSubmit(onSubmitProfile)}
+              className="grid grid-cols-1 gap-4 md:grid-cols-2"
+            >
+              <div className="space-y-2">
+                <Label htmlFor="dashboard-name">Name</Label>
+                <Input
+                  id="dashboard-name"
+                  {...register("name")}
+                  className="h-11 rounded-lg border-slate-300"
+                />
+                {errors.name ? (
+                  <p className="text-sm text-red-500">{errors.name.message}</p>
+                ) : null}
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="dashboard-email">Email</Label>
+                <Input
+                  id="dashboard-email"
+                  type="email"
+                  {...register("email")}
+                  className="h-11 rounded-lg border-slate-300"
+                />
+                {errors.email ? (
+                  <p className="text-sm text-red-500">{errors.email.message}</p>
+                ) : null}
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="dashboard-password">New Password</Label>
+                <Input
+                  id="dashboard-password"
+                  type="password"
+                  {...register("password")}
+                  className="h-11 rounded-lg border-slate-300"
+                />
+                {errors.password ? (
+                  <p className="text-sm text-red-500">
+                    {errors.password.message}
+                  </p>
+                ) : null}
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="dashboard-confirm">Confirm Password</Label>
+                <Input
+                  id="dashboard-confirm"
+                  type="password"
+                  {...register("confirmPassword")}
+                  className="h-11 rounded-lg border-slate-300"
+                />
+                {errors.confirmPassword ? (
+                  <p className="text-sm text-red-500">
+                    {errors.confirmPassword.message}
+                  </p>
+                ) : null}
+              </div>
+              <div className="md:col-span-2">
+                <Button
+                  type="submit"
+                  className="bg-primary hover:bg-primary/90"
+                  disabled={profileMutation.isPending}
+                >
+                  {profileMutation.isPending ? "Updating..." : "Update Profile"}
+                </Button>
+              </div>
+            </form>
+          </CardContent>
+        </Card>
+
+        <Card className="surface-card rounded-xl">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-xl">
+              <HandCoins className="h-5 w-5 text-secondary" />
+              My Donations
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-5">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+              <div className="space-y-2">
+                <Label htmlFor="campaign-search">Search Campaign</Label>
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                  <Input
+                    id="campaign-search"
+                    placeholder="Campaign name"
+                    value={filterText}
+                    onChange={(e) => setFilterText(e.target.value)}
+                    className="h-11 rounded-lg border-slate-300 pl-9"
+                  />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="date-from">From Date</Label>
+                <div className="relative">
+                  <Calendar className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                  <Input
+                    id="date-from"
+                    type="date"
+                    value={dateFrom}
+                    onChange={(e) => setDateFrom(e.target.value)}
+                    className="h-11 rounded-lg border-slate-300 pl-9"
+                  />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="date-to">To Date</Label>
+                <div className="relative">
+                  <Calendar className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                  <Input
+                    id="date-to"
+                    type="date"
+                    value={dateTo}
+                    onChange={(e) => setDateTo(e.target.value)}
+                    className="h-11 rounded-lg border-slate-300 pl-9"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {isDonationsLoading ? (
+              <p className="text-slate-600">Loading donations...</p>
+            ) : filteredDonations.length === 0 ? (
+              <div className="rounded-lg border border-dashed border-slate-300 p-8 text-center text-slate-600">
+                No donations found for the selected filters.
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {filteredDonations.map((donation) => (
+                  <article
+                    key={donation._id}
+                    className="flex flex-col gap-3 rounded-lg border border-slate-200 bg-slate-50 p-4 sm:flex-row sm:items-center sm:justify-between"
+                  >
                     <div>
-                      <p>
-                        <span className="font-semibold">Date:</span>{" "}
-                        {format(new Date(donation.createdAt), "PPP")}
+                      <p className="font-semibold text-slate-900">
+                        {donation.campaign?.title || "Unknown Campaign"}
                       </p>
-                      <p>
-                        <span className="font-semibold">Method:</span>{" "}
+                      <p className="text-sm text-slate-600">
+                        {format(new Date(donation.createdAt), "PPP")} |{" "}
                         {donation.method || "N/A"}
                       </p>
                     </div>
-                    <div className="text-gray-600">
-                      Donation ID: {donation._id?.slice(-6) || "N/A"}
+                    <div className="text-right">
+                      <p className="font-bold text-primary">
+                        ${(donation.amount || 0).toLocaleString()}
+                      </p>
+                      <p className="text-xs text-slate-500">
+                        ID: {donation._id?.slice(-6) || "N/A"}
+                      </p>
                     </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+                  </article>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }

@@ -100,22 +100,38 @@ export function getTopNavItems(user) {
   if (!user) return base;
 
   if (user.role === "donor") {
-    return [
+    const isOrganizerApproved =
+      user.isOrganizerApproved ||
+      user.organizerApplicationStatus === "approved";
+
+    const donorItems = [
       ...base,
       { label: "Dashboard", to: ROUTES.DASHBOARD, icon: LayoutDashboard },
       { label: "My Donations", to: ROUTES.MY_DONATIONS, icon: HandCoins },
-      {
-        label: "Apply Organizer",
-        to: ROUTES.APPLY_ORGANIZER,
-        icon: ClipboardList,
-      },
-      {
-        label: "Application Status",
-        to: ROUTES.APPLICATION_STATUS,
-        icon: Shield,
-      },
-      { label: "Notifications", to: ROUTES.NOTIFICATIONS, icon: Bell },
     ];
+
+    if (!isOrganizerApproved) {
+      donorItems.push(
+        {
+          label: "Apply Organizer",
+          to: ROUTES.APPLY_ORGANIZER,
+          icon: ClipboardList,
+        },
+        {
+          label: "Application Status",
+          to: ROUTES.APPLICATION_STATUS,
+          icon: Shield,
+        },
+      );
+    }
+
+    donorItems.push({
+      label: "Notifications",
+      to: ROUTES.NOTIFICATIONS,
+      icon: Bell,
+    });
+
+    return donorItems;
   }
 
   return [{ label: "Notifications", to: ROUTES.NOTIFICATIONS, icon: Bell }];

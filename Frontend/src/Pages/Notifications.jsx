@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import ROUTES from "@/routes/routes";
+import { NOTIFICATION_QUERY_KEYS } from "@/hooks/useUnreadNotificationCount";
 
 const API_BASE_URL = import.meta.env.VITE_BACKEND_URL
   ? `${import.meta.env.VITE_BACKEND_URL}/api`
@@ -17,7 +18,7 @@ export default function Notifications() {
   const queryClient = useQueryClient();
 
   const notificationsQuery = useQuery({
-    queryKey: ["notifications", "me"],
+    queryKey: NOTIFICATION_QUERY_KEYS.list,
     enabled: Boolean(user),
     queryFn: async () => {
       const res = await fetch(`${API_BASE_URL}/notifications/me?limit=30`, {
@@ -54,8 +55,82 @@ export default function Notifications() {
       }
       return data;
     },
+    onMutate: async (notificationId) => {
+      await queryClient.cancelQueries({
+        queryKey: NOTIFICATION_QUERY_KEYS.list,
+      });
+      await queryClient.cancelQueries({
+        queryKey: NOTIFICATION_QUERY_KEYS.unreadCount,
+      });
+
+      const previousListData = queryClient.getQueryData(
+        NOTIFICATION_QUERY_KEYS.list,
+      );
+      const previousUnreadCount = queryClient.getQueryData(
+        NOTIFICATION_QUERY_KEYS.unreadCount,
+      );
+
+      const wasUnread =
+        previousListData?.notifications?.find(
+          (item) => item._id === notificationId,
+        )?.readAt == null;
+
+      if (previousListData?.notifications) {
+        queryClient.setQueryData(
+          NOTIFICATION_QUERY_KEYS.list,
+          (current = {}) => {
+            const notifications = Array.isArray(current.notifications)
+              ? current.notifications
+              : [];
+
+            const nextNotifications = notifications.map((item) => {
+              if (item._id !== notificationId || item.readAt) return item;
+              return { ...item, readAt: new Date().toISOString() };
+            });
+
+            const nextUnreadCount = Math.max(
+              0,
+              Number(current.unreadCount || 0) - (wasUnread ? 1 : 0),
+            );
+
+            return {
+              ...current,
+              notifications: nextNotifications,
+              unreadCount: nextUnreadCount,
+            };
+          },
+        );
+      }
+
+      if (wasUnread) {
+        queryClient.setQueryData(
+          NOTIFICATION_QUERY_KEYS.unreadCount,
+          (count = 0) => Math.max(0, Number(count || 0) - 1),
+        );
+      }
+
+      return { previousListData, previousUnreadCount };
+    },
+    onError: (_error, _notificationId, context) => {
+      if (context?.previousListData) {
+        queryClient.setQueryData(
+          NOTIFICATION_QUERY_KEYS.list,
+          context.previousListData,
+        );
+      }
+
+      if (typeof context?.previousUnreadCount !== "undefined") {
+        queryClient.setQueryData(
+          NOTIFICATION_QUERY_KEYS.unreadCount,
+          context.previousUnreadCount,
+        );
+      }
+    },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["notifications", "me"] });
+      queryClient.invalidateQueries({ queryKey: NOTIFICATION_QUERY_KEYS.list });
+      queryClient.invalidateQueries({
+        queryKey: NOTIFICATION_QUERY_KEYS.unreadCount,
+      });
     },
   });
 
@@ -104,7 +179,7 @@ export default function Notifications() {
         <CardHeader>
           <CardTitle className="flex items-center justify-between">
             <span>Notifications</span>
-            <Badge className="bg-blue-100 text-blue-800">
+            <Badge className="bg-green-100 text-green-800">
               Unread: {unreadCount}
             </Badge>
           </CardTitle>

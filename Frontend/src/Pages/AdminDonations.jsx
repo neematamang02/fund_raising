@@ -5,6 +5,7 @@ import { AuthContext } from "@/Context/AuthContext";
 import ROUTES from "@/routes/routes";
 import { adminQueryKeys, getAdminDonations } from "@/services/adminApi";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { AdminPageSkeleton } from "@/components/admin/AdminSkeletons";
 import {
   Select,
   SelectContent,
@@ -88,11 +89,7 @@ export default function AdminDonations() {
   );
 
   if (loading || isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    );
+    return <AdminPageSkeleton statCount={3} listCount={4} />;
   }
 
   return (

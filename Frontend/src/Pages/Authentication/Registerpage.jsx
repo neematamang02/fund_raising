@@ -11,7 +11,7 @@ import {
   User,
   Heart,
   ArrowRight,
-  Shield,
+  ShieldCheck,
   CheckCircle,
   Users,
 } from "lucide-react";
@@ -25,11 +25,15 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { FundraisingButton } from "@/components/ui/fundraising-button";
+import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import ROUTES from "@/routes/routes";
 import { toast } from "sonner";
+
+const API_BASE_URL = import.meta.env.VITE_BACKEND_URL
+  ? `${import.meta.env.VITE_BACKEND_URL}/api`
+  : "/api";
 
 const registerSchema = z
   .object({
@@ -51,7 +55,6 @@ export default function RegisterPage() {
   const navigate = useNavigate();
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
-  const [email, setEmail] = useState("");
 
   const form = useForm({
     resolver: zodResolver(registerSchema),
@@ -65,7 +68,7 @@ export default function RegisterPage() {
 
   const mutation = useMutation({
     mutationFn: async ({ name, email, password }) => {
-      const res = await fetch("/api/auth/register", {
+      const res = await fetch(`${API_BASE_URL}/auth/register`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name, email, password }),
@@ -78,7 +81,6 @@ export default function RegisterPage() {
     },
     onSuccess: (data, variables) => {
       toast.success("Otp send to your email");
-      setEmail(variables.email);
       try {
         sessionStorage.setItem(
           "registrationData",
@@ -88,7 +90,10 @@ export default function RegisterPage() {
             password: variables.password,
           }),
         );
-      } catch {}
+      } catch {
+        toast.error("Could not save registration session. Please retry.");
+        return;
+      }
       navigate(ROUTES.OTP_VERIFICATION, { replace: true });
     },
     onError: (error) => {
@@ -105,106 +110,89 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-blue-50 to-indigo-50 flex">
-      {/* Left Side - Hero Section */}
-      <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-br from-emerald-600/90 via-blue-600/90 to-indigo-600/90 z-10"></div>
+    <div className="surface-page min-h-screen lg:grid lg:grid-cols-2">
+      <aside className="relative hidden overflow-hidden bg-secondary p-10 text-white lg:flex lg:flex-col lg:justify-between xl:p-14">
+        <div className="pointer-events-none absolute -left-14 top-10 h-52 w-52 rounded-full bg-blue-300/20 blur-3xl" />
+        <div className="pointer-events-none absolute -right-20 bottom-8 h-56 w-56 rounded-full bg-primary/30 blur-3xl" />
         <img
           src="https://plus.unsplash.com/premium_photo-1683140538884-07fb31428ca6?q=80&w=2940&auto=format&fit=crop&ixlib=rb-4.1.0"
           alt="Community coming together"
-          className="absolute inset-0 w-full h-full object-cover"
+          className="absolute inset-0 h-full w-full object-cover opacity-30"
         />
 
-        {/* Floating Elements */}
-        <div className="absolute top-20 left-10 w-20 h-20 bg-white/10 rounded-full blur-xl animate-pulse"></div>
-        <div className="absolute bottom-20 right-10 w-32 h-32 bg-emerald-400/20 rounded-full blur-2xl animate-pulse delay-1000"></div>
-
-        <div className="relative z-20 flex flex-col justify-center px-12 text-white">
-          <div className="mb-8">
-            <Badge className="bg-white/20 text-white border-white/30 mb-6">
-              <Heart className="h-4 w-4 mr-2" />
-              Join Our Community
-            </Badge>
-            <h1 className="text-5xl font-bold mb-6 leading-tight">
-              Start Making a
-              <br />
-              <span className="bg-gradient-to-r from-yellow-300 to-orange-300 bg-clip-text text-transparent">
-                Real Difference
-              </span>
-            </h1>
-            <p className="text-xl text-emerald-100 leading-relaxed mb-8">
-              Join thousands of compassionate donors who are creating positive
-              change in communities around the world.
-            </p>
-          </div>
-
-          {/* Benefits */}
-          <div className="space-y-4">
-            {[
-              { icon: Heart, text: "Support causes you care about" },
-              { icon: Users, text: "Connect with like-minded donors" },
-              { icon: CheckCircle, text: "Track your impact in real-time" },
-            ].map((item, index) => (
-              <div
-                key={index}
-                className="flex items-center gap-3 text-emerald-100"
-              >
-                <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center">
-                  <item.icon className="h-4 w-4" />
-                </div>
-                <span>{item.text}</span>
-              </div>
-            ))}
-          </div>
+        <div className="relative z-10">
+          <Badge className="mb-6 border-blue-100/40 bg-blue-100/20 text-white">
+            Join Our Community
+          </Badge>
+          <h1 className="max-w-lg text-4xl font-bold leading-tight xl:text-5xl">
+            Create Your HopeOn Account in Minutes
+          </h1>
+          <p className="mt-4 max-w-md text-base leading-7 text-blue-100">
+            Join donors and organizers building trusted community impact through
+            transparent fundraising.
+          </p>
         </div>
-      </div>
 
-      {/* Right Side - Registration Form */}
-      <div className="w-full lg:w-1/2 flex items-center justify-center p-8">
-        <div className="w-full max-w-md">
-          {/* Mobile Header */}
-          <div className="lg:hidden text-center mb-8">
-            <div className="flex items-center justify-center gap-2 mb-4">
-              <Heart className="h-8 w-8 text-emerald-600" />
-              <span className="text-2xl font-bold text-gray-900">HopeOn</span>
+        <div className="relative z-10 space-y-3">
+          {[
+            { icon: Heart, text: "Support causes you value" },
+            { icon: Users, text: "Connect with active donors" },
+            { icon: CheckCircle, text: "Track impact over time" },
+          ].map((item) => (
+            <div
+              key={item.text}
+              className="flex items-center gap-3 rounded-lg border border-blue-100/20 bg-blue-100/10 p-3"
+            >
+              <item.icon className="h-5 w-5 text-primary" />
+              <span className="text-sm text-blue-50">{item.text}</span>
             </div>
-            <h2 className="text-2xl font-bold text-gray-900">
-              Join Our Community
+          ))}
+        </div>
+      </aside>
+
+      <main className="flex items-center justify-center px-4 py-10 sm:px-6 lg:px-10">
+        <div className="w-full max-w-md">
+          <div className="mb-7 text-center lg:hidden">
+            <div className="mb-3 inline-flex items-center gap-2">
+              <Heart className="h-5 w-5 text-primary" />
+              <span className="text-2xl font-bold text-secondary">HopeOn</span>
+            </div>
+            <h2 className="text-2xl font-bold text-slate-900">
+              Create Account
             </h2>
-            <p className="text-gray-600">Start making a difference today</p>
+            <p className="text-slate-600">Start making a real difference.</p>
           </div>
 
-          <Card className="bg-white/80 backdrop-blur-sm shadow-2xl border-0">
-            <CardHeader className="text-center pb-6">
-              <CardTitle className="text-2xl font-bold text-gray-900 hidden lg:block">
+          <Card className="surface-card border-slate-200 shadow-[0_12px_30px_rgba(15,23,42,0.08)]">
+            <CardHeader className="pb-4 text-center">
+              <CardTitle className="hidden text-2xl font-bold text-slate-900 lg:block">
                 Create Account
               </CardTitle>
-              <p className="text-gray-600 hidden lg:block">
+              <p className="hidden text-slate-600 lg:block">
                 Join our community of changemakers
               </p>
             </CardHeader>
 
-            <CardContent className="px-8 pb-8">
+            <CardContent className="px-6 pb-6 sm:px-8 sm:pb-8">
               <Form {...form}>
                 <form
                   onSubmit={form.handleSubmit(onSubmit)}
-                  className="space-y-6"
+                  className="space-y-5"
                 >
-                  {/* Name Field */}
                   <FormField
                     control={form.control}
                     name="name"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="text-sm font-medium text-gray-700">
+                        <FormLabel className="text-sm font-medium text-slate-700">
                           Full Name
                         </FormLabel>
                         <FormControl>
                           <div className="relative">
-                            <User className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+                            <User className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" />
                             <Input
                               placeholder="Enter your full name"
-                              className="pl-10 h-12 border-2 border-gray-200 focus:border-emerald-500 rounded-xl"
+                              className="h-11 rounded-lg border-slate-300 pl-10"
                               {...field}
                             />
                           </div>
@@ -214,22 +202,21 @@ export default function RegisterPage() {
                     )}
                   />
 
-                  {/* Email Field */}
                   <FormField
                     control={form.control}
                     name="email"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="text-sm font-medium text-gray-700">
+                        <FormLabel className="text-sm font-medium text-slate-700">
                           Email Address
                         </FormLabel>
                         <FormControl>
                           <div className="relative">
-                            <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+                            <Mail className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" />
                             <Input
                               type="email"
                               placeholder="you@example.com"
-                              className="pl-10 h-12 border-2 border-gray-200 focus:border-emerald-500 rounded-xl"
+                              className="h-11 rounded-lg border-slate-300 pl-10"
                               {...field}
                             />
                           </div>
@@ -239,28 +226,27 @@ export default function RegisterPage() {
                     )}
                   />
 
-                  {/* Password Field */}
                   <FormField
                     control={form.control}
                     name="password"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="text-sm font-medium text-gray-700">
+                        <FormLabel className="text-sm font-medium text-slate-700">
                           Password
                         </FormLabel>
                         <FormControl>
                           <div className="relative">
-                            <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+                            <Lock className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" />
                             <Input
                               type={showPassword ? "text" : "password"}
                               placeholder="••••••••"
-                              className="pl-10 pr-12 h-12 border-2 border-gray-200 focus:border-emerald-500 rounded-xl"
+                              className="h-11 rounded-lg border-slate-300 pl-10 pr-12"
                               {...field}
                             />
                             <button
                               type="button"
                               onClick={() => setShowPassword(!showPassword)}
-                              className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 transition-colors hover:text-slate-700"
                               aria-label={
                                 showPassword ? "Hide password" : "Show password"
                               }
@@ -278,28 +264,27 @@ export default function RegisterPage() {
                     )}
                   />
 
-                  {/* Confirm Password Field */}
                   <FormField
                     control={form.control}
                     name="confirmPassword"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="text-sm font-medium text-gray-700">
+                        <FormLabel className="text-sm font-medium text-slate-700">
                           Confirm Password
                         </FormLabel>
                         <FormControl>
                           <div className="relative">
-                            <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+                            <Lock className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" />
                             <Input
                               type={showConfirm ? "text" : "password"}
                               placeholder="••••••••"
-                              className="pl-10 pr-12 h-12 border-2 border-gray-200 focus:border-emerald-500 rounded-xl"
+                              className="h-11 rounded-lg border-slate-300 pl-10 pr-12"
                               {...field}
                             />
                             <button
                               type="button"
                               onClick={() => setShowConfirm(!showConfirm)}
-                              className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 transition-colors hover:text-slate-700"
                               aria-label={
                                 showConfirm ? "Hide password" : "Show password"
                               }
@@ -317,62 +302,33 @@ export default function RegisterPage() {
                     )}
                   />
 
-                  {/* Terms Notice */}
-                  <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4">
-                    <p className="text-sm text-emerald-800">
-                      By creating an account, you agree to our{" "}
-                      <Link
-                        to="/terms"
-                        className="font-medium underline hover:text-emerald-900"
-                      >
-                        Terms of Service
-                      </Link>{" "}
-                      and{" "}
-                      <Link
-                        to="/privacy"
-                        className="font-medium underline hover:text-emerald-900"
-                      >
-                        Privacy Policy
-                      </Link>
-                      .
+                  <div className="rounded-lg border border-blue-100 bg-blue-50 p-3">
+                    <p className="text-sm text-blue-800">
+                      By creating an account, you agree to our platform terms
+                      and privacy standards.
                     </p>
                   </div>
 
-                  {/* Submit Button */}
-                  <FundraisingButton
+                  <Button
                     type="submit"
-                    variant="success"
                     size="lg"
-                    fullWidth
-                    loading={mutation.isPending}
-                    loadingText="Creating account..."
                     disabled={mutation.isPending}
-                    className="group"
+                    className="w-full bg-primary hover:bg-primary/90"
                   >
-                    <span>Create Account</span>
-                    <ArrowRight className="h-5 w-5 group-hover:translate-x-1 transition-transform" />
-                  </FundraisingButton>
+                    {mutation.isPending
+                      ? "Creating account..."
+                      : "Create Account"}
+                    <ArrowRight className="h-5 w-5" />
+                  </Button>
 
-                  {/* Divider */}
-                  <div className="relative my-6">
-                    <div className="absolute inset-0 flex items-center">
-                      <div className="w-full border-t border-gray-200"></div>
-                    </div>
-                    <div className="relative flex justify-center text-sm">
-                      <span className="px-4 bg-white text-gray-500">
-                        Already have an account?
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Login Link */}
                   <div className="text-center">
-                    <p className="text-gray-600">
+                    <p className="text-slate-600">
+                      Already have an account?{" "}
                       <Link
                         to={ROUTES.LOGIN}
-                        className="font-medium text-emerald-600 hover:text-emerald-700 transition-colors"
+                        className="font-medium text-secondary transition-colors hover:text-secondary/80"
                       >
-                        Sign in to your account
+                        Sign in now
                       </Link>
                     </p>
                   </div>
@@ -381,15 +337,14 @@ export default function RegisterPage() {
             </CardContent>
           </Card>
 
-          {/* Security Notice */}
-          <div className="mt-6 text-center">
-            <div className="flex items-center justify-center gap-2 text-sm text-gray-500">
-              <Shield className="h-4 w-4" />
-              <span>Your data is protected with enterprise-grade security</span>
+          <div className="mt-5 text-center">
+            <div className="inline-flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1 text-sm text-slate-600">
+              <ShieldCheck className="h-4 w-4 text-primary" />
+              <span>Protected with enterprise-grade security</span>
             </div>
           </div>
         </div>
-      </div>
+      </main>
     </div>
   );
 }

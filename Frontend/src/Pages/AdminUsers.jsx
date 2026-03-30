@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { AdminPageSkeleton } from "@/components/admin/AdminSkeletons";
 import {
   Select,
   SelectContent,
@@ -129,15 +130,11 @@ export default function AdminUsers() {
   };
 
   if (loading || isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    );
+    return <AdminPageSkeleton statCount={0} listCount={5} />;
   }
 
   return (
-    <div className="min-h-screen bg-[linear-gradient(120deg,#f8fafc_0%,#eef2ff_45%,#ecfeff_100%)] px-4 py-8">
+    <div className="surface-page min-h-screen px-4 py-8">
       <div className="max-w-6xl mx-auto space-y-6">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
@@ -162,7 +159,7 @@ export default function AdminUsers() {
           </Button>
         </div>
 
-        <Card className="border-0 shadow-lg bg-white/90">
+        <Card className="surface-card shadow-sm">
           <CardContent className="pt-6">
             <form
               className="grid gap-3 md:grid-cols-[1fr_220px_auto]"
@@ -175,6 +172,7 @@ export default function AdminUsers() {
                   value={searchInput}
                   onChange={(e) => setSearchInput(e.target.value)}
                   placeholder="Search by name or email"
+                  className="h-11 rounded-lg border-slate-300"
                 />
               </div>
               <div>
@@ -203,14 +201,14 @@ export default function AdminUsers() {
 
         <div className="grid gap-3">
           {users.length === 0 ? (
-            <Card className="border-dashed">
+            <Card className="border-dashed border-slate-300">
               <CardContent className="py-14 text-center text-slate-600">
                 No users found for the selected filters.
               </CardContent>
             </Card>
           ) : (
             users.map((item) => (
-              <Card key={item._id} className="shadow-sm">
+              <Card key={item._id} className="surface-card shadow-sm">
                 <CardContent className="py-4">
                   <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
                     <div className="space-y-2">
@@ -258,7 +256,7 @@ export default function AdminUsers() {
                           ) : userDetails?.user ? (
                             <div className="space-y-5">
                               <div className="grid md:grid-cols-3 gap-3">
-                                <Card>
+                                <Card className="surface-card">
                                   <CardHeader className="pb-2">
                                     <CardTitle className="text-sm text-slate-500">
                                       Role
@@ -268,7 +266,7 @@ export default function AdminUsers() {
                                     <RoleBadge role={userDetails.user.role} />
                                   </CardContent>
                                 </Card>
-                                <Card>
+                                <Card className="surface-card">
                                   <CardHeader className="pb-2">
                                     <CardTitle className="text-sm text-slate-500">
                                       Donations
@@ -278,7 +276,7 @@ export default function AdminUsers() {
                                     {userDetails.donations?.length || 0}
                                   </CardContent>
                                 </Card>
-                                <Card>
+                                <Card className="surface-card">
                                   <CardHeader className="pb-2">
                                     <CardTitle className="text-sm text-slate-500">
                                       Activities
@@ -290,7 +288,7 @@ export default function AdminUsers() {
                                 </Card>
                               </div>
 
-                              <Card className="border-dashed">
+                              <Card className="border-dashed border-slate-300">
                                 <CardHeader>
                                   <CardTitle className="text-base flex items-center gap-2">
                                     <ShieldCheck className="h-4 w-4" />
@@ -389,7 +387,7 @@ export default function AdminUsers() {
           )}
         </div>
 
-        <Card>
+        <Card className="surface-card">
           <CardContent className="py-4 flex items-center justify-between gap-3">
             <p className="text-sm text-slate-600">
               Page {page} of {totalPages}

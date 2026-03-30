@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { AdminPageSkeleton } from "@/components/admin/AdminSkeletons";
 import { Loader2, ShieldCheck, UserCircle2 } from "lucide-react";
 
 export default function AdminActivities() {
@@ -54,11 +55,7 @@ export default function AdminActivities() {
   };
 
   if (loading || isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    );
+    return <AdminPageSkeleton statCount={0} listCount={5} />;
   }
 
   return (

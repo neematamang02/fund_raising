@@ -1,8 +1,7 @@
 import { useMemo } from "react";
 import { Link } from "react-router-dom";
-import { FundraisingButton } from "./ui/fundraising-button";
-import { Badge } from "./ui/badge";
-import { Heart, Clock, Users, Target, TrendingUp } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Heart, Users, Target, TrendingUp } from "lucide-react";
 import PropTypes from "prop-types";
 
 export default function CampaignCard({ id, title, imageSrc, target, raised }) {
@@ -12,88 +11,69 @@ export default function CampaignCard({ id, title, imageSrc, target, raised }) {
   }, [target, raised]);
 
   return (
-    <div className="group bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 hover:scale-[1.02] overflow-hidden border border-gray-100">
-      {/* Image Container */}
+    <article className="surface-card group overflow-hidden rounded-xl transition-all duration-200 hover:-translate-y-0.5 hover:border-blue-200 hover:shadow-lg">
       <div className="relative overflow-hidden">
         <img
           src={imageSrc || "/placeholder.svg"}
           alt={title}
-          className="w-full h-56 object-cover group-hover:scale-110 transition-transform duration-500"
+          className="h-52 w-full object-cover transition-transform duration-500 group-hover:scale-105"
         />
 
-        {/* Progress Overlay */}
-        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-4">
-          <div className="flex items-center gap-2 text-white text-sm">
+        <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-slate-900/75 to-transparent p-4">
+          <div className="inline-flex items-center gap-2 rounded-full bg-white/20 px-2.5 py-1 text-xs font-semibold text-white backdrop-blur-sm">
             <TrendingUp className="h-4 w-4" />
-            <span className="font-medium">{percent}% funded</span>
+            <span>{percent}% funded</span>
           </div>
         </div>
       </div>
 
-      {/* Content */}
-      <div className="p-6 space-y-4">
-        {/* Title */}
-        <h3 className="font-bold text-xl text-gray-900 line-clamp-2 group-hover:text-blue-600 transition-colors">
+      <div className="space-y-4 p-5">
+        <h3 className="line-clamp-2 text-xl font-bold text-slate-900 transition-colors group-hover:text-blue-700">
           {title}
         </h3>
 
-        {/* Progress Section */}
         <div className="space-y-3">
-          {/* Progress Bar */}
-          <div className="relative">
-            <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
+          <div>
+            <div className="h-2.5 w-full overflow-hidden rounded-full bg-slate-200">
               <div
-                className="bg-gradient-to-r from-blue-500 to-indigo-600 h-3 rounded-full transition-all duration-1000 ease-out relative overflow-hidden"
+                className="h-2.5 rounded-full bg-primary transition-all duration-700 ease-out"
                 style={{ width: `${percent}%` }}
-              >
-                {/* Shimmer Effect */}
-                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent animate-shimmer"></div>
-              </div>
+              />
             </div>
-            <div
-              className="absolute -top-1 bg-white border-2 border-blue-500 rounded-full w-5 h-5 transition-all duration-300"
-              style={{ left: `calc(${Math.min(percent, 95)}% - 10px)` }}
-            ></div>
           </div>
 
-          {/* Amount Info */}
-          <div className="flex justify-between items-center text-sm">
-            <div className="space-y-1">
-              <div className="font-bold text-lg text-gray-900">
+          <div className="flex items-end justify-between text-sm">
+            <div>
+              <p className="text-lg font-bold text-slate-900">
                 ${raised.toLocaleString()}
-              </div>
-              <div className="text-gray-500 flex items-center gap-1">
+              </p>
+              <p className="flex items-center gap-1 text-slate-500">
                 <Target className="h-3 w-3" />
                 raised of ${target.toLocaleString()}
-              </div>
+              </p>
             </div>
-            <div className="text-right space-y-1">
-              <div className="font-bold text-lg text-blue-600">{percent}%</div>
-              <div className="text-gray-500 text-xs">complete</div>
+            <div className="text-right">
+              <p className="text-lg font-bold text-secondary">{percent}%</p>
+              <p className="text-xs text-slate-500">complete</p>
             </div>
           </div>
 
-          {/* Donor Count */}
-          <div className="flex items-center gap-2 text-gray-600 text-sm">
+          <div className="flex items-center gap-2 text-sm text-slate-600">
             <Users className="h-4 w-4" />
             <span>{Math.floor(raised / 50)} donors supporting this cause</span>
           </div>
         </div>
 
-        {/* Action Button */}
-        <div className="pt-2">
+        <div className="pt-1">
           <Link to={`/donate/${id}`} className="block">
-            <FundraisingButton size="lg" fullWidth className="group">
-              <Heart className="h-5 w-5 group-hover:scale-110 transition-transform" />
+            <Button className="w-full bg-primary hover:bg-primary/90">
+              <Heart className="h-5 w-5" />
               Support This Cause
-            </FundraisingButton>
+            </Button>
           </Link>
         </div>
       </div>
-
-      {/* Hover Effect Border */}
-      <div className="absolute inset-0 rounded-2xl border-2 border-transparent group-hover:border-blue-200 transition-colors pointer-events-none"></div>
-    </div>
+    </article>
   );
 }
 

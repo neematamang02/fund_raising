@@ -24,7 +24,7 @@ export default function AppShell({ children }) {
     !isAuthRoute && (role === "admin" || role === "organizer");
 
   if (isAuthRoute) {
-    return <main className="min-h-screen bg-slate-50">{children}</main>;
+    return <main className="surface-page min-h-screen">{children}</main>;
   }
 
   if (useSidebarLayout) {
@@ -34,7 +34,7 @@ export default function AppShell({ children }) {
   return (
     <>
       <TopNav />
-      <main className="min-h-screen bg-slate-50">{children}</main>
+      <main className="surface-page min-h-screen">{children}</main>
       <Footer />
     </>
   );

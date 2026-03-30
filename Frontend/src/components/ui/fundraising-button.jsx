@@ -5,50 +5,25 @@ import { cn } from "@/lib/utils";
 import { Loader2 } from "lucide-react";
 
 const fundraisingButtonVariants = cva(
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-xl text-sm font-semibold ring-offset-background transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 transform active:scale-95 shadow-lg hover:shadow-xl",
+  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg text-sm font-semibold ring-offset-background transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 active:scale-[0.99]",
   {
     variants: {
       variant: {
-        // Primary donation - Orange/coral for warmth and generosity
-        donate:
-          "bg-gradient-to-r from-orange-500 to-coral-500 text-white shadow-orange-500/25 hover:from-orange-600 hover:to-coral-600 hover:shadow-orange-500/40 hover:scale-105 border border-orange-400/20",
-
-        // Trust-building - Blue for reliability and security
-        trust:
-          "bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-blue-500/25 hover:from-blue-700 hover:to-indigo-700 hover:shadow-blue-500/40 hover:scale-105 border border-blue-400/20",
-
-        // Success/completion - Green for positive outcomes
-        success:
-          "bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-emerald-500/25 hover:from-emerald-600 hover:to-teal-600 hover:shadow-emerald-500/40 hover:scale-105 border border-emerald-400/20",
-
-        // Urgent action - Red for immediate action
-        urgent:
-          "bg-gradient-to-r from-red-500 to-rose-500 text-white shadow-red-500/25 hover:from-red-600 hover:to-rose-600 hover:shadow-red-500/40 hover:scale-105 border border-red-400/20 animate-pulse",
-
-        // Secondary support - Purple for community and support
-        support:
-          "bg-gradient-to-r from-purple-500 to-violet-500 text-white shadow-purple-500/25 hover:from-purple-600 hover:to-violet-600 hover:shadow-purple-500/40 hover:scale-105 border border-purple-400/20",
-
-        // Warm secondary - Amber for encouragement
-        warm: "bg-gradient-to-r from-amber-500 to-yellow-500 text-white shadow-amber-500/25 hover:from-amber-600 hover:to-yellow-600 hover:shadow-amber-500/40 hover:scale-105 border border-amber-400/20",
-
-        // Outline variants for secondary actions
+        donate: "bg-primary text-primary-foreground hover:bg-primary/90",
+        trust: "bg-secondary text-secondary-foreground hover:bg-secondary/90",
+        success: "bg-primary text-primary-foreground hover:bg-primary/85",
+        urgent: "bg-destructive text-white hover:bg-destructive/90",
+        support: "bg-secondary text-secondary-foreground hover:bg-secondary/85",
+        warm: "bg-accent text-accent-foreground hover:bg-accent/90",
         "outline-donate":
-          "border-2 border-orange-500 text-orange-600 bg-orange-50 hover:bg-orange-500 hover:text-white shadow-orange-500/10 hover:shadow-orange-500/25 hover:scale-105",
+          "border border-primary bg-transparent text-primary hover:bg-primary hover:text-primary-foreground",
         "outline-trust":
-          "border-2 border-blue-500 text-blue-600 bg-blue-50 hover:bg-blue-500 hover:text-white shadow-blue-500/10 hover:shadow-blue-500/25 hover:scale-105",
+          "border border-secondary bg-transparent text-secondary hover:bg-secondary hover:text-secondary-foreground",
         "outline-success":
-          "border-2 border-emerald-500 text-emerald-600 bg-emerald-50 hover:bg-emerald-500 hover:text-white shadow-emerald-500/10 hover:shadow-emerald-500/25 hover:scale-105",
-
-        // Ghost variants for subtle actions
-        "ghost-donate":
-          "text-orange-600 hover:bg-orange-100 hover:text-orange-700 shadow-none hover:shadow-md hover:shadow-orange-500/20",
-        "ghost-trust":
-          "text-blue-600 hover:bg-blue-100 hover:text-blue-700 shadow-none hover:shadow-md hover:shadow-blue-500/20",
-
-        // Destructive for dangerous actions
-        destructive:
-          "bg-gradient-to-r from-red-600 to-pink-600 text-white shadow-red-500/25 hover:from-red-700 hover:to-pink-700 hover:shadow-red-500/40 hover:scale-105 border border-red-400/20",
+          "border border-primary bg-transparent text-primary hover:bg-primary hover:text-primary-foreground",
+        "ghost-donate": "text-primary hover:bg-primary/10",
+        "ghost-trust": "text-secondary hover:bg-secondary/10",
+        destructive: "bg-destructive text-white hover:bg-destructive/90",
       },
       size: {
         sm: "h-9 px-4 text-xs",
@@ -67,7 +42,7 @@ const fundraisingButtonVariants = cva(
       size: "default",
       fullWidth: false,
     },
-  }
+  },
 );
 
 const FundraisingButton = React.forwardRef(
@@ -84,14 +59,14 @@ const FundraisingButton = React.forwardRef(
       disabled,
       ...props
     },
-    ref
+    ref,
   ) => {
     const Comp = asChild ? Slot : "button";
 
     return (
       <Comp
         className={cn(
-          fundraisingButtonVariants({ variant, size, fullWidth, className })
+          fundraisingButtonVariants({ variant, size, fullWidth, className }),
         )}
         ref={ref}
         disabled={disabled || loading}
@@ -101,7 +76,7 @@ const FundraisingButton = React.forwardRef(
         {loading ? loadingText || "Loading..." : children}
       </Comp>
     );
-  }
+  },
 );
 FundraisingButton.displayName = "FundraisingButton";
 

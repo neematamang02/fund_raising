@@ -19,6 +19,9 @@ import {
   getSidebarItems,
   getSidebarSections,
 } from "./roleNavConfig";
+import useUnreadNotificationCount, {
+  formatUnreadCount,
+} from "@/hooks/useUnreadNotificationCount";
 import RoleModeSwitcher from "./RoleModeSwitcher";
 import { toast } from "sonner";
 import {
@@ -39,6 +42,24 @@ function itemClass({ isActive }) {
   ].join(" ");
 }
 
+function UnreadNotificationDot({ unreadCount, compact = false }) {
+  if (unreadCount <= 0) return null;
+
+  return (
+    <span
+      className={[
+        "inline-flex items-center justify-center rounded-full bg-green-600 text-white",
+        compact
+          ? "h-4 min-w-4 px-1 text-[10px]"
+          : "h-5 min-w-5 px-1.5 text-[11px]",
+      ].join(" ")}
+      aria-label={`${unreadCount} unread notifications`}
+    >
+      {formatUnreadCount(unreadCount)}
+    </span>
+  );
+}
+
 export default function RoleSidebarLayout({ role, children }) {
   const { user, logout } = useContext(AuthContext);
   const navigate = useNavigate();
@@ -46,6 +67,7 @@ export default function RoleSidebarLayout({ role, children }) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
   const [logoutDialogOpen, setLogoutDialogOpen] = useState(false);
+  const { unreadCount } = useUnreadNotificationCount();
 
   const navItems = useMemo(() => getSidebarItems(role), [role]);
   const navSections = useMemo(() => getSidebarSections(role), [role]);
@@ -71,7 +93,7 @@ export default function RoleSidebarLayout({ role, children }) {
 
   const SidebarContent = (
     <>
-      <div className="flex h-14 items-center justify-between border-b border-slate-200 px-3">
+      <div className="flex h-20 items-center justify-between border-b border-slate-200 px-3">
         <Link
           to={getRoleHomePath(role)}
           className={[
@@ -80,7 +102,12 @@ export default function RoleSidebarLayout({ role, children }) {
           ].join(" ")}
           onClick={() => setMobileOpen(false)}
         >
-          {collapsed ? "HO" : "HopeOn"}
+          {/* {collapsed ? "HO" : "HopeOn"} */}
+          <img
+            src="https://ik.imagekit.io/zisapgd2g/ChatGPT_Image_Mar_30__2026__02_44_14_PM-removebg-preview.png"
+            alt="HopeOn Logo"
+            className="h-16 w-auto object-contain"
+          />
         </Link>
 
         <button
@@ -145,9 +172,23 @@ export default function RoleSidebarLayout({ role, children }) {
                         className: "h-4 w-4 shrink-0",
                         "aria-hidden": true,
                       })}
+
+                      {to === ROUTES.NOTIFICATIONS && collapsed ? (
+                        <span className="absolute left-5 top-1.5">
+                          <UnreadNotificationDot
+                            unreadCount={unreadCount}
+                            compact
+                          />
+                        </span>
+                      ) : null}
+
                       <span className={collapsed ? "sr-only" : "truncate"}>
                         {label}
                       </span>
+
+                      {to === ROUTES.NOTIFICATIONS && !collapsed ? (
+                        <UnreadNotificationDot unreadCount={unreadCount} />
+                      ) : null}
 
                       {!collapsed ? (
                         <ChevronRight
@@ -242,10 +283,17 @@ export default function RoleSidebarLayout({ role, children }) {
 
             <Link
               to={ROUTES.NOTIFICATIONS}
-              className="text-slate-600 hover:text-slate-900"
-              aria-label="Open notifications"
+              className="relative text-slate-600 hover:text-slate-900"
+              aria-label={`Open notifications${
+                unreadCount > 0 ? ` (${unreadCount} unread)` : ""
+              }`}
             >
               <Bell className="h-5 w-5" />
+              {unreadCount > 0 ? (
+                <span className="absolute -right-2 -top-2">
+                  <UnreadNotificationDot unreadCount={unreadCount} compact />
+                </span>
+              ) : null}
             </Link>
           </header>
 

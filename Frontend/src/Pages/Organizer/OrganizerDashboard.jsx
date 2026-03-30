@@ -11,7 +11,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { FundraisingButton } from "@/components/ui/fundraising-button";
+import { Button } from "@/components/ui/button";
 import {
   BarChart3,
   Clock3,
@@ -133,12 +133,12 @@ export default function OrganizerDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-emerald-50 to-cyan-50 py-8 px-4">
+    <div className="surface-page min-h-screen py-8 px-4">
       <div className="max-w-6xl mx-auto space-y-8">
-        <section className="rounded-2xl border border-emerald-100 bg-white/85 backdrop-blur-sm p-6 md:p-8 shadow-sm">
+        <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm md:p-8">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
             <div>
-              <p className="text-sm font-medium text-emerald-700">
+              <p className="text-sm font-medium text-secondary">
                 Organizer Workspace
               </p>
               <h1 className="text-3xl md:text-4xl font-bold text-slate-900 mt-1">
@@ -150,26 +150,26 @@ export default function OrganizerDashboard() {
               </p>
             </div>
             <div className="flex flex-wrap gap-3">
-              <FundraisingButton
-                variant="donate"
+              <Button
+                className="bg-primary hover:bg-primary/90"
                 onClick={() => navigate(ROUTES.CREATE_CAMPAIGN)}
               >
                 <PlusCircle className="h-4 w-4 mr-2" />
                 New Campaign
-              </FundraisingButton>
-              <FundraisingButton
-                variant="trust"
+              </Button>
+              <Button
+                className="bg-secondary hover:bg-secondary/90"
                 onClick={() => navigate(ROUTES.MY_CAMPAIGNS)}
               >
                 <BarChart3 className="h-4 w-4 mr-2" />
                 Manage Campaigns
-              </FundraisingButton>
+              </Button>
             </div>
           </div>
         </section>
 
         <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <Card className="bg-white/90">
+          <Card className="surface-card">
             <CardHeader className="pb-2">
               <CardDescription>Total Campaigns</CardDescription>
               <CardTitle className="text-3xl">{stats.totalCampaigns}</CardTitle>
@@ -179,7 +179,7 @@ export default function OrganizerDashboard() {
             </CardContent>
           </Card>
 
-          <Card className="bg-white/90">
+          <Card className="surface-card">
             <CardHeader className="pb-2">
               <CardDescription>Active Campaigns</CardDescription>
               <CardTitle className="text-3xl">
@@ -193,7 +193,7 @@ export default function OrganizerDashboard() {
             </CardContent>
           </Card>
 
-          <Card className="bg-white/90">
+          <Card className="surface-card">
             <CardHeader className="pb-2">
               <CardDescription>Total Raised</CardDescription>
               <CardTitle className="text-3xl">
@@ -207,7 +207,7 @@ export default function OrganizerDashboard() {
             </CardContent>
           </Card>
 
-          <Card className="bg-white/90">
+          <Card className="surface-card">
             <CardHeader className="pb-2">
               <CardDescription>Pending Withdrawals</CardDescription>
               <CardTitle className="text-3xl">
@@ -221,7 +221,7 @@ export default function OrganizerDashboard() {
         </section>
 
         <section className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-          <Card className="bg-white/90">
+          <Card className="surface-card">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <ShieldCheck className="h-5 w-5 text-emerald-700" />
@@ -242,13 +242,13 @@ export default function OrganizerDashboard() {
                   ).toUpperCase()}
                 </Badge>
               </div>
-              <FundraisingButton
-                variant="warm"
+              <Button
+                className="bg-secondary hover:bg-secondary/90"
                 onClick={() => navigate(ROUTES.ORGANIZER_PROFILE)}
               >
                 <ShieldCheck className="h-4 w-4 mr-2" />
                 Open Organizer Profile
-              </FundraisingButton>
+              </Button>
             </CardContent>
           </Card>
 
