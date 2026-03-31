@@ -97,9 +97,9 @@ import { useMutation } from "@tanstack/react-query";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Mail, ArrowRight, ShieldCheck } from "lucide-react";
+import { Mail, ArrowRight } from "lucide-react";
 import ROUTES from "@/routes/routes";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 
 const forgotPasswordSchema = z.object({
@@ -107,6 +107,7 @@ const forgotPasswordSchema = z.object({
 });
 
 export default function ForgotPasswordPage() {
+  const navigate = useNavigate();
   const {
     register,
     handleSubmit,
@@ -136,8 +137,14 @@ export default function ForgotPasswordPage() {
 
       return res.json();
     },
-    onSuccess: (data) => {
-      toast.success(data.message || "Reset email sent!");
+    onSuccess: (data, variables) => {
+      toast.success(
+        data.message || "If that email exists, an OTP has been sent.",
+      );
+      sessionStorage.setItem("forgotPasswordEmail", variables.email);
+      navigate(ROUTES.RESET_PASSWORD, {
+        state: { email: variables.email, mode: "otp" },
+      });
     },
     onError: (error) => {
       toast.error(error.message || "Something went wrong");
@@ -184,16 +191,12 @@ export default function ForgotPasswordPage() {
               className="w-full bg-primary hover:bg-primary/90"
               disabled={mutation.isPending}
             >
-              {mutation.isPending ? "Sending..." : "Send Reset Link"}
+              {mutation.isPending ? "Sending..." : "Send OTP"}
               <ArrowRight className="h-4 w-4" />
             </Button>
           </form>
 
           <div className="space-y-3 text-center">
-            <p className="inline-flex items-center gap-2 text-sm text-slate-600">
-              <ShieldCheck className="h-4 w-4 text-primary" />
-              Secure, one-time reset link
-            </p>
             <Link
               to={ROUTES.LOGIN}
               className="text-sm font-medium text-secondary hover:text-secondary/80"

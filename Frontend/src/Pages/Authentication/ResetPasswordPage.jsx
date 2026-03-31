@@ -1,4 +1,4 @@
-import { useSearchParams, useNavigate } from "react-router-dom";
+import { useSearchParams, useNavigate, useLocation } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -8,16 +8,17 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useMutation } from "@tanstack/react-query";
 import axios from "axios";
 import { useState } from "react";
-import { Lock, ArrowRight } from "lucide-react";
+import { Lock, ArrowRight, ShieldCheck } from "lucide-react";
 import ROUTES from "@/routes/routes";
+import { toast } from "sonner";
 
 const API_BASE_URL = import.meta.env.VITE_BACKEND_URL
   ? `${import.meta.env.VITE_BACKEND_URL}/api`
   : "/api";
 
-const schema = z
+const passwordSchema = z
   .object({
-    password: z.string().min(6, "Password must be at least 6 characters."),
+    password: z.string().min(8, "Password must be at least 8 characters."),
     confirmPassword: z.string(),
   })
   .refine((data) => data.password === data.confirmPassword, {
@@ -29,25 +30,62 @@ export default function ResetPasswordPage() {
   const [searchParams] = useSearchParams();
   const token = searchParams.get("token");
   const navigate = useNavigate();
+  const location = useLocation();
+  const emailFromState = location.state?.email;
+  const rememberedEmail = sessionStorage.getItem("forgotPasswordEmail");
+  const defaultEmail = emailFromState || rememberedEmail || "";
   const [serverError, setServerError] = useState("");
+  const [email, setEmail] = useState(defaultEmail);
+  const [otp, setOtp] = useState("");
+  const [otpVerified, setOtpVerified] = useState(Boolean(token));
 
   const {
     register,
     handleSubmit,
     formState: { errors },
   } = useForm({
-    resolver: zodResolver(schema),
+    resolver: zodResolver(passwordSchema),
   });
 
-  const mutation = useMutation({
-    mutationFn: async (data) => {
-      const res = await axios.post(`${API_BASE_URL}/auth/reset-password`, {
-        token,
-        password: data.password,
+  const verifyOtpMutation = useMutation({
+    mutationFn: async ({ email: userEmail, otp: userOtp }) => {
+      const res = await axios.post(`${API_BASE_URL}/auth/verify-reset-otp`, {
+        email: userEmail,
+        otp: userOtp,
       });
       return res.data;
     },
     onSuccess: () => {
+      setOtpVerified(true);
+      setServerError("");
+      toast.success("OTP verified. You can now set a new password.");
+    },
+    onError: (error) => {
+      setOtpVerified(false);
+      setServerError(
+        error.response?.data?.message || "OTP verification failed.",
+      );
+    },
+  });
+
+  const mutation = useMutation({
+    mutationFn: async (data) => {
+      const payload = token
+        ? { token, password: data.password }
+        : {
+            email,
+            otp,
+            password: data.password,
+          };
+      const res = await axios.post(
+        `${API_BASE_URL}/auth/reset-password`,
+        payload,
+      );
+      return res.data;
+    },
+    onSuccess: () => {
+      sessionStorage.removeItem("forgotPasswordEmail");
+      toast.success("Password reset successful.");
       navigate(ROUTES.LOGIN);
     },
     onError: (error) => {
@@ -56,11 +94,32 @@ export default function ResetPasswordPage() {
   });
 
   const onSubmit = (data) => {
-    if (!token) {
-      setServerError("Reset token is missing.");
+    if (!token && !otpVerified) {
+      setServerError("Please verify OTP before setting a new password.");
       return;
     }
     mutation.mutate(data);
+  };
+
+  const handleVerifyOtp = () => {
+    setServerError("");
+
+    if (token) {
+      setOtpVerified(true);
+      return;
+    }
+
+    if (!email) {
+      setServerError("Email is required.");
+      return;
+    }
+
+    if (!otp || otp.length !== 6) {
+      setServerError("Please enter a valid 6-digit OTP.");
+      return;
+    }
+
+    verifyOtpMutation.mutate({ email, otp });
   };
 
   return (
@@ -74,11 +133,52 @@ export default function ResetPasswordPage() {
             Reset Password
           </CardTitle>
           <p className="text-sm text-slate-600">
-            Choose a new secure password for your account.
+            {token
+              ? "Choose a new secure password for your account."
+              : "Verify OTP first, then choose a new secure password."}
           </p>
         </CardHeader>
 
         <CardContent className="space-y-5 p-6 pt-0">
+          {!token ? (
+            <div className="space-y-3 rounded-lg border border-slate-200 bg-slate-50 p-4">
+              <div>
+                <Input
+                  type="email"
+                  placeholder="you@example.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="h-11 rounded-lg border-slate-300"
+                />
+              </div>
+              <div>
+                <Input
+                  type="text"
+                  inputMode="numeric"
+                  maxLength={6}
+                  placeholder="Enter 6-digit OTP"
+                  value={otp}
+                  onChange={(e) => setOtp(e.target.value.replace(/\D/g, ""))}
+                  className="h-11 rounded-lg border-slate-300"
+                />
+              </div>
+              <Button
+                type="button"
+                variant="secondary"
+                className="w-full"
+                onClick={handleVerifyOtp}
+                disabled={verifyOtpMutation.isPending || otpVerified}
+              >
+                {verifyOtpMutation.isPending
+                  ? "Verifying OTP..."
+                  : otpVerified
+                    ? "OTP Verified"
+                    : "Verify OTP"}
+                <ShieldCheck className="h-4 w-4" />
+              </Button>
+            </div>
+          ) : null}
+
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
             <div>
               <Input
@@ -86,6 +186,7 @@ export default function ResetPasswordPage() {
                 placeholder="New password"
                 className="h-11 rounded-lg border-slate-300"
                 {...register("password")}
+                disabled={!token && !otpVerified}
               />
               {errors.password && (
                 <p className="text-red-500 text-sm mt-1">
@@ -100,6 +201,7 @@ export default function ResetPasswordPage() {
                 placeholder="Confirm password"
                 className="h-11 rounded-lg border-slate-300"
                 {...register("confirmPassword")}
+                disabled={!token && !otpVerified}
               />
               {errors.confirmPassword && (
                 <p className="text-red-500 text-sm mt-1">
@@ -115,7 +217,7 @@ export default function ResetPasswordPage() {
             <Button
               type="submit"
               className="w-full bg-primary hover:bg-primary/90"
-              disabled={mutation.isPending}
+              disabled={mutation.isPending || (!token && !otpVerified)}
             >
               {mutation.isPending ? "Resetting..." : "Reset Password"}
               <ArrowRight className="h-4 w-4" />

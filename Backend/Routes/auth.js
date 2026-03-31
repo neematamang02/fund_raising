@@ -5,7 +5,6 @@ import jwt from "jsonwebtoken";
 import { requireAuth } from "../middleware/auth.js";
 import { strictRateLimiter } from "../middleware/rateLimiter.js";
 import OrganizerApplication from "../Models/OrganizerApplication.js";
-import crypto from "crypto";
 import nodemailer from "nodemailer";
 import Otp from "../Models/Otp.js";
 import {
@@ -403,7 +402,7 @@ router.put("/update-profile", requireAuth, async (req, res) => {
 
 /**
  * POST /api/auth/forgot-password
- * Send password reset link to email
+ * Send password reset OTP to email
  */
 router.post("/forgot-password", strictRateLimiter, async (req, res) => {
   try {
@@ -415,19 +414,16 @@ router.post("/forgot-password", strictRateLimiter, async (req, res) => {
 
     const sanitizedEmail = sanitizeString(email).toLowerCase();
 
+    if (!isValidEmail(sanitizedEmail)) {
+      return res.status(400).json({ message: "Invalid email format." });
+    }
+
     // Validate environment
     if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
       logError("Email service not configured");
       return res
         .status(500)
         .json({ message: "Email server not configured properly." });
-    }
-
-    if (!process.env.FRONTEND_URL) {
-      logError("Frontend URL not configured");
-      return res
-        .status(500)
-        .json({ message: "Frontend URL is not configured." });
     }
 
     // Find user
@@ -438,31 +434,37 @@ router.post("/forgot-password", strictRateLimiter, async (req, res) => {
         requestedEmail: sanitizedEmail,
       });
       return res.json({
-        message: "If that email exists, a reset link has been sent.",
+        message: "If that email exists, an OTP has been sent.",
       });
     }
 
-    // Generate secure token
-    const token = crypto.randomBytes(32).toString("hex");
-    user.resetToken = token;
-    user.resetTokenExpiry = Date.now() + 60 * 60 * 1000; // 1 hour
-    await user.save();
+    // Generate reset OTP and store it for forgot-password flow
+    const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
 
-    // Construct reset URL
-    const resetUrl = `${process.env.FRONTEND_URL}/reset-password?token=${token}`;
+    await Otp.findOneAndUpdate(
+      { email: sanitizedEmail, purpose: "forget-password" },
+      {
+        email: sanitizedEmail,
+        otpCode,
+        purpose: "forget-password",
+        expiresAt,
+        isUsed: false,
+      },
+      { upsert: true, new: true },
+    );
 
-    // Send email
-    const emailInfo = await transporter.sendMail({
-      to: user.email, // IMPORTANT: This is the USER'S email, not EMAIL_USER
+    const emailInfo = await getMailTransporter().sendMail({
+      to: user.email,
       from: process.env.EMAIL_USER,
-      subject: "Password Reset Request",
+      subject: "Password Reset OTP",
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <h2>Password Reset Request</h2>
+          <h2>Password Reset OTP</h2>
           <p>You requested a password reset for your account.</p>
-          <p>Click the link below to reset your password:</p>
-          <a href="${resetUrl}" style="display: inline-block; padding: 12px 24px; background: #4F46E5; color: white; text-decoration: none; border-radius: 5px; margin: 20px 0;">Reset Password</a>
-          <p>This link will expire in 1 hour.</p>
+          <p>Your one-time password (OTP) is:</p>
+          <h1 style="color: #4F46E5; font-size: 32px; letter-spacing: 5px; margin: 16px 0;">${otpCode}</h1>
+          <p>This OTP will expire in 10 minutes.</p>
           <p style="color: #666; font-size: 14px;">If you didn't request this, please ignore this email.</p>
         </div>
       `,
@@ -471,14 +473,14 @@ router.post("/forgot-password", strictRateLimiter, async (req, res) => {
     // Detailed logging for debugging
     logInfo("Password reset email sent successfully", {
       userId: user._id,
-      userEmail: user.email, // The recipient
+      userEmail: user.email,
       messageId: emailInfo.messageId,
-      accepted: emailInfo.accepted, // Array of accepted recipients
-      from: process.env.EMAIL_USER, // The sender
+      accepted: emailInfo.accepted,
+      from: process.env.EMAIL_USER,
     });
 
     return res.json({
-      message: "If that email exists, a reset link has been sent.",
+      message: "If that email exists, an OTP has been sent.",
     });
   } catch (err) {
     logError("Forgot Password Error", err, {
@@ -489,24 +491,100 @@ router.post("/forgot-password", strictRateLimiter, async (req, res) => {
 });
 
 /**
+ * POST /api/auth/verify-reset-otp
+ * Verify OTP for forgot-password flow
+ */
+router.post("/verify-reset-otp", strictRateLimiter, async (req, res) => {
+  try {
+    const { email, otp } = req.body;
+
+    if (!email || !otp) {
+      return res.status(400).json({ message: "Email and OTP are required." });
+    }
+
+    const sanitizedEmail = sanitizeString(email).toLowerCase();
+
+    if (!isValidEmail(sanitizedEmail)) {
+      return res.status(400).json({ message: "Invalid email format." });
+    }
+
+    const otpRecord = await Otp.findOne({
+      email: sanitizedEmail,
+      otpCode: sanitizeString(otp),
+      purpose: "forget-password",
+      isUsed: false,
+    });
+
+    if (
+      !otpRecord ||
+      (otpRecord.expiresAt && otpRecord.expiresAt < new Date())
+    ) {
+      return res.status(400).json({ message: "Invalid or expired OTP." });
+    }
+
+    return res.json({ message: "OTP verified." });
+  } catch (err) {
+    logError("Verify Reset OTP Error", err);
+    return res.status(500).json({ message: "Server error." });
+  }
+});
+
+/**
  * POST /api/auth/reset-password
  * Reset password using token
  */
 router.post("/reset-password", strictRateLimiter, async (req, res) => {
   try {
-    const { token, password } = req.body;
+    const { token, email, otp, password } = req.body;
 
-    if (!token || !password) {
-      return res
-        .status(400)
-        .json({ message: "Token and new password required." });
+    if (!password) {
+      return res.status(400).json({ message: "New password required." });
     }
 
-    // Find user with valid token
-    const user = await User.findOne({
-      resetToken: token,
-      resetTokenExpiry: { $gt: Date.now() },
-    });
+    if (!token && (!email || !otp)) {
+      return res.status(400).json({
+        message: "Either reset token or email + OTP are required.",
+      });
+    }
+
+    let user;
+
+    // Backward-compatible token flow
+    if (token) {
+      user = await User.findOne({
+        resetToken: token,
+        resetTokenExpiry: { $gt: Date.now() },
+      });
+    } else {
+      const sanitizedEmail = sanitizeString(email).toLowerCase();
+
+      if (!isValidEmail(sanitizedEmail)) {
+        return res.status(400).json({ message: "Invalid email format." });
+      }
+
+      const otpRecord = await Otp.findOne({
+        email: sanitizedEmail,
+        otpCode: sanitizeString(otp),
+        purpose: "forget-password",
+        isUsed: false,
+      });
+
+      if (
+        !otpRecord ||
+        (otpRecord.expiresAt && otpRecord.expiresAt < new Date())
+      ) {
+        return res.status(400).json({ message: "Invalid or expired OTP." });
+      }
+
+      user = await User.findOne({ email: sanitizedEmail });
+
+      if (!user) {
+        return res.status(404).json({ message: "User not found." });
+      }
+
+      otpRecord.isUsed = true;
+      await otpRecord.save();
+    }
 
     if (!user) {
       logSecurityEvent("Invalid password reset attempt", { token });
