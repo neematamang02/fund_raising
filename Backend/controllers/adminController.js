@@ -3,6 +3,7 @@ import {
   getCampaignDetails,
   getDashboardStats,
   getUserDetails,
+  getUserDonations,
   listActivities,
   listCampaigns,
   listDonations,
@@ -66,6 +67,27 @@ export async function getAdminUserDetails(req, res) {
     });
   } catch (error) {
     console.error("Error fetching user details:", error);
+    return res
+      .status(500)
+      .json({ message: "Server error", error: error.message });
+  }
+}
+
+export async function getAdminUserDonations(req, res) {
+  try {
+    const result = await getUserDonations({ userId: req.params.userId });
+
+    if (result.status) {
+      return res.status(result.status).json({ message: result.message });
+    }
+
+    return res.json({
+      donations: result.donations,
+      totalAmount: result.totalAmount,
+      totalCount: result.totalCount,
+    });
+  } catch (error) {
+    console.error("Error fetching user donations:", error);
     return res
       .status(500)
       .json({ message: "Server error", error: error.message });

@@ -79,6 +79,7 @@ export const adminQueryKeys = {
     search,
   ],
   userDetails: (userId) => ["admin", "users", "details", userId],
+  userDonations: (userId) => ["admin", "users", "donations", userId],
   donations: ({ page = 1, status = "all" } = {}) => [
     "admin",
     "donations",
@@ -200,6 +201,10 @@ export function updateAdminUserStatus(userId, payload, options = {}) {
     method: "PATCH",
     body: payload,
   });
+}
+
+export function getAdminUserDonations(userId, options = {}) {
+  return request(`/admin/users/${userId}/donations`, options);
 }
 
 export function getAdminDonations({

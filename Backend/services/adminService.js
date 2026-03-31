@@ -328,3 +328,28 @@ export async function listActivities({ activityType, userId, page, limit }) {
     total: count,
   };
 }
+
+export async function getUserDonations({ userId }) {
+  // Validate user exists
+  const user = await User.findById(userId);
+  if (!user) {
+    return { status: 404, message: "User not found" };
+  }
+
+  // Fetch donations with campaign population
+  const donations = await Donation.find({
+    donor: userId,
+    status: "COMPLETED",
+  })
+    .populate("campaign", "title imageURL")
+    .sort({ createdAt: -1 });
+
+  // Calculate total amount
+  const totalAmount = donations.reduce((sum, d) => sum + d.amount, 0);
+
+  return {
+    donations,
+    totalAmount,
+    totalCount: donations.length,
+  };
+}

@@ -7,6 +7,7 @@ import {
   getAdminDashboardStats,
   getAdminDonations,
   getAdminUserDetails,
+  getAdminUserDonations,
   getAdminUsers,
   patchAdminUserStatus,
   removeAdminCampaign,
@@ -44,6 +45,14 @@ router.patch(
   authenticateToken,
   requireRole(["admin"]),
   patchAdminUserStatus,
+);
+
+// Get user donations
+router.get(
+  "/admin/users/:userId/donations",
+  authenticateToken,
+  requireRole(["admin"]),
+  getAdminUserDonations,
 );
 
 // Campaign Management - Get all campaigns

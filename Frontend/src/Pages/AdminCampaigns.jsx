@@ -29,6 +29,8 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Eye, Loader2, Search, Trash2, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
+import { format } from "date-fns";
+import { Link } from "react-router-dom";
 
 export default function AdminCampaigns() {
   const { user, loading } = useContext(AuthContext);
@@ -274,6 +276,88 @@ export default function AdminCampaigns() {
                                   </CardContent>
                                 </Card>
                               </div>
+
+                              <Card className="surface-card">
+                                <CardHeader>
+                                  <CardTitle>Campaign Donors</CardTitle>
+                                </CardHeader>
+                                <CardContent>
+                                  {!campaignDetails.donations ||
+                                  campaignDetails.donations.length === 0 ? (
+                                    <div className="py-8 text-center text-slate-500">
+                                      No donations yet
+                                    </div>
+                                  ) : (
+                                    <div className="space-y-3">
+                                      {campaignDetails.donations.map(
+                                        (donation) => (
+                                          <Card
+                                            key={donation._id}
+                                            className="surface-card"
+                                          >
+                                            <CardContent className="py-3">
+                                              <div className="grid md:grid-cols-4 gap-3">
+                                                <div>
+                                                  <p className="text-xs text-slate-500 mb-1">
+                                                    Donor
+                                                  </p>
+                                                  {donation.isAnonymous ? (
+                                                    <p className="text-sm text-slate-600">
+                                                      Anonymous
+                                                    </p>
+                                                  ) : donation.donor ? (
+                                                    <Link
+                                                      to={`/profile/${donation.donor._id}`}
+                                                      className="text-sm font-medium text-blue-600 hover:text-blue-800 hover:underline"
+                                                    >
+                                                      {donation.donor.name}
+                                                    </Link>
+                                                  ) : (
+                                                    <p className="text-sm text-slate-600">
+                                                      N/A
+                                                    </p>
+                                                  )}
+                                                </div>
+                                                <div>
+                                                  <p className="text-xs text-slate-500 mb-1">
+                                                    Email
+                                                  </p>
+                                                  <p className="text-sm text-slate-600">
+                                                    {donation.donorEmail ||
+                                                      "N/A"}
+                                                  </p>
+                                                </div>
+                                                <div>
+                                                  <p className="text-xs text-slate-500 mb-1">
+                                                    Amount
+                                                  </p>
+                                                  <p className="text-sm font-semibold text-slate-900">
+                                                    $
+                                                    {donation.amount.toFixed(2)}
+                                                  </p>
+                                                </div>
+                                                <div>
+                                                  <p className="text-xs text-slate-500 mb-1">
+                                                    Date
+                                                  </p>
+                                                  <p className="text-sm text-slate-600">
+                                                    {format(
+                                                      new Date(
+                                                        donation.createdAt,
+                                                      ),
+                                                      "PPP",
+                                                    )}
+                                                  </p>
+                                                </div>
+                                              </div>
+                                            </CardContent>
+                                          </Card>
+                                        ),
+                                      )}
+                                    </div>
+                                  )}
+                                </CardContent>
+                              </Card>
                             </div>
                           ) : (
                             <div className="py-8 text-center text-slate-500">

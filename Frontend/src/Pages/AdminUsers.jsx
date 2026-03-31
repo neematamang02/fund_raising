@@ -1,11 +1,12 @@
 import { useContext, useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { AuthContext } from "@/Context/AuthContext";
 import ROUTES from "@/routes/routes";
 import {
   adminQueryKeys,
   getAdminUserDetails,
+  getAdminUserDonations,
   getAdminUsers,
   updateAdminUserStatus,
 } from "@/services/adminApi";
@@ -30,8 +31,15 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Loader2, Search, ShieldCheck, Mail, Eye } from "lucide-react";
+import {
+  Tabs,
+  TabsList,
+  TabsTrigger,
+  TabsContent,
+} from "@/components/ui/tabs";
+import { Loader2, Search, ShieldCheck, Mail, Eye, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
+import { format } from "date-fns";
 
 function RoleBadge({ role }) {
   const roleMap = {
@@ -44,6 +52,106 @@ function RoleBadge({ role }) {
     <Badge className={roleMap[role] || roleMap.donor}>
       {(role || "donor").toUpperCase()}
     </Badge>
+  );
+}
+
+function DonationsTab({ userId }) {
+  const { data, isLoading, error } = useQuery({
+    queryKey: adminQueryKeys.userDonations(userId),
+    queryFn: () => getAdminUserDonations(userId),
+    enabled: Boolean(userId),
+  });
+
+  if (isLoading) {
+    return (
+      <div className="py-14 flex items-center justify-center">
+        <Loader2 className="h-6 w-6 animate-spin text-slate-400" />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <Card className="border-rose-200 bg-rose-50">
+        <CardContent className="py-8 flex items-center justify-center gap-2 text-rose-700">
+          <AlertCircle className="h-5 w-5" />
+          <span>Failed to load donations: {error.message}</span>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (!data?.donations || data.donations.length === 0) {
+    return (
+      <Card className="border-dashed border-slate-300">
+        <CardContent className="py-14 text-center text-slate-600">
+          This user has not made any donations yet.
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      <Card className="surface-card bg-emerald-50 border-emerald-200">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base text-emerald-900">
+            Total Donated
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-3xl font-bold text-emerald-900">
+            ${data.totalAmount.toFixed(2)}
+          </p>
+          <p className="text-sm text-emerald-700 mt-1">
+            {data.totalCount} {data.totalCount === 1 ? "donation" : "donations"}
+          </p>
+        </CardContent>
+      </Card>
+
+      <Card className="surface-card">
+        <CardHeader>
+          <CardTitle className="text-base">Donation History</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-3">
+            {data.donations.map((donation) => (
+              <Card key={donation._id} className="border-slate-200">
+                <CardContent className="py-3">
+                  <div className="grid md:grid-cols-3 gap-3">
+                    <div>
+                      <p className="text-xs text-slate-500 mb-1">Campaign</p>
+                      {donation.campaign ? (
+                        <Link
+                          to={`/donate/${donation.campaign._id}`}
+                          className="text-sm font-medium text-blue-600 hover:text-blue-800 hover:underline"
+                        >
+                          {donation.campaign.title}
+                        </Link>
+                      ) : (
+                        <p className="text-sm text-slate-600">N/A</p>
+                      )}
+                    </div>
+                    <div>
+                      <p className="text-xs text-slate-500 mb-1">Amount</p>
+                      <p className="text-sm font-semibold text-slate-900">
+                        ${donation.amount.toFixed(2)}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-slate-500 mb-1">Date</p>
+                      <p className="text-sm text-slate-600">
+                        {format(new Date(donation.createdAt), "PPP")}
+                      </p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+    </div>
   );
 }
 
@@ -254,124 +362,137 @@ export default function AdminUsers() {
                               <Loader2 className="h-6 w-6 animate-spin" />
                             </div>
                           ) : userDetails?.user ? (
-                            <div className="space-y-5">
-                              <div className="grid md:grid-cols-3 gap-3">
-                                <Card className="surface-card">
-                                  <CardHeader className="pb-2">
-                                    <CardTitle className="text-sm text-slate-500">
-                                      Role
-                                    </CardTitle>
-                                  </CardHeader>
-                                  <CardContent>
-                                    <RoleBadge role={userDetails.user.role} />
-                                  </CardContent>
-                                </Card>
-                                <Card className="surface-card">
-                                  <CardHeader className="pb-2">
-                                    <CardTitle className="text-sm text-slate-500">
-                                      Donations
-                                    </CardTitle>
-                                  </CardHeader>
-                                  <CardContent className="text-xl font-bold text-slate-900">
-                                    {userDetails.donations?.length || 0}
-                                  </CardContent>
-                                </Card>
-                                <Card className="surface-card">
-                                  <CardHeader className="pb-2">
-                                    <CardTitle className="text-sm text-slate-500">
-                                      Activities
-                                    </CardTitle>
-                                  </CardHeader>
-                                  <CardContent className="text-xl font-bold text-slate-900">
-                                    {userDetails.activities?.length || 0}
-                                  </CardContent>
-                                </Card>
-                              </div>
+                            <Tabs defaultValue="overview">
+                              <TabsList>
+                                <TabsTrigger value="overview">Overview</TabsTrigger>
+                                <TabsTrigger value="donations">Donations</TabsTrigger>
+                              </TabsList>
 
-                              <Card className="border-dashed border-slate-300">
-                                <CardHeader>
-                                  <CardTitle className="text-base flex items-center gap-2">
-                                    <ShieldCheck className="h-4 w-4" />
-                                    Admin controls
-                                  </CardTitle>
-                                </CardHeader>
-                                <CardContent className="grid md:grid-cols-3 gap-3">
-                                  <div>
-                                    <Label htmlFor={`role-${item._id}`}>
-                                      Role
-                                    </Label>
-                                    <Select
-                                      defaultValue={
-                                        userDetails.user.role || "donor"
-                                      }
-                                      onValueChange={(nextRole) =>
-                                        handleUpdateUser({
-                                          userId: item._id,
-                                          role: nextRole,
-                                          isOrganizerApproved:
-                                            userDetails.user
-                                              .isOrganizerApproved,
-                                        })
-                                      }
-                                    >
-                                      <SelectTrigger id={`role-${item._id}`}>
-                                        <SelectValue />
-                                      </SelectTrigger>
-                                      <SelectContent>
-                                        <SelectItem value="donor">
-                                          Donor
-                                        </SelectItem>
-                                        <SelectItem value="organizer">
-                                          Organizer
-                                        </SelectItem>
-                                        <SelectItem value="admin">
-                                          Admin
-                                        </SelectItem>
-                                      </SelectContent>
-                                    </Select>
+                              <TabsContent value="overview">
+                                <div className="space-y-5">
+                                  <div className="grid md:grid-cols-3 gap-3">
+                                    <Card className="surface-card">
+                                      <CardHeader className="pb-2">
+                                        <CardTitle className="text-sm text-slate-500">
+                                          Role
+                                        </CardTitle>
+                                      </CardHeader>
+                                      <CardContent>
+                                        <RoleBadge role={userDetails.user.role} />
+                                      </CardContent>
+                                    </Card>
+                                    <Card className="surface-card">
+                                      <CardHeader className="pb-2">
+                                        <CardTitle className="text-sm text-slate-500">
+                                          Donations
+                                        </CardTitle>
+                                      </CardHeader>
+                                      <CardContent className="text-xl font-bold text-slate-900">
+                                        {userDetails.donations?.length || 0}
+                                      </CardContent>
+                                    </Card>
+                                    <Card className="surface-card">
+                                      <CardHeader className="pb-2">
+                                        <CardTitle className="text-sm text-slate-500">
+                                          Activities
+                                        </CardTitle>
+                                      </CardHeader>
+                                      <CardContent className="text-xl font-bold text-slate-900">
+                                        {userDetails.activities?.length || 0}
+                                      </CardContent>
+                                    </Card>
                                   </div>
 
-                                  <div>
-                                    <Label htmlFor={`approved-${item._id}`}>
-                                      Organizer approval
-                                    </Label>
-                                    <Select
-                                      defaultValue={
-                                        userDetails.user.isOrganizerApproved
-                                          ? "yes"
-                                          : "no"
-                                      }
-                                      onValueChange={(value) =>
-                                        handleUpdateUser({
-                                          userId: item._id,
-                                          role: userDetails.user.role,
-                                          isOrganizerApproved: value === "yes",
-                                        })
-                                      }
-                                    >
-                                      <SelectTrigger
-                                        id={`approved-${item._id}`}
-                                      >
-                                        <SelectValue />
-                                      </SelectTrigger>
-                                      <SelectContent>
-                                        <SelectItem value="yes">
-                                          Approved
-                                        </SelectItem>
-                                        <SelectItem value="no">
-                                          Not approved
-                                        </SelectItem>
-                                      </SelectContent>
-                                    </Select>
-                                  </div>
+                                  <Card className="border-dashed border-slate-300">
+                                    <CardHeader>
+                                      <CardTitle className="text-base flex items-center gap-2">
+                                        <ShieldCheck className="h-4 w-4" />
+                                        Admin controls
+                                      </CardTitle>
+                                    </CardHeader>
+                                    <CardContent className="grid md:grid-cols-3 gap-3">
+                                      <div>
+                                        <Label htmlFor={`role-${item._id}`}>
+                                          Role
+                                        </Label>
+                                        <Select
+                                          defaultValue={
+                                            userDetails.user.role || "donor"
+                                          }
+                                          onValueChange={(nextRole) =>
+                                            handleUpdateUser({
+                                              userId: item._id,
+                                              role: nextRole,
+                                              isOrganizerApproved:
+                                                userDetails.user
+                                                  .isOrganizerApproved,
+                                            })
+                                          }
+                                        >
+                                          <SelectTrigger id={`role-${item._id}`}>
+                                            <SelectValue />
+                                          </SelectTrigger>
+                                          <SelectContent>
+                                            <SelectItem value="donor">
+                                              Donor
+                                            </SelectItem>
+                                            <SelectItem value="organizer">
+                                              Organizer
+                                            </SelectItem>
+                                            <SelectItem value="admin">
+                                              Admin
+                                            </SelectItem>
+                                          </SelectContent>
+                                        </Select>
+                                      </div>
 
-                                  <div className="text-sm text-slate-600 flex items-end">
-                                    Changes apply immediately and are logged by
-                                    backend activity tracking.
-                                  </div>
-                                </CardContent>
-                              </Card>
-                            </div>
+                                      <div>
+                                        <Label htmlFor={`approved-${item._id}`}>
+                                          Organizer approval
+                                        </Label>
+                                        <Select
+                                          defaultValue={
+                                            userDetails.user.isOrganizerApproved
+                                              ? "yes"
+                                              : "no"
+                                          }
+                                          onValueChange={(value) =>
+                                            handleUpdateUser({
+                                              userId: item._id,
+                                              role: userDetails.user.role,
+                                              isOrganizerApproved: value === "yes",
+                                            })
+                                          }
+                                        >
+                                          <SelectTrigger
+                                            id={`approved-${item._id}`}
+                                          >
+                                            <SelectValue />
+                                          </SelectTrigger>
+                                          <SelectContent>
+                                            <SelectItem value="yes">
+                                              Approved
+                                            </SelectItem>
+                                            <SelectItem value="no">
+                                              Not approved
+                                            </SelectItem>
+                                          </SelectContent>
+                                        </Select>
+                                      </div>
+
+                                      <div className="text-sm text-slate-600 flex items-end">
+                                        Changes apply immediately and are logged by
+                                        backend activity tracking.
+                                      </div>
+                                    </CardContent>
+                                  </Card>
+                                </div>
+                              </TabsContent>
+
+                              <TabsContent value="donations">
+                                <DonationsTab userId={selectedUserId} />
+                              </TabsContent>
+                            </Tabs>
                           ) : (
                             <div className="py-8 text-center text-slate-500">
                               Unable to load user details.
