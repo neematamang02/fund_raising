@@ -25,10 +25,10 @@ const API_BASE_URL = import.meta.env.VITE_BACKEND_URL
   : "/api";
 
 function statusClass(status) {
-  if (status === "verified") return "bg-emerald-100 text-emerald-800";
-  if (status === "rejected") return "bg-red-100 text-red-800";
-  if (status === "pending") return "bg-amber-100 text-amber-800";
-  return "bg-slate-100 text-slate-800";
+  if (status === "verified") return "bg-primary/15 text-primary border-primary/25";
+  if (status === "rejected") return "bg-destructive/15 text-destructive border-destructive/25";
+  if (status === "pending") return "bg-chart-4/15 text-chart-4 border-chart-4/25";
+  return "bg-muted text-muted-foreground";
 }
 
 export default function OrganizerProfile() {
@@ -291,17 +291,17 @@ export default function OrganizerProfile() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8 max-w-4xl">
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold mb-2">
-          Organizer Profile & Verification
-        </h1>
-        <p className="text-muted-foreground">
-          Set up your one-time KYC and bank profile to enable withdrawals.
-        </p>
-      </div>
+    <div className="min-h-screen surface-page px-4 py-8">
+      <div className="container mx-auto max-w-4xl space-y-6">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-1">Organizer</p>
+          <h1 className="text-2xl font-bold text-foreground">Profile & Verification</h1>
+          <p className="text-sm text-muted-foreground mt-0.5">
+            Set up your one-time KYC and bank profile to enable withdrawals.
+          </p>
+        </div>
 
-      <Card className="mb-6">
+      <Card className="border bg-card">
         <CardHeader>
           <CardTitle className="flex items-center justify-between">
             <span>Verification Status</span>
@@ -316,7 +316,7 @@ export default function OrganizerProfile() {
         </CardHeader>
         {profileStatus === "rejected" && rejectionReason && (
           <CardContent>
-            <div className="rounded-md border border-red-200 bg-red-50 p-4 text-red-800">
+            <div className="rounded-md border border-destructive/20 bg-destructive/5 p-4 text-destructive">
               <p className="font-medium">Review Feedback</p>
               <p className="mt-1 whitespace-pre-wrap">{rejectionReason}</p>
             </div>
@@ -552,7 +552,7 @@ export default function OrganizerProfile() {
             </CardHeader>
             <CardContent className="space-y-4">
               {documentReuseSummary?.reusableDocumentsCount > 0 && (
-                <div className="rounded-md border border-blue-200 bg-blue-50 p-3 text-sm text-blue-800">
+                <div className="rounded-md border border-chart-2/20 bg-chart-2/5 p-3 text-sm text-chart-2">
                   {documentReuseSummary.reusableDocumentsCount} document(s)
                   reused from your approved organizer application. Bank Proof
                   still requires a dedicated upload.
@@ -639,7 +639,7 @@ export default function OrganizerProfile() {
                     </SelectContent>
                   </Select>
 
-                  <label className="flex items-center gap-2 cursor-pointer text-sm text-blue-700">
+                  <label className="flex items-center gap-2 cursor-pointer text-sm text-primary">
                     <Upload className="h-4 w-4" />
                     Upload file
                     <input
@@ -666,6 +666,7 @@ export default function OrganizerProfile() {
           </Button>
         </form>
       )}
+      </div>
     </div>
   );
 }

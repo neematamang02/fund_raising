@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { AuthContext } from "@/Context/AuthContext";
 import ROUTES from "@/routes/routes";
 import { adminQueryKeys, getAdminDonations } from "@/services/adminApi";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { AdminPageSkeleton } from "@/components/admin/AdminSkeletons";
 import {
   Select,
@@ -13,42 +13,76 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
 import {
-  Loader2,
-  HandCoins,
-  CircleDollarSign,
-  CheckCircle,
-  Clock,
-  AlertTriangle,
-} from "lucide-react";
+  PageHeader,
+  RefreshButton,
+  StatusBadge,
+  EmptyState,
+  Pagination,
+  FilterCard,
+} from "@/components/admin/AdminUtils";
+import { HandCoins, CircleDollarSign, Hash } from "lucide-react";
 
-function StatusBadge({ status }) {
-  const normalized = String(status || "").toUpperCase();
-  if (normalized === "COMPLETED") {
-    return (
-      <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200">
-        <CheckCircle className="h-3 w-3 mr-1" />
-        COMPLETED
-      </Badge>
-    );
-  }
-  if (normalized === "PENDING") {
-    return (
-      <Badge className="bg-amber-100 text-amber-700 border-amber-200">
-        <Clock className="h-3 w-3 mr-1" />
-        PENDING
-      </Badge>
-    );
-  }
+// ─── Stat tile ────────────────────────────────────────────────────────────────
+
+function StatTile({ icon: Icon, label, value, accent }) {
+  const accentMap = {
+    primary: "text-primary bg-primary/8 border-primary/20",
+    blue: "text-chart-2 bg-chart-2/8 border-chart-2/20",
+    muted: "text-muted-foreground bg-muted border-border",
+  };
   return (
-    <Badge className="bg-rose-100 text-rose-700 border-rose-200">
-      <AlertTriangle className="h-3 w-3 mr-1" />
-      {normalized || "UNKNOWN"}
-    </Badge>
+    <Card className="border bg-card">
+      <CardContent className="p-5 flex items-center gap-4">
+        <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border ${accentMap[accent ?? "muted"]}`}>
+          <Icon className="h-5 w-5" />
+        </div>
+        <div>
+          <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground">{label}</p>
+          <p className="text-2xl font-bold text-foreground leading-tight">{value}</p>
+        </div>
+      </CardContent>
+    </Card>
   );
 }
+
+// ─── Donation card ─────────────────────────────────────────────────────────────
+
+function DonationCard({ donation }) {
+  return (
+    <Card className="border bg-card transition-colors hover:bg-accent/20">
+      <CardContent className="py-4 px-5">
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
+          <div className="min-w-0 space-y-1">
+            <p className="font-semibold text-foreground truncate">
+              {donation.campaign?.title || "Unknown Campaign"}
+            </p>
+            <p className="text-sm text-muted-foreground">
+              Donor: {donation.donor?.name || "N/A"}{" "}
+              <span className="text-muted-foreground/60">
+                ({donation.donor?.email || donation.donorEmail || "N/A"})
+              </span>
+            </p>
+            <p className="text-xs text-muted-foreground/60">
+              TXN: {donation.transactionId || "N/A"} &bull;{" "}
+              {new Date(donation.createdAt).toLocaleString()}
+            </p>
+          </div>
+
+          <div className="flex items-center gap-3 shrink-0">
+            <p className="text-xl font-bold text-primary">
+              ${Number(donation.amount || 0).toFixed(2)}
+            </p>
+            <StatusBadge status={donation.status?.toLowerCase()} />
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+// ─── Main ──────────────────────────────────────────────────────────────────────
 
 export default function AdminDonations() {
   const { user, loading } = useContext(AuthContext);
@@ -89,159 +123,89 @@ export default function AdminDonations() {
   );
 
   if (loading || isLoading) {
-    return <AdminPageSkeleton statCount={3} listCount={4} />;
+    return <AdminPageSkeleton statCount={3} listCount={5} />;
   }
 
   return (
-    <div className="min-h-screen bg-[linear-gradient(120deg,#f8fafc_0%,#ecfeff_45%,#eef2ff_100%)] px-4 py-8">
-      <div className="max-w-6xl mx-auto space-y-6">
-        <section className="flex flex-wrap items-center justify-between gap-4">
-          <div>
-            <h1 className="text-3xl font-black text-slate-900">
-              Donation Tracking
-            </h1>
-            <p className="text-slate-600 mt-1">
-              Monitor all donation transactions and payment statuses.
-            </p>
+    <div className="min-h-screen surface-page px-4 py-8">
+      <div className="mx-auto max-w-5xl space-y-6">
+
+        {/* Header */}
+        <PageHeader
+          label="Admin"
+          title="Donation Tracking"
+          description="Monitor all donation transactions and payment statuses."
+          action={
+            <RefreshButton
+              disabled={isFetching}
+              onClick={() =>
+                queryClient.invalidateQueries({ queryKey: ["admin", "donations"] })
+              }
+            />
+          }
+        />
+
+        {/* Stats */}
+        <div className="grid sm:grid-cols-3 gap-4">
+          <StatTile icon={HandCoins} label="Visible records" value={donations.length} accent="muted" />
+          <StatTile icon={Hash} label="Total records" value={total} accent="blue" />
+          <StatTile
+            icon={CircleDollarSign}
+            label="Completed amount"
+            value={`$${completedAmount.toFixed(2)}`}
+            accent="primary"
+          />
+        </div>
+
+        {/* Filter */}
+        <FilterCard>
+          <div className="w-full max-w-xs space-y-1.5">
+            <Label className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+              Status filter
+            </Label>
+            <Select
+              value={status}
+              onValueChange={(value) => {
+                setStatus(value);
+                setPage(1);
+              }}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All statuses</SelectItem>
+                <SelectItem value="COMPLETED">Completed</SelectItem>
+                <SelectItem value="PENDING">Pending</SelectItem>
+                <SelectItem value="FAILED">Failed</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
-          <Button
-            variant="outline"
-            disabled={isFetching}
-            onClick={() =>
-              queryClient.invalidateQueries({
-                queryKey: ["admin", "donations"],
-              })
-            }
-          >
-            {isFetching ? (
-              <Loader2 className="h-4 w-4 animate-spin mr-2" />
-            ) : null}
-            Refresh
-          </Button>
-        </section>
+        </FilterCard>
 
-        <section className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          <Card className="shadow-sm">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm text-slate-500">
-                Visible records
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="text-2xl font-bold text-slate-900 flex items-center gap-2">
-              <HandCoins className="h-5 w-5 text-cyan-600" />
-              {donations.length}
-            </CardContent>
-          </Card>
-          <Card className="shadow-sm">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm text-slate-500">
-                Total records
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="text-2xl font-bold text-slate-900">
-              {total}
-            </CardContent>
-          </Card>
-          <Card className="shadow-sm">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm text-slate-500">
-                Completed amount (visible)
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="text-2xl font-bold text-emerald-700 flex items-center gap-2">
-              <CircleDollarSign className="h-5 w-5" />$
-              {completedAmount.toFixed(2)}
-            </CardContent>
-          </Card>
-        </section>
-
-        <Card className="border-0 shadow-lg bg-white/90">
-          <CardContent className="pt-6 flex flex-col md:flex-row md:items-end gap-3">
-            <div className="w-full md:w-64">
-              <p className="text-sm font-medium mb-1">Status filter</p>
-              <Select
-                value={status}
-                onValueChange={(value) => {
-                  setStatus(value);
-                  setPage(1);
-                }}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All statuses</SelectItem>
-                  <SelectItem value="COMPLETED">COMPLETED</SelectItem>
-                  <SelectItem value="PENDING">PENDING</SelectItem>
-                  <SelectItem value="FAILED">FAILED</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </CardContent>
-        </Card>
-
-        <div className="grid gap-3">
+        {/* List */}
+        <div className="space-y-2">
           {donations.length === 0 ? (
-            <Card className="border-dashed">
-              <CardContent className="py-14 text-center text-slate-600">
-                No donations found for this filter.
-              </CardContent>
-            </Card>
+            <EmptyState
+              icon={HandCoins}
+              title="No donations found"
+              description="No donations match the current filter."
+            />
           ) : (
             donations.map((donation) => (
-              <Card key={donation._id} className="shadow-sm">
-                <CardContent className="py-4">
-                  <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-                    <div className="space-y-1">
-                      <h3 className="text-lg font-semibold text-slate-900">
-                        {donation.campaign?.title || "Unknown Campaign"}
-                      </h3>
-                      <p className="text-sm text-slate-600">
-                        Donor: {donation.donor?.name || "N/A"} (
-                        {donation.donor?.email || donation.donorEmail || "N/A"})
-                      </p>
-                      <p className="text-xs text-slate-500">
-                        TXN: {donation.transactionId || "N/A"} |{" "}
-                        {new Date(donation.createdAt).toLocaleString()}
-                      </p>
-                    </div>
-
-                    <div className="flex items-center gap-3 flex-wrap">
-                      <p className="text-xl font-bold text-slate-900">
-                        ${Number(donation.amount || 0).toFixed(2)}
-                      </p>
-                      <StatusBadge status={donation.status} />
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
+              <DonationCard key={donation._id} donation={donation} />
             ))
           )}
         </div>
 
-        <Card>
-          <CardContent className="py-4 flex items-center justify-between gap-3">
-            <p className="text-sm text-slate-600">
-              Page {page} of {totalPages}
-            </p>
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                disabled={page <= 1 || isFetching}
-                onClick={() => setPage((prev) => Math.max(prev - 1, 1))}
-              >
-                Previous
-              </Button>
-              <Button
-                variant="outline"
-                disabled={page >= totalPages || isFetching}
-                onClick={() => setPage((prev) => prev + 1)}
-              >
-                Next
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
+        {/* Pagination */}
+        <Pagination
+          page={page}
+          totalPages={totalPages}
+          isFetching={isFetching}
+          onPrev={() => setPage((p) => Math.max(p - 1, 1))}
+          onNext={() => setPage((p) => p + 1)}
+        />
       </div>
     </div>
   );

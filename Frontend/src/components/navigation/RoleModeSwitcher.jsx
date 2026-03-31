@@ -35,7 +35,7 @@ export default function RoleModeSwitcher({ currentRole, compact = false }) {
 
     if (!ok) {
       toast.error(
-        "You are not verified as organizer yet. Complete organizer application first.",
+        "You are not verified as an organizer yet. Complete your organizer application first.",
       );
     } else {
       toast.success(`Switched to ${nextRole} portal`);
@@ -46,38 +46,40 @@ export default function RoleModeSwitcher({ currentRole, compact = false }) {
 
   return (
     <section
-      className="rounded-xl border border-slate-200 bg-slate-50 p-2"
+      className="rounded-lg border border-sidebar-border bg-sidebar-accent/40 p-2"
       aria-label="Portal mode switcher"
     >
       {!compact ? (
-        <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
-          Portal mode
+        <p className="mb-2 px-1 text-[10px] font-semibold uppercase tracking-widest text-sidebar-foreground/40">
+          Switch portal
         </p>
       ) : null}
 
-      <div className={compact ? "space-y-1" : "space-y-2"}>
+      <div className={compact ? "space-y-1" : "space-y-1"}>
         {ROLES.map(({ key, label, helper, icon }) => {
           const isActive = currentRole === key;
 
           return (
-            <Button
+            <button
               key={key}
               type="button"
-              variant={isActive ? "default" : "ghost"}
               className={[
-                "w-full justify-start gap-2",
-                compact ? "h-9 px-2" : "h-auto px-3 py-2",
-                isActive ? "shadow-sm" : "",
+                "flex w-full items-center gap-2 rounded-md px-2 transition-colors duration-150",
+                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring",
+                compact ? "h-9 justify-center" : "py-2",
+                isActive
+                  ? "bg-sidebar-primary/10 text-sidebar-primary font-semibold"
+                  : "text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
               ].join(" ")}
               onClick={() => handleSwitch(key)}
               aria-pressed={isActive}
               disabled={isSwitching}
             >
               {isSwitching ? (
-                <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+                <Loader2 className="h-4 w-4 shrink-0 animate-spin" aria-hidden="true" />
               ) : (
                 createElement(icon, {
-                  className: "h-4 w-4",
+                  className: "h-4 w-4 shrink-0",
                   "aria-hidden": true,
                 })
               )}
@@ -85,12 +87,14 @@ export default function RoleModeSwitcher({ currentRole, compact = false }) {
               {compact ? (
                 <span className="sr-only">Switch to {label} portal</span>
               ) : (
-                <span className="flex flex-col items-start">
-                  <span className="text-sm font-medium">{label}</span>
-                  <span className="text-xs text-slate-500">{helper}</span>
+                <span className="flex flex-col items-start min-w-0">
+                  <span className="text-sm font-medium leading-tight">{label}</span>
+                  <span className="text-[11px] text-sidebar-foreground/50 leading-tight">
+                    {helper}
+                  </span>
                 </span>
               )}
-            </Button>
+            </button>
           );
         })}
       </div>

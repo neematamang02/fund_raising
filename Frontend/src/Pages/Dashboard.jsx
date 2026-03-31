@@ -150,30 +150,30 @@ export default function Dashboard() {
   return (
     <div className="surface-page min-h-screen px-4 py-8">
       <div className="mx-auto max-w-5xl space-y-7">
-        <section className="rounded-xl border border-slate-200 bg-white px-5 py-6 sm:px-6">
+        <section className="rounded-xl border border-border bg-card px-5 py-6 sm:px-6">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <Badge className="mb-3 bg-blue-100 text-blue-800">
+              <Badge className="mb-3 bg-chart-2/10 text-chart-2 border-chart-2/20">
                 Donor Dashboard
               </Badge>
-              <h1 className="text-3xl font-bold text-slate-900">
+              <h1 className="text-2xl font-bold text-foreground">
                 Welcome, {user?.name}
               </h1>
-              <p className="mt-1 text-slate-600">
+              <p className="mt-1 text-muted-foreground">
                 Manage profile details and review your donation activity.
               </p>
             </div>
             <div className="grid grid-cols-2 gap-3 sm:w-auto">
-              <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3">
-                <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
+              <div className="rounded-lg border border-border bg-muted/50 px-4 py-3">
+                <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
                   Donations
                 </p>
-                <p className="text-lg font-bold text-slate-900">
+                <p className="text-lg font-bold text-foreground">
                   {donationStats.count}
                 </p>
               </div>
-              <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3">
-                <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
+              <div className="rounded-lg border border-primary/20 bg-primary/5 px-4 py-3">
+                <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
                   Total Given
                 </p>
                 <p className="text-lg font-bold text-primary">
@@ -186,8 +186,8 @@ export default function Dashboard() {
 
         <Card className="surface-card rounded-xl">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-xl">
-              <Settings className="h-5 w-5 text-secondary" />
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Settings className="h-4 w-4 text-muted-foreground" />
               Edit Profile
             </CardTitle>
           </CardHeader>
@@ -201,7 +201,6 @@ export default function Dashboard() {
                 <Input
                   id="dashboard-name"
                   {...register("name")}
-                  className="h-11 rounded-lg border-slate-300"
                 />
                 {errors.name ? (
                   <p className="text-sm text-red-500">{errors.name.message}</p>
@@ -213,7 +212,6 @@ export default function Dashboard() {
                   id="dashboard-email"
                   type="email"
                   {...register("email")}
-                  className="h-11 rounded-lg border-slate-300"
                 />
                 {errors.email ? (
                   <p className="text-sm text-red-500">{errors.email.message}</p>
@@ -225,7 +223,6 @@ export default function Dashboard() {
                   id="dashboard-password"
                   type="password"
                   {...register("password")}
-                  className="h-11 rounded-lg border-slate-300"
                 />
                 {errors.password ? (
                   <p className="text-sm text-red-500">
@@ -239,7 +236,6 @@ export default function Dashboard() {
                   id="dashboard-confirm"
                   type="password"
                   {...register("confirmPassword")}
-                  className="h-11 rounded-lg border-slate-300"
                 />
                 {errors.confirmPassword ? (
                   <p className="text-sm text-red-500">
@@ -262,8 +258,8 @@ export default function Dashboard() {
 
         <Card className="surface-card rounded-xl">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-xl">
-              <HandCoins className="h-5 w-5 text-secondary" />
+            <CardTitle className="flex items-center gap-2 text-base">
+              <HandCoins className="h-4 w-4 text-muted-foreground" />
               My Donations
             </CardTitle>
           </CardHeader>
@@ -272,39 +268,39 @@ export default function Dashboard() {
               <div className="space-y-2">
                 <Label htmlFor="campaign-search">Search Campaign</Label>
                 <div className="relative">
-                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                   <Input
                     id="campaign-search"
                     placeholder="Campaign name"
                     value={filterText}
                     onChange={(e) => setFilterText(e.target.value)}
-                    className="h-11 rounded-lg border-slate-300 pl-9"
+                    className="pl-9"
                   />
                 </div>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="date-from">From Date</Label>
                 <div className="relative">
-                  <Calendar className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                  <Calendar className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                   <Input
                     id="date-from"
                     type="date"
                     value={dateFrom}
                     onChange={(e) => setDateFrom(e.target.value)}
-                    className="h-11 rounded-lg border-slate-300 pl-9"
+                    className="pl-9"
                   />
                 </div>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="date-to">To Date</Label>
                 <div className="relative">
-                  <Calendar className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                  <Calendar className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                   <Input
                     id="date-to"
                     type="date"
                     value={dateTo}
                     onChange={(e) => setDateTo(e.target.value)}
-                    className="h-11 rounded-lg border-slate-300 pl-9"
+                    className="pl-9"
                   />
                 </div>
               </div>
@@ -313,7 +309,7 @@ export default function Dashboard() {
             {isDonationsLoading ? (
               <p className="text-slate-600">Loading donations...</p>
             ) : filteredDonations.length === 0 ? (
-              <div className="rounded-lg border border-dashed border-slate-300 p-8 text-center text-slate-600">
+              <div className="rounded-lg border border-dashed border-border p-8 text-center text-muted-foreground">
                 No donations found for the selected filters.
               </div>
             ) : (
@@ -321,13 +317,13 @@ export default function Dashboard() {
                 {filteredDonations.map((donation) => (
                   <article
                     key={donation._id}
-                    className="flex flex-col gap-3 rounded-lg border border-slate-200 bg-slate-50 p-4 sm:flex-row sm:items-center sm:justify-between"
+                    className="flex flex-col gap-3 rounded-lg border border-border bg-muted/20 p-4 sm:flex-row sm:items-center sm:justify-between transition-colors hover:bg-muted/40"
                   >
                     <div>
-                      <p className="font-semibold text-slate-900">
+                      <p className="font-semibold text-foreground">
                         {donation.campaign?.title || "Unknown Campaign"}
                       </p>
-                      <p className="text-sm text-slate-600">
+                      <p className="text-sm text-muted-foreground">
                         {format(new Date(donation.createdAt), "PPP")} |{" "}
                         {donation.method || "N/A"}
                       </p>

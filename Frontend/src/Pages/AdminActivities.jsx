@@ -4,13 +4,20 @@ import { useNavigate } from "react-router-dom";
 import { AuthContext } from "@/Context/AuthContext";
 import ROUTES from "@/routes/routes";
 import { adminQueryKeys, getAdminActivities } from "@/services/adminApi";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
 import { AdminPageSkeleton } from "@/components/admin/AdminSkeletons";
-import { Loader2, ShieldCheck, UserCircle2 } from "lucide-react";
+import {
+  PageHeader,
+  RefreshButton,
+  StatusBadge,
+  EmptyState,
+  Pagination,
+  FilterCard,
+} from "@/components/admin/AdminUtils";
+import { Activity, UserCircle2 } from "lucide-react";
 
 export default function AdminActivities() {
   const { user, loading } = useContext(AuthContext);
@@ -25,11 +32,8 @@ export default function AdminActivities() {
 
   useEffect(() => {
     if (!loading) {
-      if (!user) {
-        navigate(`${ROUTES.LOGIN}?redirect=${ROUTES.ADMIN_ACTIVITIES}`);
-      } else if (user.role !== "admin") {
-        navigate(ROUTES.HOME);
-      }
+      if (!user) navigate(`${ROUTES.LOGIN}?redirect=${ROUTES.ADMIN_ACTIVITIES}`);
+      else if (user.role !== "admin") navigate(ROUTES.HOME);
     }
   }, [loading, navigate, user]);
 
@@ -44,8 +48,8 @@ export default function AdminActivities() {
     enabled: Boolean(user?.role === "admin"),
   });
 
-  const activities = data?.activities || [];
-  const totalPages = Number(data?.totalPages || 1);
+  const activities = data?.activities ?? [];
+  const totalPages = Number(data?.totalPages ?? 1);
 
   const applyFilters = (e) => {
     e.preventDefault();
@@ -54,102 +58,101 @@ export default function AdminActivities() {
     setAppliedUserId(userId.trim());
   };
 
-  if (loading || isLoading) {
-    return <AdminPageSkeleton statCount={0} listCount={5} />;
-  }
+  if (loading || isLoading) return <AdminPageSkeleton statCount={0} listCount={5} variant="list" />;
 
   return (
-    <div className="min-h-screen bg-[linear-gradient(120deg,#f8fafc_0%,#eef2ff_45%,#ecfdf5_100%)] px-4 py-8">
-      <div className="max-w-6xl mx-auto space-y-6">
-        <section className="flex flex-wrap items-center justify-between gap-4">
-          <div>
-            <h1 className="text-3xl font-black text-slate-900">
-              Activity Logs
-            </h1>
-            <p className="text-slate-600 mt-1">
-              Track platform actions for operations and auditing.
-            </p>
-          </div>
-          <Button
-            variant="outline"
-            disabled={isFetching}
-            onClick={() =>
-              queryClient.invalidateQueries({
-                queryKey: ["admin", "activities"],
-              })
-            }
-          >
-            {isFetching ? (
-              <Loader2 className="h-4 w-4 animate-spin mr-2" />
-            ) : null}
-            Refresh
-          </Button>
-        </section>
+    <div className="surface-page min-h-screen px-4 py-8">
+      <div className="max-w-6xl mx-auto space-y-6 animate-fadeIn">
 
-        <Card className="border-0 shadow-lg bg-white/90">
-          <CardContent className="pt-6">
-            <form className="grid md:grid-cols-3 gap-3" onSubmit={applyFilters}>
-              <div>
-                <Label htmlFor="activity-type">Activity type</Label>
-                <Input
-                  id="activity-type"
-                  value={activityType}
-                  onChange={(e) => setActivityType(e.target.value)}
-                  placeholder="e.g. profile_updated"
-                />
-              </div>
-              <div>
-                <Label htmlFor="activity-user">User ID</Label>
-                <Input
-                  id="activity-user"
-                  value={userId}
-                  onChange={(e) => setUserId(e.target.value)}
-                  placeholder="MongoDB user id"
-                />
-              </div>
-              <div className="flex items-end">
-                <Button type="submit" className="w-full md:w-auto">
-                  Apply filters
-                </Button>
-              </div>
-            </form>
-          </CardContent>
-        </Card>
+        <PageHeader
+          label="Admin · Audit"
+          title="Activity Logs"
+          description="Track platform actions for operations and auditing."
+          action={
+            <RefreshButton
+              disabled={isFetching}
+              onClick={() => queryClient.invalidateQueries({ queryKey: ["admin", "activities"] })}
+            />
+          }
+        />
 
-        <div className="grid gap-3">
+        {/* Filters */}
+        <FilterCard>
+          <form className="grid grid-cols-1 md:grid-cols-[1fr_1fr_auto] gap-3" onSubmit={applyFilters}>
+            <div>
+              <Label htmlFor="activity-type" className="text-xs font-medium text-muted-foreground">
+                Activity type
+              </Label>
+              <Input
+                id="activity-type"
+                value={activityType}
+                onChange={(e) => setActivityType(e.target.value)}
+                placeholder="e.g. profile_updated"
+                className="mt-1 h-9"
+              />
+            </div>
+            <div>
+              <Label htmlFor="activity-user" className="text-xs font-medium text-muted-foreground">
+                User ID
+              </Label>
+              <Input
+                id="activity-user"
+                value={userId}
+                onChange={(e) => setUserId(e.target.value)}
+                placeholder="MongoDB user id"
+                className="mt-1 h-9"
+              />
+            </div>
+            <div className="flex items-end">
+              <Button type="submit" size="sm">
+                Apply filters
+              </Button>
+            </div>
+          </form>
+        </FilterCard>
+
+        {/* Activity list */}
+        <div className="space-y-2">
           {activities.length === 0 ? (
-            <Card className="border-dashed">
-              <CardContent className="py-14 text-center text-slate-600">
-                No activities found for selected filters.
-              </CardContent>
-            </Card>
+            <EmptyState
+              icon={Activity}
+              title="No activities found"
+              description={appliedType || appliedUserId ? "No results for the applied filters." : "No platform activity recorded yet."}
+            />
           ) : (
             activities.map((activity) => (
-              <Card key={activity._id} className="shadow-sm">
-                <CardContent className="py-4">
-                  <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-                    <div className="space-y-1">
-                      <p className="text-sm text-slate-600 flex items-center gap-2">
-                        <UserCircle2 className="h-4 w-4" />
-                        {activity.user?.name || "Unknown user"} (
-                        {activity.user?.email || "N/A"})
+              <Card key={activity._id} className="surface-card shadow-sm hover:shadow-md transition-shadow">
+                <CardContent className="p-4">
+                  <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+                    <div className="min-w-0 flex-1 space-y-1">
+                      {/* User */}
+                      <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                        <UserCircle2 className="h-3.5 w-3.5 shrink-0" />
+                        <span className="font-medium text-foreground">
+                          {activity.user?.name ?? "Unknown user"}
+                        </span>
+                        <span className="text-border">·</span>
+                        <span>{activity.user?.email ?? "N/A"}</span>
+                      </div>
+                      {/* Description */}
+                      <p className="text-sm text-foreground">
+                        {activity.description ?? "No description"}
                       </p>
-                      <p className="text-sm text-slate-700">
-                        {activity.description || "No description"}
-                      </p>
-                      <p className="text-xs text-slate-500">
+                      {/* Timestamp */}
+                      <p className="text-xs text-muted-foreground">
                         {new Date(activity.createdAt).toLocaleString()}
                       </p>
                     </div>
 
-                    <div className="flex items-center gap-2">
-                      <Badge className="bg-indigo-100 text-indigo-700 border-indigo-200">
-                        <ShieldCheck className="h-3 w-3 mr-1" />
-                        {activity.activityType || "unknown"}
-                      </Badge>
-                      {activity.user?.role ? (
-                        <Badge variant="outline">{activity.user.role}</Badge>
-                      ) : null}
+                    {/* Badges */}
+                    <div className="flex items-center gap-2 shrink-0 flex-wrap">
+                      <span className="inline-flex items-center gap-1.5 rounded-full border border-chart-2/20 bg-chart-2/10 px-2.5 py-0.5 text-[11px] font-semibold text-chart-2">
+                        <Activity className="h-3 w-3" />
+                        {activity.activityType ?? "unknown"}
+                      </span>
+                      {activity.user?.role && (
+                        <StatusBadge status={activity.user.role} />
+                      )}
                     </div>
                   </div>
                 </CardContent>
@@ -158,29 +161,13 @@ export default function AdminActivities() {
           )}
         </div>
 
-        <Card>
-          <CardContent className="py-4 flex items-center justify-between gap-3">
-            <p className="text-sm text-slate-600">
-              Page {page} of {totalPages}
-            </p>
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                disabled={page <= 1 || isFetching}
-                onClick={() => setPage((prev) => Math.max(prev - 1, 1))}
-              >
-                Previous
-              </Button>
-              <Button
-                variant="outline"
-                disabled={page >= totalPages || isFetching}
-                onClick={() => setPage((prev) => prev + 1)}
-              >
-                Next
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
+        <Pagination
+          page={page}
+          totalPages={totalPages}
+          isFetching={isFetching}
+          onPrev={() => setPage((p) => Math.max(p - 1, 1))}
+          onNext={() => setPage((p) => p + 1)}
+        />
       </div>
     </div>
   );

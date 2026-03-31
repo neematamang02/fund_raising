@@ -13,6 +13,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { FundraisingButton } from "@/components/ui/fundraising-button";
+import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -237,10 +238,10 @@ export default function CreateCampaign() {
 
   if (!user) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 flex items-center justify-center">
+      <div className="min-h-screen surface-page flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading...</p>
+          <div className="animate-spin rounded-full h-10 w-10 border-2 border-primary border-t-transparent mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Loading...</p>
         </div>
       </div>
     );
@@ -248,57 +249,40 @@ export default function CreateCampaign() {
 
   if (user.role !== "organizer") {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 flex items-center justify-center">
+      <div className="min-h-screen surface-page flex items-center justify-center">
         <div className="text-center">
-          <div className="w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <Users className="h-8 w-8 text-amber-600" />
+          <div className="w-16 h-16 bg-chart-4/10 rounded-full flex items-center justify-center mx-auto mb-4">
+            <Users className="h-8 w-8 text-chart-4" />
           </div>
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">
-            Organizer Access Required
-          </h2>
-          <p className="text-gray-600 mb-6">
-            You need to be an organizer to create campaigns.
-          </p>
-          <FundraisingButton
-            variant="support"
-            onClick={() => navigate(ROUTES.APPLY_ORGANIZER)}
-          >
+          <h2 className="text-2xl font-bold text-foreground mb-2">Organizer Access Required</h2>
+          <p className="text-muted-foreground mb-6">You need to be an organizer to create campaigns.</p>
+          <Button className="bg-primary hover:bg-primary/90" onClick={() => navigate(ROUTES.APPLY_ORGANIZER)}>
             Apply to Become Organizer
-          </FundraisingButton>
+          </Button>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 py-12 px-4">
-      <div className="max-w-6xl mx-auto">
+    <div className="min-h-screen surface-page py-8 px-4">
+      <div className="max-w-6xl mx-auto space-y-8">
         {/* Header */}
-        <div className="text-center mb-12">
-          <Badge className="bg-gradient-to-r from-green-600 to-emerald-600 text-white px-6 py-2 text-sm font-medium mb-6">
-            <Sparkles className="h-4 w-4 mr-2" />
-            Create New Campaign
-          </Badge>
-          <h1 className="text-4xl md:text-5xl font-bold mb-6">
-            <span className="bg-gradient-to-r from-green-700 via-emerald-600 to-teal-600 bg-clip-text text-transparent">
-              Launch Your
-            </span>
-            <br />
-            <span className="text-gray-800">Fundraising Campaign</span>
-          </h1>
-          <p className="text-xl text-gray-600 max-w-2xl mx-auto leading-relaxed">
-            Create a compelling campaign that inspires donors and drives
-            meaningful change in your community.
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-1">Organizer</p>
+          <h1 className="text-2xl font-bold text-foreground">Create New Campaign</h1>
+          <p className="text-sm text-muted-foreground mt-0.5">
+            Launch a compelling campaign that inspires donors and drives meaningful change.
           </p>
         </div>
 
         <div className="grid lg:grid-cols-3 gap-8">
           {/* Form Section */}
           <div className="lg:col-span-2">
-            <Card className="bg-white shadow-xl border-0 overflow-hidden">
-              <CardHeader className="bg-gradient-to-r from-green-600 to-emerald-600 text-white">
-                <CardTitle className="flex items-center gap-3 text-xl">
-                  <FileText className="h-6 w-6" />
+            <Card className="border bg-card overflow-hidden">
+              <CardHeader className="border-b border-border">
+                <CardTitle className="flex items-center gap-2 text-foreground">
+                  <FileText className="h-5 w-5 text-primary" />
                   Campaign Details
                 </CardTitle>
               </CardHeader>
@@ -320,14 +304,11 @@ export default function CreateCampaign() {
                         name="title"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel className="text-sm font-medium text-gray-700">
-                              Campaign Title *
-                            </FormLabel>
+                            <FormLabel>Campaign Title *</FormLabel>
                             <FormControl>
                               <Input
                                 {...field}
                                 placeholder="e.g. Clean Water for Rural Communities in Kenya"
-                                className="h-11 border-2 border-gray-200 focus:border-green-500 rounded-xl"
                               />
                             </FormControl>
                             <div className="flex justify-between items-center">
@@ -344,15 +325,13 @@ export default function CreateCampaign() {
                         name="description"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel className="text-sm font-medium text-gray-700">
-                              Campaign Description *
-                            </FormLabel>
+                            <FormLabel>Campaign Description *</FormLabel>
                             <FormControl>
                               <Textarea
                                 {...field}
                                 rows={6}
-                                placeholder="Tell your story... What problem are you solving? Who will benefit? How will the funds be used? Be specific and compelling to inspire donors."
-                                className="border-2 border-gray-200 focus:border-green-500 rounded-xl resize-none"
+                                placeholder="Tell your story... What problem are you solving? Who will benefit? How will the funds be used?"
+                                className="resize-none"
                               />
                             </FormControl>
                             <div className="flex justify-between items-center">
@@ -382,9 +361,7 @@ export default function CreateCampaign() {
                         name="imageUrl"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel className="text-sm font-medium text-gray-700">
-                              Campaign Image *
-                            </FormLabel>
+                            <FormLabel>Campaign Image *</FormLabel>
                             <div className="space-y-4">
                               <div className="space-y-2">
                                 <p className="text-sm font-medium text-gray-700">
@@ -401,13 +378,11 @@ export default function CreateCampaign() {
                                 </p>
                               </div>
 
-                              <div className="flex items-center gap-3">
-                                <div className="h-px flex-1 bg-gray-200" />
-                                <span className="text-xs font-semibold text-gray-500">
-                                  OR
-                                </span>
-                                <div className="h-px flex-1 bg-gray-200" />
-                              </div>
+                                <div className="flex items-center gap-2 my-2">
+                                  <div className="h-px flex-1 bg-border" />
+                                  <span className="text-xs font-semibold text-muted-foreground uppercase">or</span>
+                                  <div className="h-px flex-1 bg-border" />
+                                </div>
 
                               <div className="space-y-2">
                                 <p className="text-sm font-medium text-gray-700">
@@ -425,7 +400,6 @@ export default function CreateCampaign() {
                                     }
                                     disabled={Boolean(imageFile)}
                                     placeholder="https://example.com/your-campaign-image.jpg"
-                                    className="h-11 border-2 border-gray-200 focus:border-green-500 rounded-xl"
                                   />
                                 </FormControl>
                               </div>
@@ -444,12 +418,9 @@ export default function CreateCampaign() {
                           name="target"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel className="text-sm font-medium text-gray-700">
-                                Funding Goal (USD) *
-                              </FormLabel>
+                              <FormLabel>Funding Goal (USD) *</FormLabel>
                               <FormControl>
                                 <div className="relative">
-                                  <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
                                   <Input
                                     {...field}
                                     type="number"
@@ -458,7 +429,6 @@ export default function CreateCampaign() {
                                     onChange={(e) =>
                                       field.onChange(Number(e.target.value))
                                     }
-                                    className="pl-10 h-11 border-2 border-gray-200 focus:border-green-500 rounded-xl"
                                   />
                                 </div>
                               </FormControl>
@@ -471,15 +441,13 @@ export default function CreateCampaign() {
                           name="expiryMode"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel className="text-sm font-medium text-gray-700">
-                                Campaign Expiry Option *
-                              </FormLabel>
+                              <FormLabel>Campaign Expiry Option *</FormLabel>
                               <Select
                                 onValueChange={field.onChange}
                                 value={field.value}
                               >
                                 <FormControl>
-                                  <SelectTrigger className="h-11 border-2 border-gray-200 focus:border-green-500 rounded-xl">
+                                  <SelectTrigger>
                                     <SelectValue placeholder="Select expiry option" />
                                   </SelectTrigger>
                                 </FormControl>
@@ -502,9 +470,7 @@ export default function CreateCampaign() {
                             name="duration"
                             render={({ field }) => (
                               <FormItem>
-                                <FormLabel className="text-sm font-medium text-gray-700">
-                                  Campaign Duration (Days) *
-                                </FormLabel>
+                                <FormLabel>Campaign Duration (Days) *</FormLabel>
                                 <FormControl>
                                   <Input
                                     {...field}
@@ -516,7 +482,6 @@ export default function CreateCampaign() {
                                         Number(e.target.value || 0),
                                       )
                                     }
-                                    className="h-11 border-2 border-gray-200 focus:border-green-500 rounded-xl"
                                   />
                                 </FormControl>
                                 <p className="text-xs text-gray-500">
@@ -532,15 +497,12 @@ export default function CreateCampaign() {
                             name="deadlineAt"
                             render={({ field }) => (
                               <FormItem>
-                                <FormLabel className="text-sm font-medium text-gray-700">
-                                  Campaign End Date *
-                                </FormLabel>
+                                <FormLabel>Campaign End Date *</FormLabel>
                                 <FormControl>
                                   <Input
                                     {...field}
                                     type="datetime-local"
                                     min={new Date().toISOString().slice(0, 16)}
-                                    className="h-11 border-2 border-gray-200 focus:border-green-500 rounded-xl"
                                   />
                                 </FormControl>
                                 {watchedDeadlineAt ? (
@@ -560,20 +522,20 @@ export default function CreateCampaign() {
                       </div>
                     </div>
 
-                    {/* Submit Button */}
-                    <div className="pt-6 border-t border-gray-200">
-                      <FundraisingButton
+                    {/* Submit */}
+                    <div className="pt-4 border-t border-border">
+                      <Button
                         type="submit"
-                        variant="success"
-                        size="lg"
-                        fullWidth
-                        loading={isSubmitting}
-                        loadingText="Creating Campaign..."
+                        className="w-full bg-primary hover:bg-primary/90"
+                        size="sm"
                         disabled={isSubmitting}
                       >
-                        <Target className="h-5 w-5" />
-                        Launch Campaign
-                      </FundraisingButton>
+                        {isSubmitting ? (
+                          <><span className="animate-spin mr-2">⏳</span>Creating Campaign...</>
+                        ) : (
+                          <><Target className="h-4 w-4 mr-2" />Launch Campaign</>
+                        )}
+                      </Button>
                     </div>
                   </form>
                 </Form>
@@ -581,13 +543,13 @@ export default function CreateCampaign() {
             </Card>
           </div>
 
-          {/* Preview & Tips Section */}
-          <div className="space-y-6">
+          {/* Preview & Tips */}
+          <div className="space-y-5">
             {/* Campaign Preview */}
-            <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-lg">
+            <Card className="border bg-card">
               <CardHeader>
-                <CardTitle className="flex items-center gap-3 text-lg">
-                  <Eye className="h-5 w-5 text-blue-600" />
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <Eye className="h-4 w-4 text-chart-2" />
                   Live Preview
                 </CardTitle>
               </CardHeader>
@@ -609,8 +571,8 @@ export default function CreateCampaign() {
                       "Your campaign description will appear here..."}
                   </p>
                 </div>
-                <div className="bg-blue-50 rounded-xl p-3">
-                  <div className="text-2xl font-bold text-blue-600">
+                <div className="bg-primary/5 border border-primary/15 rounded-lg p-3">
+                  <div className="text-xl font-bold text-primary">
                     ${watchedTarget?.toLocaleString() || "0"}
                   </div>
                   <div className="text-sm text-gray-600">Funding Goal</div>
@@ -619,45 +581,27 @@ export default function CreateCampaign() {
             </Card>
 
             {/* Tips */}
-            <Card className="bg-gradient-to-r from-green-50 to-emerald-50 border-green-200">
+            <Card className="border bg-primary/5 border-primary/15">
               <CardHeader>
-                <CardTitle className="flex items-center gap-3 text-lg text-green-800">
-                  <CheckCircle className="h-5 w-5" />
+                <CardTitle className="flex items-center gap-2 text-base text-primary">
+                  <CheckCircle className="h-4 w-4" />
                   Success Tips
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 {[
-                  {
-                    icon: Heart,
-                    title: "Tell Your Story",
-                    desc: "Share personal experiences and emotional connections to your cause",
-                  },
-                  {
-                    icon: ImageIcon,
-                    title: "Use Quality Images",
-                    desc: "High-resolution photos that show the impact of your work",
-                  },
-                  {
-                    icon: Target,
-                    title: "Set Realistic Goals",
-                    desc: "Research similar campaigns and set achievable funding targets",
-                  },
-                  {
-                    icon: TrendingUp,
-                    title: "Share Regularly",
-                    desc: "Post updates and engage with your supporters throughout the campaign",
-                  },
-                ].map((tip, index) => (
-                  <div key={index} className="flex items-start gap-3">
-                    <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
-                      <tip.icon className="h-4 w-4 text-green-600" />
+                  { icon: Heart, title: "Tell Your Story", desc: "Share personal experiences and emotional connections to your cause" },
+                  { icon: ImageIcon, title: "Use Quality Images", desc: "High-resolution photos that show the impact of your work" },
+                  { icon: Target, title: "Set Realistic Goals", desc: "Research similar campaigns and set achievable funding targets" },
+                  { icon: TrendingUp, title: "Share Regularly", desc: "Post updates and engage with your supporters throughout the campaign" },
+                ].map((tip, i) => (
+                  <div key={i} className="flex items-start gap-3">
+                    <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center shrink-0">
+                      <tip.icon className="h-4 w-4 text-primary" />
                     </div>
                     <div>
-                      <h4 className="font-semibold text-green-800 text-sm">
-                        {tip.title}
-                      </h4>
-                      <p className="text-green-700 text-xs">{tip.desc}</p>
+                      <h4 className="font-semibold text-primary text-sm">{tip.title}</h4>
+                      <p className="text-primary/70 text-xs">{tip.desc}</p>
                     </div>
                   </div>
                 ))}
@@ -665,26 +609,22 @@ export default function CreateCampaign() {
             </Card>
 
             {/* Platform Stats */}
-            <Card className="bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200">
-              <CardContent className="p-6">
-                <div className="flex items-center gap-3 mb-3">
-                  <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
-                    <Globe className="h-5 w-5 text-blue-600" />
+            <Card className="border bg-chart-2/5 border-chart-2/15">
+              <CardContent className="p-5">
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="w-8 h-8 bg-chart-2/10 rounded-full flex items-center justify-center">
+                    <Globe className="h-4 w-4 text-chart-2" />
                   </div>
-                  <h3 className="font-semibold text-blue-800">
-                    Platform Impact
-                  </h3>
+                  <h3 className="font-semibold text-chart-2">Platform Impact</h3>
                 </div>
                 <div className="grid grid-cols-2 gap-4 text-center">
                   <div>
-                    <div className="text-2xl font-bold text-blue-600">500+</div>
-                    <div className="text-xs text-blue-700">Campaigns</div>
+                    <div className="text-xl font-bold text-chart-2">500+</div>
+                    <div className="text-xs text-chart-2/70">Campaigns</div>
                   </div>
                   <div>
-                    <div className="text-2xl font-bold text-blue-600">
-                      $2.5M+
-                    </div>
-                    <div className="text-xs text-blue-700">Raised</div>
+                    <div className="text-xl font-bold text-chart-2">$2.5M+</div>
+                    <div className="text-xs text-chart-2/70">Raised</div>
                   </div>
                 </div>
               </CardContent>

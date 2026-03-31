@@ -4,7 +4,6 @@ import { AuthContext } from "@/Context/AuthContext";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { FundraisingButton } from "@/components/ui/fundraising-button";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -241,21 +240,21 @@ export default function Donate() {
     return (
       <div className="surface-page flex min-h-screen items-center justify-center px-4">
         <div className="text-center">
-          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-red-100">
-            <Heart className="h-8 w-8 text-red-600" />
+          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-destructive/10">
+            <Heart className="h-8 w-8 text-destructive" />
           </div>
-          <h2 className="mb-2 text-2xl font-bold text-slate-900">
+          <h2 className="mb-2 text-2xl font-bold text-foreground">
             Campaign Not Found
           </h2>
-          <p className="mb-6 text-slate-600">
+          <p className="mb-6 text-muted-foreground">
             {campaignError?.message ||
               "The campaign you're looking for doesn't exist."}
           </p>
           <Link to="/donate">
-            <FundraisingButton variant="trust">
-              <ArrowLeft className="h-4 w-4" />
+            <Button variant="outline">
+              <ArrowLeft className="h-4 w-4 mr-2" />
               Back to Campaigns
-            </FundraisingButton>
+            </Button>
           </Link>
         </div>
       </div>
@@ -268,19 +267,19 @@ export default function Donate() {
       <div className="surface-page px-4 py-12">
         <div className="max-w-2xl mx-auto">
           <div className="text-center mb-8">
-            <div className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-green-100">
-              <CheckCircle className="h-12 w-12 text-green-600" />
+            <div className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-primary/15">
+              <CheckCircle className="h-12 w-12 text-primary" />
             </div>
-            <h1 className="mb-2 text-4xl font-bold text-slate-900">
+            <h1 className="mb-2 text-4xl font-bold text-foreground">
               Thank You!
             </h1>
-            <p className="text-lg text-slate-600">
+            <p className="text-lg text-muted-foreground">
               Your donation has been successfully processed
             </p>
           </div>
 
-          <Card className="surface-card overflow-hidden rounded-xl border-slate-200 shadow-[0_12px_30px_rgba(15,23,42,0.08)]">
-            <CardHeader className="bg-primary text-white">
+          <Card className="surface-card overflow-hidden rounded-xl border shadow-lg">
+            <CardHeader className="bg-primary text-primary-foreground">
               <CardTitle className="flex items-center gap-3 text-xl">
                 <Sparkles className="h-6 w-6" />
                 Donation Receipt
@@ -289,15 +288,15 @@ export default function Donate() {
             <CardContent className="p-8 space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                  <Label className="text-sm font-medium text-slate-500">
+                  <Label className="text-sm font-medium text-muted-foreground">
                     Campaign
                   </Label>
-                  <p className="text-lg font-semibold text-slate-900">
+                  <p className="text-lg font-semibold text-foreground">
                     {bill.campaignTitle}
                   </p>
                 </div>
                 <div>
-                  <Label className="text-sm font-medium text-slate-500">
+                  <Label className="text-sm font-medium text-muted-foreground">
                     Amount
                   </Label>
                   <p className="text-2xl font-bold text-primary">
@@ -305,18 +304,18 @@ export default function Donate() {
                   </p>
                 </div>
                 <div>
-                  <Label className="text-sm font-medium text-slate-500">
+                  <Label className="text-sm font-medium text-muted-foreground">
                     Transaction ID
                   </Label>
-                  <p className="rounded bg-slate-100 px-3 py-1 font-mono text-sm text-slate-700">
+                  <p className="rounded bg-muted px-3 py-1 font-mono text-sm text-foreground">
                     {bill.transactionId}
                   </p>
                 </div>
                 <div>
-                  <Label className="text-sm font-medium text-slate-500">
+                  <Label className="text-sm font-medium text-muted-foreground">
                     Date & Time
                   </Label>
-                  <p className="text-sm text-slate-700">
+                  <p className="text-sm text-foreground">
                     {new Date(bill.timestamp).toLocaleString("en-US", {
                       dateStyle: "medium",
                       timeStyle: "short",
@@ -326,32 +325,27 @@ export default function Donate() {
               </div>
 
               <div className="border-t pt-6">
-                <Label className="text-sm font-medium text-slate-500">
+                <Label className="text-sm font-medium text-muted-foreground">
                   Donor Information
                 </Label>
-                <p className="text-lg text-slate-900">{bill.payerName}</p>
-                <p className="text-sm text-slate-600">{bill.payerEmail}</p>
+                <p className="text-lg text-foreground">{bill.payerName}</p>
+                <p className="text-sm text-muted-foreground">{bill.payerEmail}</p>
               </div>
 
               <div className="flex flex-col sm:flex-row gap-4 pt-6">
-                <FundraisingButton
-                  variant="trust"
+                <Button
+                  className="flex-1 bg-primary hover:bg-primary/90"
                   size="lg"
-                  fullWidth
                   onClick={() => navigate(ROUTES.MY_DONATIONS)}
                 >
-                  <TrendingUp className="h-5 w-5" />
+                  <TrendingUp className="h-5 w-5 mr-2" />
                   View Donation History
-                </FundraisingButton>
+                </Button>
                 <Link to="/donate" className="flex-1">
-                  <FundraisingButton
-                    variant="outline-donate"
-                    size="lg"
-                    fullWidth
-                  >
-                    <Heart className="h-5 w-5" />
+                  <Button variant="outline" size="lg" className="w-full">
+                    <Heart className="h-5 w-5 mr-2" />
                     Donate to Another Cause
-                  </FundraisingButton>
+                  </Button>
                 </Link>
               </div>
             </CardContent>
@@ -367,10 +361,10 @@ export default function Donate() {
       <div className="pt-6 pb-4 px-4">
         <div className="max-w-4xl mx-auto">
           <Link to="/donate">
-            <FundraisingButton variant="ghost-trust" size="sm">
-              <ArrowLeft className="h-4 w-4" />
+            <Button variant="ghost" size="sm">
+              <ArrowLeft className="h-4 w-4 mr-2" />
               Back to Campaigns
-            </FundraisingButton>
+            </Button>
           </Link>
         </div>
       </div>
@@ -382,14 +376,14 @@ export default function Donate() {
               <Badge
                 className={
                   campaignEnded
-                    ? "mb-4 bg-slate-700 text-white"
-                    : "mb-4 bg-blue-100 text-blue-800"
+                    ? "mb-4 bg-muted text-muted-foreground border-border"
+                    : "mb-4 bg-chart-2/10 text-chart-2 border-chart-2/20"
                 }
               >
                 <Heart className="h-4 w-4 mr-2" />
                 {campaignEnded ? "Campaign Ended" : "Support This Cause"}
               </Badge>
-              <h1 className="mb-4 text-3xl font-bold text-slate-900">
+              <h1 className="mb-4 text-3xl font-bold text-foreground">
                 {campaign.title}
               </h1>
             </div>
@@ -398,20 +392,20 @@ export default function Donate() {
               <img
                 src={campaign.imageURL || "/placeholder.svg"}
                 alt={campaign.title}
-                className="h-64 w-full rounded-xl border border-slate-200 object-cover transition-transform duration-300 group-hover:scale-[1.01]"
+                className="h-64 w-full rounded-xl border border-border object-cover transition-transform duration-300 group-hover:scale-[1.01]"
               />
               <div className="absolute inset-0 rounded-xl bg-gradient-to-t from-black/20 to-transparent"></div>
             </div>
 
             <Card className="surface-card rounded-xl">
               <CardContent className="p-6">
-                <p className="mb-6 leading-relaxed text-slate-700">
+                <p className="mb-6 leading-relaxed text-muted-foreground">
                   {campaign.description}
                 </p>
 
                 <div className="space-y-4">
                   <div className="flex justify-between items-center">
-                    <span className="text-sm font-medium text-slate-600">
+                    <span className="text-sm font-medium text-muted-foreground">
                       Progress
                     </span>
                     <span className="text-sm font-bold text-secondary">
@@ -420,7 +414,7 @@ export default function Donate() {
                   </div>
 
                   <div>
-                    <div className="h-4 w-full overflow-hidden rounded-full bg-slate-200">
+                    <div className="h-4 w-full overflow-hidden rounded-full bg-muted">
                       <div
                         className="h-4 rounded-full bg-primary transition-all duration-1000 ease-out"
                         style={{ width: `${progressPercentage}%` }}
@@ -429,35 +423,35 @@ export default function Donate() {
                   </div>
 
                   <div className="grid grid-cols-2 gap-4">
-                    <div className="rounded-xl bg-blue-50 p-4 text-center">
-                      <div className="text-2xl font-bold text-secondary">
+                    <div className="rounded-xl bg-primary/8 border border-primary/15 p-4 text-center">
+                      <div className="text-2xl font-bold text-primary">
                         ${campaign.raised.toLocaleString()}
                       </div>
-                      <div className="text-sm text-slate-600">Raised</div>
+                      <div className="text-sm text-muted-foreground">Raised</div>
                     </div>
-                    <div className="rounded-xl bg-slate-50 p-4 text-center">
-                      <div className="text-2xl font-bold text-slate-900">
+                    <div className="rounded-xl bg-muted/50 border border-border p-4 text-center">
+                      <div className="text-2xl font-bold text-foreground">
                         ${campaign.target.toLocaleString()}
                       </div>
-                      <div className="text-sm text-slate-600">Goal</div>
+                      <div className="text-sm text-muted-foreground">Goal</div>
                     </div>
                   </div>
 
                   {remainingAmount > 0 ? (
-                    <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
-                      <div className="flex items-center gap-2 text-amber-800">
+                    <div className="bg-chart-4/8 border border-chart-4/20 rounded-xl p-4">
+                      <div className="flex items-center gap-2 text-chart-4">
                         <Target className="h-5 w-5" />
-                        <span className="font-medium">
+                        <span className="font-medium text-sm">
                           ${remainingAmount.toLocaleString()} still needed to
                           reach the goal
                         </span>
                       </div>
                     </div>
                   ) : (
-                    <div className="bg-green-50 border border-green-200 rounded-xl p-4">
-                      <div className="flex items-center gap-2 text-green-800">
+                    <div className="bg-primary/8 border border-primary/20 rounded-xl p-4">
+                      <div className="flex items-center gap-2 text-primary">
                         <CheckCircle className="h-5 w-5" />
-                        <span className="font-medium">
+                        <span className="font-medium text-sm">
                           Donation Target Completed
                         </span>
                       </div>
@@ -467,29 +461,29 @@ export default function Donate() {
               </CardContent>
             </Card>
 
-            <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-lg">
+            <Card className="surface-card rounded-xl border bg-card">
               <CardContent className="p-6">
                 <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-semibold text-gray-900">
+                  <h3 className="text-base font-semibold text-foreground">
                     Fund Transparency
                   </h3>
-                  <Badge className="bg-blue-100 text-blue-800 border-blue-200">
+                  <Badge className="bg-chart-2/10 text-chart-2 border-chart-2/20">
                     {payoutStatusLabel}
                   </Badge>
                 </div>
 
                 {loadingPayoutHistory ? (
-                  <p className="text-sm text-gray-500">
+                  <p className="text-sm text-muted-foreground">
                     Loading payout timeline...
                   </p>
                 ) : (
                   <>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
-                      <div className="rounded-xl bg-slate-50 p-4">
-                        <p className="text-xs uppercase tracking-wide text-slate-500">
+                      <div className="rounded-xl bg-muted/50 border border-border/50 p-4">
+                        <p className="text-xs uppercase tracking-wide text-muted-foreground">
                           Raised
                         </p>
-                        <p className="text-lg font-semibold text-slate-900">
+                        <p className="text-base font-semibold text-foreground">
                           $
                           {Number(
                             campaignPayoutHistory?.summary?.totalRaised ||
@@ -498,22 +492,22 @@ export default function Donate() {
                           ).toLocaleString()}
                         </p>
                       </div>
-                      <div className="rounded-xl bg-slate-50 p-4">
-                        <p className="text-xs uppercase tracking-wide text-slate-500">
+                      <div className="rounded-xl bg-muted/50 border border-border/50 p-4">
+                        <p className="text-xs uppercase tracking-wide text-muted-foreground">
                           Paid Out
                         </p>
-                        <p className="text-lg font-semibold text-slate-900">
+                        <p className="text-base font-semibold text-foreground">
                           $
                           {Number(
                             campaignPayoutHistory?.summary?.totalPaidOut || 0,
                           ).toLocaleString()}
                         </p>
                       </div>
-                      <div className="rounded-xl bg-slate-50 p-4">
-                        <p className="text-xs uppercase tracking-wide text-slate-500">
+                      <div className="rounded-xl bg-muted/50 border border-border/50 p-4">
+                        <p className="text-xs uppercase tracking-wide text-muted-foreground">
                           Last Transfer
                         </p>
-                        <p className="text-lg font-semibold text-slate-900">
+                        <p className="text-base font-semibold text-foreground">
                           {latestPayoutEvent?.eventDate
                             ? new Date(
                                 latestPayoutEvent.eventDate,
@@ -527,7 +521,7 @@ export default function Donate() {
                       </div>
                     </div>
 
-                    <p className="text-sm text-gray-600">
+                    <p className="text-sm text-muted-foreground">
                       We share payout status, date, and amount with donors to
                       improve transparency while keeping sensitive bank details
                       private.
@@ -548,37 +542,27 @@ export default function Donate() {
               </CardHeader>
               <CardContent className="p-6 space-y-6">
                 {errorMsg && (
-                  <div className="rounded-xl border border-red-200 bg-red-50 p-4">
-                    <p className="text-red-800 text-sm">{errorMsg}</p>
+                  <div className="rounded-xl border border-destructive/20 bg-destructive/5 p-4">
+                    <p className="text-destructive text-sm">{errorMsg}</p>
                   </div>
                 )}
 
                 {campaignEnded ? (
                   <div className="text-center">
-                    <FundraisingButton
-                      variant="outline-donate"
-                      size="lg"
-                      fullWidth
-                      disabled
-                    >
+                    <Button variant="outline" size="lg" className="w-full" disabled>
                       Donations Disabled (Campaign Ended)
-                    </FundraisingButton>
+                    </Button>
                   </div>
                 ) : remainingAmount <= 0 ? (
                   <div className="text-center">
-                    <FundraisingButton
-                      variant="outline-donate"
-                      size="lg"
-                      fullWidth
-                      disabled
-                    >
+                    <Button variant="outline" size="lg" className="w-full" disabled>
                       Donation Target Completed
-                    </FundraisingButton>
+                    </Button>
                   </div>
                 ) : (
                   <>
                     <div>
-                      <Label className="mb-3 block text-sm font-medium text-slate-700">
+                      <Label className="mb-3 block text-sm font-medium text-foreground">
                         Choose an amount or enter custom
                       </Label>
                       <div className="grid grid-cols-3 gap-3 mb-4">
@@ -586,10 +570,10 @@ export default function Donate() {
                           <button
                             key={preset}
                             onClick={() => handlePresetAmount(preset)}
-                            className={`rounded-lg border px-3 py-3 text-slate-700 transition-colors duration-200 ${
+                            className={`rounded-lg border px-3 py-3 text-foreground transition-colors duration-200 ${
                               selectedPreset === preset
-                                ? "border-primary bg-green-50 text-primary"
-                                : "border-slate-300 hover:border-primary/60"
+                                ? "border-primary bg-primary/8 text-primary"
+                                : "border-border hover:border-primary/60"
                             }`}
                           >
                             <div className="text-lg font-bold">${preset}</div>
@@ -601,7 +585,7 @@ export default function Donate() {
                     <div>
                       <Label
                         htmlFor="donation-amount"
-                        className="text-sm font-medium text-slate-700"
+                        className="text-sm font-medium text-foreground"
                       >
                         Custom Amount (USD)
                       </Label>
@@ -614,13 +598,13 @@ export default function Donate() {
                           placeholder="Enter amount"
                           value={amount}
                           onChange={(e) => handleCustomAmount(e.target.value)}
-                          className="h-12 rounded-lg border-slate-300 pl-10 text-lg"
+                          className="h-12 rounded-lg pl-10 text-lg"
                         />
                       </div>
                     </div>
 
-                    <div className="rounded-xl border border-blue-200 bg-blue-50 p-4">
-                      <div className="flex items-center gap-2 text-blue-800">
+                    <div className="rounded-xl border border-chart-2/20 bg-chart-2/8 p-4">
+                      <div className="flex items-center gap-2 text-chart-2">
                         <Shield className="h-5 w-5" />
                         <span className="text-sm font-medium">
                           Secure payment powered by PayPal. Your information is
@@ -629,7 +613,7 @@ export default function Donate() {
                       </div>
                     </div>
 
-                    <label className="flex items-start gap-3 rounded-xl border border-slate-300 bg-white p-4">
+                    <label className="flex items-start gap-3 rounded-xl border border-border bg-card p-4">
                       <input
                         type="checkbox"
                         className="mt-1"
@@ -638,7 +622,7 @@ export default function Donate() {
                           setIsAnonymousDonation(e.target.checked)
                         }
                       />
-                      <span className="text-sm text-slate-700">
+                      <span className="text-sm text-muted-foreground">
                         Donate anonymously. Your identity will be hidden in
                         donor lists and shown as Anonymous Donor.
                       </span>
@@ -705,8 +689,8 @@ export default function Donate() {
                           />
                         </PayPalScriptProvider>
                       ) : (
-                        <div className="rounded-xl border border-red-200 bg-red-50 p-4">
-                          <p className="text-red-800 text-sm">
+                        <div className="rounded-xl border border-destructive/20 bg-destructive/5 p-4">
+                          <p className="text-destructive text-sm">
                             Payment system is currently unavailable. Please try
                             again later.
                           </p>
@@ -715,8 +699,8 @@ export default function Donate() {
                     </div>
 
                     {!user && (
-                      <div className="rounded-xl border border-amber-200 bg-amber-50 p-4">
-                        <div className="flex items-center gap-2 text-amber-800">
+                      <div className="rounded-xl border border-chart-4/20 bg-chart-4/8 p-4">
+                        <div className="flex items-center gap-2 text-chart-4">
                           <Clock className="h-5 w-5" />
                           <span className="text-sm">
                             You'll need to{" "}
@@ -736,15 +720,15 @@ export default function Donate() {
               </CardContent>
             </Card>
 
-            <Card className="rounded-xl border-green-200 bg-green-50">
+            <Card className="rounded-xl border border-primary/20 bg-primary/5">
               <CardContent className="p-6">
                 <div className="flex items-center gap-3 mb-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-green-100">
-                    <Users className="h-5 w-5 text-green-600" />
+                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/15">
+                    <Users className="h-5 w-5 text-primary" />
                   </div>
-                  <h3 className="font-semibold text-green-800">Your Impact</h3>
+                  <h3 className="font-semibold text-foreground">Your Impact</h3>
                 </div>
-                <p className="text-green-700 text-sm leading-relaxed">
+                <p className="text-muted-foreground text-sm leading-relaxed">
                   Every donation, no matter the size, brings this campaign
                   closer to its goal and creates real, positive change in the
                   lives of those who need it most.

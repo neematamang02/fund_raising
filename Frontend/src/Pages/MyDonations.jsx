@@ -3,8 +3,8 @@ import { useQuery, useQueries } from "@tanstack/react-query";
 import { AuthContext } from "@/Context/AuthContext";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { FundraisingButton } from "@/components/ui/fundraising-button";
 import {
   Select,
   SelectContent,
@@ -28,8 +28,145 @@ import {
   Sparkles,
   ArrowUpRight,
   Gift,
+  Loader2,
 } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
+
+// ── Status badge helpers ─────────────────────────────────────────────────────
+
+function DonationStatusBadge({ status }) {
+  const s = (status || "").toLowerCase();
+  if (s === "completed")
+    return (
+      <Badge className="bg-primary/15 text-primary border-primary/25">
+        <CheckCircle className="h-3 w-3 mr-1" />
+        Completed
+      </Badge>
+    );
+  if (s === "pending")
+    return (
+      <Badge className="bg-chart-4/15 text-chart-4 border-chart-4/25">
+        <Clock className="h-3 w-3 mr-1" />
+        Pending
+      </Badge>
+    );
+  if (s === "failed")
+    return (
+      <Badge className="bg-destructive/15 text-destructive border-destructive/25">
+        <AlertCircle className="h-3 w-3 mr-1" />
+        Failed
+      </Badge>
+    );
+  return (
+    <Badge className="bg-muted text-muted-foreground border-border">
+      {status || "Unknown"}
+    </Badge>
+  );
+}
+
+function PayoutStatusBadge({ status }) {
+  if (status === "paid_out")
+    return (
+      <Badge className="bg-primary/15 text-primary border-primary/25">
+        Paid Out
+      </Badge>
+    );
+  if (status === "scheduled")
+    return (
+      <Badge className="bg-chart-2/15 text-chart-2 border-chart-2/25">
+        Scheduled
+      </Badge>
+    );
+  if (status === "processing")
+    return (
+      <Badge className="bg-chart-4/15 text-chart-4 border-chart-4/25">
+        Processing
+      </Badge>
+    );
+  return (
+    <Badge className="bg-muted text-muted-foreground border-border">
+      No Payout Yet
+    </Badge>
+  );
+}
+
+function CampaignEndedBadge({ campaign }) {
+  if (!campaign) return null;
+  const ended =
+    campaign.status === "expired" ||
+    campaign.status === "inactive" ||
+    campaign.isDonationEnabled === false;
+  if (!ended) return null;
+  return (
+    <Badge className="bg-muted text-muted-foreground border-border">
+      Campaign Ended
+    </Badge>
+  );
+}
+
+// ── Stat tile ────────────────────────────────────────────────────────────────
+
+const STAT_CONFIGS = [
+  {
+    key: "totalAmount",
+    label: "Total Donated",
+    icon: DollarSign,
+    fmt: (v) => `$${Number(v).toLocaleString()}`,
+    bg: "bg-primary/8 border-primary/15",
+    icon_bg: "bg-primary/15",
+    text: "text-primary",
+  },
+  {
+    key: "totalDonations",
+    label: "Donations Made",
+    icon: Heart,
+    fmt: (v) => v,
+    bg: "bg-chart-4/8 border-chart-4/15",
+    icon_bg: "bg-chart-4/15",
+    text: "text-chart-4",
+  },
+  {
+    key: "uniqueCampaigns",
+    label: "Campaigns Supported",
+    icon: Target,
+    fmt: (v) => v,
+    bg: "bg-chart-2/8 border-chart-2/15",
+    icon_bg: "bg-chart-2/15",
+    text: "text-chart-2",
+  },
+  {
+    key: "averageDonation",
+    label: "Average Donation",
+    icon: TrendingUp,
+    fmt: (v) => `$${Number(v).toFixed(0)}`,
+    bg: "bg-chart-3/8 border-chart-3/15",
+    icon_bg: "bg-chart-3/15",
+    text: "text-chart-3",
+  },
+];
+
+function StatTile({ config, value }) {
+  const { label, icon: Icon, fmt, bg, icon_bg, text } = config;
+  return (
+    <Card className={`border ${bg}`}>
+      <CardContent className="p-5">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className={`text-xs font-medium mb-1 ${text}`}>{label}</p>
+            <p className="text-2xl font-bold text-foreground">{fmt(value)}</p>
+          </div>
+          <div
+            className={`w-10 h-10 rounded-full flex items-center justify-center ${icon_bg}`}
+          >
+            <Icon className={`h-5 w-5 ${text}`} />
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+// ── Main component ───────────────────────────────────────────────────────────
 
 export default function MyDonations() {
   const { user } = useContext(AuthContext);
@@ -47,9 +184,7 @@ export default function MyDonations() {
     queryKey: ["myDonations"],
     queryFn: async () => {
       const token = localStorage.getItem("token");
-      if (!token) {
-        throw new Error("No authentication token found");
-      }
+      if (!token) throw new Error("No authentication token found");
 
       const res = await fetch("/api/donations/me", {
         headers: { Authorization: `Bearer ${token}` },
@@ -57,30 +192,23 @@ export default function MyDonations() {
 
       if (!res.ok) {
         const errorData = await res.json().catch(() => ({}));
-
-        // Handle 403 Forbidden specifically
-        if (res.status === 403) {
+        if (res.status === 403)
           throw new Error(
             "Access denied. Please ensure you have donor role to view donations.",
           );
-        }
-
         throw new Error(
           errorData.message || `Failed to load donations (${res.status})`,
         );
       }
 
       const data = await res.json();
-      console.log("Donations data received:", data);
       return data;
     },
-    enabled: !!user, // Only run query if user is logged in
+    enabled: !!user,
     retry: 1,
   });
 
-  // Extract donations array from response
   const donations = donationsData?.donations || [];
-  const pagination = donationsData?.pagination;
 
   const campaignIds = useMemo(
     () => [
@@ -94,10 +222,8 @@ export default function MyDonations() {
       queryKey: ["campaignPayoutHistory", id],
       queryFn: async () => {
         const res = await fetch(`/api/campaigns/${id}/payout-history`);
-        if (!res.ok) {
+        if (!res.ok)
           throw new Error(`Failed to load payout history for campaign ${id}`);
-        }
-
         const data = await res.json();
         return { campaignId: id, ...data };
       },
@@ -108,39 +234,14 @@ export default function MyDonations() {
 
   const payoutHistoryByCampaign = useMemo(() => {
     return campaignPayoutQueries.reduce((acc, queryResult) => {
-      if (queryResult.data?.campaignId) {
+      if (queryResult.data?.campaignId)
         acc[queryResult.data.campaignId] = queryResult.data;
-      }
       return acc;
     }, {});
   }, [campaignPayoutQueries]);
 
-  // If not logged in, show login prompt
-  if (!user) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <Heart className="h-8 w-8 text-blue-600" />
-          </div>
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">
-            Sign In Required
-          </h2>
-          <p className="text-gray-600 mb-6">
-            Please log in to view your donation history
-          </p>
-          <FundraisingButton variant="trust" onClick={() => navigate("/login")}>
-            Sign In
-          </FundraisingButton>
-        </div>
-      </div>
-    );
-  }
-
-  // Calculate donation statistics
   const donationStats = useMemo(() => {
     if (!donations || donations.length === 0) return null;
-
     const totalAmount = donations.reduce((sum, d) => sum + (d.amount || 0), 0);
     const totalDonations = donations.length;
     const averageDonation = totalAmount / totalDonations;
@@ -148,45 +249,27 @@ export default function MyDonations() {
       (d) => d.status === "COMPLETED" || d.status === "completed",
     ).length;
     const successRate = (completedDonations / totalDonations) * 100;
-
-    // Group by month for trend analysis
-    const monthlyData = donations.reduce((acc, donation) => {
-      const month = new Date(donation.createdAt).toLocaleDateString("en-US", {
-        year: "numeric",
-        month: "short",
-      });
-      acc[month] = (acc[month] || 0) + (donation.amount || 0);
-      return acc;
-    }, {});
-
-    // Get unique campaigns supported
     const uniqueCampaigns = new Set(
       donations.map((d) => d.campaign?._id).filter(Boolean),
     ).size;
-
     return {
       totalAmount,
       totalDonations,
       averageDonation,
       successRate,
       uniqueCampaigns,
-      monthlyData,
       recentDonation: donations[0]?.createdAt,
     };
   }, [donations]);
 
-  // Filter and sort donations
   const filteredDonations = useMemo(() => {
     if (!donations || donations.length === 0) return [];
 
     const filtered = donations.filter((donation) => {
-      // Safely check campaign title
       const campaignTitle = donation.campaign?.title || "";
       const matchesSearch = campaignTitle
         .toLowerCase()
         .includes(searchTerm.toLowerCase());
-
-      // Normalize status for comparison
       const donationStatus = (donation.status || "").toLowerCase();
       const matchesStatus =
         statusFilter === "all" || donationStatus === statusFilter.toLowerCase();
@@ -195,7 +278,6 @@ export default function MyDonations() {
       if (timeFilter !== "all") {
         const donationDate = new Date(donation.createdAt);
         const now = new Date();
-
         switch (timeFilter) {
           case "week":
             matchesTime = now - donationDate <= 7 * 24 * 60 * 60 * 1000;
@@ -208,11 +290,9 @@ export default function MyDonations() {
             break;
         }
       }
-
       return matchesSearch && matchesStatus && matchesTime;
     });
 
-    // Sort donations
     filtered.sort((a, b) => {
       switch (sortBy) {
         case "newest":
@@ -231,102 +311,48 @@ export default function MyDonations() {
     return filtered;
   }, [donations, searchTerm, statusFilter, sortBy, timeFilter]);
 
-  const getStatusBadge = (status) => {
-    const normalizedStatus = (status || "").toLowerCase();
+  // ── Early returns ────────────────────────────────────────────────────────
 
-    switch (normalizedStatus) {
-      case "completed":
-        return (
-          <Badge className="bg-green-100 text-green-800 border-green-200">
-            <CheckCircle className="h-3 w-3 mr-1" />
-            Completed
-          </Badge>
-        );
-      case "pending":
-        return (
-          <Badge className="bg-amber-100 text-amber-800 border-amber-200">
-            <Clock className="h-3 w-3 mr-1" />
-            Pending
-          </Badge>
-        );
-      case "failed":
-        return (
-          <Badge className="bg-red-100 text-red-800 border-red-200">
-            <AlertCircle className="h-3 w-3 mr-1" />
-            Failed
-          </Badge>
-        );
-      default:
-        return (
-          <Badge className="bg-gray-100 text-gray-800 border-gray-200">
-            {status || "Unknown"}
-          </Badge>
-        );
-    }
-  };
-
-  const getCampaignLifecycleBadge = (campaign) => {
-    if (!campaign) return null;
-
-    const isEnded =
-      campaign.status === "expired" ||
-      campaign.status === "inactive" ||
-      campaign.isDonationEnabled === false;
-
-    if (!isEnded) return null;
-
+  if (!user) {
     return (
-      <Badge className="bg-slate-100 text-slate-800 border-slate-300">
-        Campaign Ended
-      </Badge>
+      <div className="min-h-screen surface-page flex items-center justify-center px-4">
+        <div className="text-center">
+          <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
+            <Heart className="h-8 w-8 text-primary" />
+          </div>
+          <h2 className="text-2xl font-bold text-foreground mb-2">
+            Sign In Required
+          </h2>
+          <p className="text-muted-foreground mb-6">
+            Please log in to view your donation history
+          </p>
+          <Button
+            className="bg-primary hover:bg-primary/90"
+            onClick={() => navigate("/login")}
+          >
+            Sign In
+          </Button>
+        </div>
+      </div>
     );
-  };
-
-  const getPayoutStatusBadge = (status) => {
-    switch (status) {
-      case "paid_out":
-        return (
-          <Badge className="bg-emerald-100 text-emerald-800 border-emerald-200">
-            Paid Out
-          </Badge>
-        );
-      case "scheduled":
-        return (
-          <Badge className="bg-blue-100 text-blue-800 border-blue-200">
-            Scheduled
-          </Badge>
-        );
-      case "processing":
-        return (
-          <Badge className="bg-amber-100 text-amber-800 border-amber-200">
-            Processing
-          </Badge>
-        );
-      default:
-        return (
-          <Badge className="bg-gray-100 text-gray-800 border-gray-200">
-            No Payout Yet
-          </Badge>
-        );
-    }
-  };
+  }
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 py-12 px-4">
+      <div className="min-h-screen surface-page py-12 px-4">
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-12">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-            <p className="text-gray-600">Loading your donation history...</p>
+            <Loader2 className="h-10 w-10 animate-spin text-primary mx-auto mb-4" />
+            <p className="text-muted-foreground">
+              Loading your donation history…
+            </p>
           </div>
-
-          {/* Loading Skeleton */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
             {Array.from({ length: 3 }).map((_, i) => (
-              <Card key={i} className="bg-white shadow-lg border-0">
+              <Card key={i} className="border">
                 <CardContent className="p-6">
-                  <div className="h-4 bg-gray-200 rounded animate-pulse mb-4"></div>
-                  <div className="h-8 bg-gray-200 rounded animate-pulse"></div>
+                  <div className="h-4 bg-muted rounded animate-pulse mb-4" />
+                  <div className="h-8 bg-muted rounded animate-pulse" />
                 </CardContent>
               </Card>
             ))}
@@ -338,21 +364,21 @@ export default function MyDonations() {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 flex items-center justify-center">
+      <div className="min-h-screen surface-page flex items-center justify-center px-4">
         <div className="text-center">
-          <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <AlertCircle className="h-8 w-8 text-red-600" />
+          <div className="w-16 h-16 bg-destructive/10 rounded-full flex items-center justify-center mx-auto mb-4">
+            <AlertCircle className="h-8 w-8 text-destructive" />
           </div>
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">
+          <h2 className="text-2xl font-bold text-foreground mb-2">
             Error Loading Donations
           </h2>
-          <p className="text-gray-600 mb-6">{error.message}</p>
-          <FundraisingButton
-            variant="trust"
+          <p className="text-muted-foreground mb-6">{error.message}</p>
+          <Button
+            className="bg-primary hover:bg-primary/90"
             onClick={() => window.location.reload()}
           >
             Try Again
-          </FundraisingButton>
+          </Button>
         </div>
       </div>
     );
@@ -360,48 +386,44 @@ export default function MyDonations() {
 
   if (donations.length === 0) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 py-12 px-4">
+      <div className="min-h-screen surface-page py-12 px-4">
         <div className="max-w-4xl mx-auto">
           {/* Header */}
-          <div className="text-center mb-12">
-            <Badge className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-6 py-2 text-sm font-medium mb-6">
-              <Heart className="h-4 w-4 mr-2" />
+          <div className="mb-10">
+            <Badge className="bg-primary/10 text-primary border-primary/20 mb-3">
+              <Heart className="h-3.5 w-3.5 mr-1.5" />
               Donation History
             </Badge>
-            <h1 className="text-4xl md:text-5xl font-bold mb-6">
-              <span className="bg-gradient-to-r from-blue-700 via-indigo-600 to-purple-600 bg-clip-text text-transparent">
-                Your Giving
-              </span>
-              <br />
-              <span className="text-gray-800">Journey</span>
+            <h1 className="text-3xl md:text-4xl font-bold text-foreground">
+              Your Giving Journey
             </h1>
           </div>
 
-          {/* Empty State */}
-          <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-xl">
+          {/* Empty state */}
+          <Card className="border">
             <CardContent className="p-12 text-center">
-              <div className="w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-6">
-                <Gift className="h-10 w-10 text-blue-600" />
+              <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-6">
+                <Gift className="h-10 w-10 text-primary" />
               </div>
-              <h3 className="text-2xl font-bold text-gray-900 mb-4">
+              <h3 className="text-2xl font-bold text-foreground mb-4">
                 Start Your Impact Journey
               </h3>
-              <p className="text-gray-600 mb-8 max-w-md mx-auto leading-relaxed">
+              <p className="text-muted-foreground mb-8 max-w-md mx-auto leading-relaxed">
                 You haven't made any donations yet. Discover meaningful causes
                 and start making a difference in communities around the world.
               </p>
-              <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              <div className="flex flex-col sm:flex-row gap-3 justify-center">
                 <Link to="/donate">
-                  <FundraisingButton variant="donate" size="lg">
-                    <Heart className="h-5 w-5" />
+                  <Button className="bg-primary hover:bg-primary/90">
+                    <Heart className="h-4 w-4 mr-2" />
                     Browse Campaigns
-                  </FundraisingButton>
+                  </Button>
                 </Link>
                 <Link to="/campaigns">
-                  <FundraisingButton variant="outline-trust" size="lg">
-                    <Target className="h-5 w-5" />
+                  <Button variant="outline">
+                    <Target className="h-4 w-4 mr-2" />
                     Explore Causes
-                  </FundraisingButton>
+                  </Button>
                 </Link>
               </div>
             </CardContent>
@@ -411,166 +433,104 @@ export default function MyDonations() {
     );
   }
 
+  // ── Main view ────────────────────────────────────────────────────────────
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 py-12 px-4">
-      <div className="max-w-6xl mx-auto">
-        {/* Header */}
-        <div className="text-center mb-12">
-          <Badge className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-6 py-2 text-sm font-medium mb-6">
-            <Heart className="h-4 w-4 mr-2" />
+    <div className="min-h-screen surface-page py-10 px-4">
+      <div className="max-w-6xl mx-auto space-y-6">
+
+        {/* Page header */}
+        <div>
+          <Badge className="bg-primary/10 text-primary border-primary/20 mb-3">
+            <Heart className="h-3.5 w-3.5 mr-1.5" />
             Your Impact Dashboard
           </Badge>
-          <h1 className="text-4xl md:text-5xl font-bold mb-6">
-            <span className="bg-gradient-to-r from-blue-700 via-indigo-600 to-purple-600 bg-clip-text text-transparent">
-              Donation
-            </span>
-            <br />
-            <span className="text-gray-800">History</span>
+          <h1 className="text-3xl md:text-4xl font-bold text-foreground">
+            Donation History
           </h1>
-          <p className="text-xl text-gray-600 max-w-2xl mx-auto leading-relaxed">
+          <p className="text-muted-foreground mt-1.5 max-w-xl">
             Track your giving journey and see the positive impact you've created
             in communities worldwide.
           </p>
         </div>
 
-        {/* Statistics Cards */}
+        {/* Stat tiles */}
         {donationStats && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-            <Card className="bg-gradient-to-r from-blue-500 to-indigo-500 text-white border-0 shadow-xl">
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-blue-100 text-sm font-medium">
-                      Total Donated
-                    </p>
-                    <p className="text-3xl font-bold">
-                      ${donationStats.totalAmount.toLocaleString()}
-                    </p>
-                  </div>
-                  <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center">
-                    <DollarSign className="h-6 w-6" />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="bg-gradient-to-r from-emerald-500 to-teal-500 text-white border-0 shadow-xl">
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-emerald-100 text-sm font-medium">
-                      Donations Made
-                    </p>
-                    <p className="text-3xl font-bold">
-                      {donationStats.totalDonations}
-                    </p>
-                  </div>
-                  <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center">
-                    <Heart className="h-6 w-6" />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="bg-gradient-to-r from-purple-500 to-pink-500 text-white border-0 shadow-xl">
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-purple-100 text-sm font-medium">
-                      Campaigns Supported
-                    </p>
-                    <p className="text-3xl font-bold">
-                      {donationStats.uniqueCampaigns}
-                    </p>
-                  </div>
-                  <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center">
-                    <Target className="h-6 w-6" />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="bg-gradient-to-r from-amber-500 to-orange-500 text-white border-0 shadow-xl">
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-amber-100 text-sm font-medium">
-                      Average Donation
-                    </p>
-                    <p className="text-3xl font-bold">
-                      ${donationStats.averageDonation.toFixed(0)}
-                    </p>
-                  </div>
-                  <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center">
-                    <TrendingUp className="h-6 w-6" />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {STAT_CONFIGS.map((cfg) => (
+              <StatTile key={cfg.key} config={cfg} value={donationStats[cfg.key]} />
+            ))}
           </div>
         )}
 
-        {/* Impact Summary */}
-        <Card className="bg-gradient-to-r from-green-50 to-emerald-50 border-green-200 mb-8">
-          <CardContent className="p-6">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
-                <Award className="h-5 w-5 text-green-600" />
-              </div>
-              <h3 className="text-lg font-semibold text-green-800">
-                Your Impact Summary
-              </h3>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-center">
-              <div>
-                <div className="text-2xl font-bold text-green-700">
-                  {donationStats?.successRate.toFixed(1)}%
+        {/* Impact summary */}
+        {donationStats && (
+          <Card className="border bg-primary/5 border-primary/15">
+            <CardContent className="p-6">
+              <div className="flex items-center gap-3 mb-5">
+                <div className="w-9 h-9 bg-primary/15 rounded-full flex items-center justify-center">
+                  <Award className="h-4.5 w-4.5 text-primary" />
                 </div>
-                <div className="text-sm text-green-600">Success Rate</div>
+                <h3 className="text-base font-semibold text-foreground">
+                  Your Impact Summary
+                </h3>
               </div>
-              <div>
-                <div className="text-2xl font-bold text-green-700">
-                  {donationStats?.uniqueCampaigns}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-center">
+                <div>
+                  <div className="text-2xl font-bold text-primary">
+                    {donationStats.successRate.toFixed(1)}%
+                  </div>
+                  <div className="text-sm text-muted-foreground">
+                    Success Rate
+                  </div>
                 </div>
-                <div className="text-sm text-green-600">Lives Impacted</div>
+                <div>
+                  <div className="text-2xl font-bold text-primary">
+                    {donationStats.uniqueCampaigns}
+                  </div>
+                  <div className="text-sm text-muted-foreground">
+                    Campaigns Supported
+                  </div>
+                </div>
+                <div>
+                  <div className="text-2xl font-bold text-primary">
+                    {donationStats.recentDonation
+                      ? Math.floor(
+                          (new Date() -
+                            new Date(donationStats.recentDonation)) /
+                            (1000 * 60 * 60 * 24),
+                        )
+                      : 0}
+                  </div>
+                  <div className="text-sm text-muted-foreground">
+                    Days Since Last Donation
+                  </div>
+                </div>
               </div>
-              <div>
-                <div className="text-2xl font-bold text-green-700">
-                  {donationStats?.recentDonation
-                    ? Math.floor(
-                        (new Date() - new Date(donationStats.recentDonation)) /
-                          (1000 * 60 * 60 * 24),
-                      )
-                    : 0}
-                </div>
-                <div className="text-sm text-green-600">
-                  Days Since Last Donation
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Filters */}
-        <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-lg mb-8">
-          <CardContent className="p-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+        <Card className="border bg-card">
+          <CardContent className="p-5">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
               {/* Search */}
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
                   type="text"
-                  placeholder="Search campaigns..."
+                  placeholder="Search campaigns…"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10 h-11 border-2 border-gray-200 focus:border-blue-500 rounded-xl"
+                  className="pl-9"
                 />
               </div>
 
-              {/* Status Filter */}
+              {/* Status */}
               <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="h-11 border-2 border-gray-200 focus:border-blue-500 rounded-xl">
-                  <Filter className="h-4 w-4 mr-2" />
+                <SelectTrigger>
+                  <Filter className="h-4 w-4 mr-2 text-muted-foreground" />
                   <SelectValue placeholder="All Statuses" />
                 </SelectTrigger>
                 <SelectContent>
@@ -581,10 +541,10 @@ export default function MyDonations() {
                 </SelectContent>
               </Select>
 
-              {/* Time Filter */}
+              {/* Time */}
               <Select value={timeFilter} onValueChange={setTimeFilter}>
-                <SelectTrigger className="h-11 border-2 border-gray-200 focus:border-blue-500 rounded-xl">
-                  <Calendar className="h-4 w-4 mr-2" />
+                <SelectTrigger>
+                  <Calendar className="h-4 w-4 mr-2 text-muted-foreground" />
                   <SelectValue placeholder="All Time" />
                 </SelectTrigger>
                 <SelectContent>
@@ -597,8 +557,8 @@ export default function MyDonations() {
 
               {/* Sort */}
               <Select value={sortBy} onValueChange={setSortBy}>
-                <SelectTrigger className="h-11 border-2 border-gray-200 focus:border-blue-500 rounded-xl">
-                  <TrendingUp className="h-4 w-4 mr-2" />
+                <SelectTrigger>
+                  <TrendingUp className="h-4 w-4 mr-2 text-muted-foreground" />
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -610,196 +570,194 @@ export default function MyDonations() {
               </Select>
             </div>
 
-            <div className="flex items-center justify-between text-sm text-gray-600">
+            <div className="flex items-center justify-between text-sm text-muted-foreground">
               <span>
                 Showing {filteredDonations.length} of {donations.length}{" "}
                 donations
               </span>
-              <FundraisingButton variant="ghost-trust" size="sm">
+              <Button variant="ghost" size="sm" className="text-muted-foreground">
                 <Download className="h-4 w-4 mr-2" />
                 Export History
-              </FundraisingButton>
+              </Button>
             </div>
           </CardContent>
         </Card>
 
-        {/* Donations List */}
-        <div className="space-y-4">
-          {filteredDonations.map((donation) => (
-            <Card
-              key={donation._id}
-              className="bg-white shadow-lg border-0 hover:shadow-xl transition-all duration-300"
-            >
-              <CardContent className="p-6">
-                {(() => {
-                  const campaignTransparency =
-                    payoutHistoryByCampaign[donation.campaign?._id];
-                  const latestPayout =
-                    campaignTransparency?.timeline?.[0] || null;
+        {/* Donation list */}
+        <div className="space-y-3">
+          {filteredDonations.map((donation) => {
+            const campaignTransparency =
+              payoutHistoryByCampaign[donation.campaign?._id];
+            const latestPayout =
+              campaignTransparency?.timeline?.[0] || null;
 
-                  return (
-                    <>
-                      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-                        {/* Campaign Info */}
+            return (
+              <Card
+                key={donation._id}
+                className="border bg-card hover:bg-accent/20 transition-colors"
+              >
+                <CardContent className="p-5">
+                  <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                    {/* Campaign info */}
+                    <div className="flex-1">
+                      <div className="flex items-start gap-4">
+                        <img
+                          src={
+                            donation.campaign?.imageURL || "/placeholder.svg"
+                          }
+                          alt={donation.campaign?.title || "Campaign"}
+                          className="w-14 h-14 rounded-xl object-cover flex-shrink-0 border border-border"
+                        />
                         <div className="flex-1">
-                          <div className="flex items-start gap-4">
-                            <img
-                              src={
-                                donation.campaign?.imageURL ||
-                                "/placeholder.svg"
-                              }
-                              alt={donation.campaign?.title || "Campaign"}
-                              className="w-16 h-16 rounded-xl object-cover flex-shrink-0"
-                            />
-                            <div className="flex-1">
-                              <h3 className="font-bold text-lg text-gray-900 mb-2 line-clamp-1">
-                                {donation.campaign?.title || "Unknown Campaign"}
-                              </h3>
-                              <div className="flex flex-wrap items-center gap-3 text-sm text-gray-600">
-                                <div className="flex items-center gap-1">
-                                  <Calendar className="h-4 w-4" />
-                                  <span>
-                                    {new Date(
-                                      donation.createdAt,
-                                    ).toLocaleDateString("en-US", {
-                                      year: "numeric",
-                                      month: "short",
-                                      day: "numeric",
-                                    })}
-                                  </span>
-                                </div>
-                                <div className="flex items-center gap-1">
-                                  <Clock className="h-4 w-4" />
-                                  <span>
-                                    {new Date(
-                                      donation.createdAt,
-                                    ).toLocaleTimeString("en-US", {
-                                      hour: "2-digit",
-                                      minute: "2-digit",
-                                    })}
-                                  </span>
-                                </div>
-                              </div>
+                          <h3 className="font-semibold text-base text-foreground mb-1.5 line-clamp-1">
+                            {donation.campaign?.title || "Unknown Campaign"}
+                          </h3>
+                          <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
+                            <div className="flex items-center gap-1">
+                              <Calendar className="h-3.5 w-3.5" />
+                              <span>
+                                {new Date(
+                                  donation.createdAt,
+                                ).toLocaleDateString("en-US", {
+                                  year: "numeric",
+                                  month: "short",
+                                  day: "numeric",
+                                })}
+                              </span>
                             </div>
-                          </div>
-                        </div>
-
-                        {/* Donation Details */}
-                        <div className="flex flex-col lg:flex-row lg:items-center gap-4">
-                          <div className="text-center lg:text-right">
-                            <div className="text-2xl font-bold text-gray-900">
-                              ${(donation.amount || 0).toFixed(2)}
+                            <div className="flex items-center gap-1">
+                              <Clock className="h-3.5 w-3.5" />
+                              <span>
+                                {new Date(
+                                  donation.createdAt,
+                                ).toLocaleTimeString("en-US", {
+                                  hour: "2-digit",
+                                  minute: "2-digit",
+                                })}
+                              </span>
                             </div>
-                            <div className="text-sm text-gray-500">
-                              Transaction ID: {donation.transactionId || "N/A"}
-                            </div>
-                          </div>
-
-                          <div className="flex flex-col items-center lg:items-end gap-2">
-                            {getStatusBadge(donation.status)}
-                            {getCampaignLifecycleBadge(donation.campaign)}
-                            {donation.campaign?._id && (
-                              <Link to={`/donate/${donation.campaign._id}`}>
-                                <FundraisingButton
-                                  variant="ghost-trust"
-                                  size="sm"
-                                >
-                                  <ArrowUpRight className="h-4 w-4" />
-                                  View Campaign
-                                </FundraisingButton>
-                              </Link>
-                            )}
                           </div>
                         </div>
                       </div>
+                    </div>
 
-                      <div className="mt-5 pt-5 border-t border-slate-100">
-                        <div className="flex flex-wrap items-center justify-between gap-3">
-                          <p className="text-sm font-semibold text-slate-700">
-                            Campaign fund transparency
-                          </p>
-                          {getPayoutStatusBadge(latestPayout?.status)}
+                    {/* Amount + status */}
+                    <div className="flex flex-col lg:flex-row lg:items-center gap-4">
+                      <div className="text-center lg:text-right">
+                        <div className="text-xl font-bold text-foreground">
+                          ${(donation.amount || 0).toFixed(2)}
                         </div>
-
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mt-3 text-sm">
-                          <div className="rounded-lg bg-slate-50 p-3">
-                            <p className="text-slate-500">Raised</p>
-                            <p className="font-semibold text-slate-800">
-                              $
-                              {Number(
-                                campaignTransparency?.summary?.totalRaised ||
-                                  donation.campaign?.raised ||
-                                  0,
-                              ).toLocaleString()}
-                            </p>
-                          </div>
-                          <div className="rounded-lg bg-slate-50 p-3">
-                            <p className="text-slate-500">Paid Out</p>
-                            <p className="font-semibold text-slate-800">
-                              $
-                              {Number(
-                                campaignTransparency?.summary?.totalPaidOut ||
-                                  0,
-                              ).toLocaleString()}
-                            </p>
-                          </div>
-                          <div className="rounded-lg bg-slate-50 p-3">
-                            <p className="text-slate-500">Last Transfer</p>
-                            <p className="font-semibold text-slate-800">
-                              {latestPayout?.eventDate
-                                ? new Date(
-                                    latestPayout.eventDate,
-                                  ).toLocaleDateString("en-US", {
-                                    year: "numeric",
-                                    month: "short",
-                                    day: "numeric",
-                                  })
-                                : "Not yet"}
-                            </p>
-                          </div>
+                        <div className="text-xs text-muted-foreground mt-0.5">
+                          ID: {donation.transactionId || "N/A"}
                         </div>
                       </div>
-                    </>
-                  );
-                })()}
-              </CardContent>
-            </Card>
-          ))}
+
+                      <div className="flex flex-col items-center lg:items-end gap-2">
+                        <DonationStatusBadge status={donation.status} />
+                        <CampaignEndedBadge campaign={donation.campaign} />
+                        {donation.campaign?._id && (
+                          <Link to={`/donate/${donation.campaign._id}`}>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="text-primary hover:bg-primary/10 h-7 px-2.5 text-xs"
+                            >
+                              <ArrowUpRight className="h-3.5 w-3.5 mr-1" />
+                              View Campaign
+                            </Button>
+                          </Link>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Transparency row */}
+                  <div className="mt-4 pt-4 border-t border-border">
+                    <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
+                      <p className="text-sm font-medium text-foreground">
+                        Fund transparency
+                      </p>
+                      <PayoutStatusBadge status={latestPayout?.status} />
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5 text-sm">
+                      <div className="rounded-lg bg-muted/50 border border-border/50 p-3">
+                        <p className="text-muted-foreground text-xs mb-1">
+                          Raised
+                        </p>
+                        <p className="font-semibold text-foreground">
+                          $
+                          {Number(
+                            campaignTransparency?.summary?.totalRaised ||
+                              donation.campaign?.raised ||
+                              0,
+                          ).toLocaleString()}
+                        </p>
+                      </div>
+                      <div className="rounded-lg bg-muted/50 border border-border/50 p-3">
+                        <p className="text-muted-foreground text-xs mb-1">
+                          Paid Out
+                        </p>
+                        <p className="font-semibold text-foreground">
+                          $
+                          {Number(
+                            campaignTransparency?.summary?.totalPaidOut || 0,
+                          ).toLocaleString()}
+                        </p>
+                      </div>
+                      <div className="rounded-lg bg-muted/50 border border-border/50 p-3">
+                        <p className="text-muted-foreground text-xs mb-1">
+                          Last Transfer
+                        </p>
+                        <p className="font-semibold text-foreground">
+                          {latestPayout?.eventDate
+                            ? new Date(
+                                latestPayout.eventDate,
+                              ).toLocaleDateString("en-US", {
+                                year: "numeric",
+                                month: "short",
+                                day: "numeric",
+                              })
+                            : "Not yet"}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
 
-        {/* Call to Action */}
-        <Card className="bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 text-white border-0 shadow-xl mt-12">
+        {/* CTA */}
+        <Card className="border bg-primary/5 border-primary/15">
           <CardContent className="p-8 text-center">
-            <div className="flex items-center justify-center gap-2 mb-4">
-              <Sparkles className="h-6 w-6" />
-              <h3 className="text-2xl font-bold">
+            <div className="flex items-center justify-center gap-2 mb-3">
+              <Sparkles className="h-5 w-5 text-primary" />
+              <h3 className="text-xl font-bold text-foreground">
                 Continue Making a Difference
               </h3>
             </div>
-            <p className="text-blue-100 mb-6 max-w-2xl mx-auto">
+            <p className="text-muted-foreground mb-6 max-w-xl mx-auto">
               Your generosity has already created positive change. Discover more
               campaigns and continue your impact journey.
             </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <div className="flex flex-col sm:flex-row gap-3 justify-center">
               <Link to="/donate">
-                <FundraisingButton variant="warm" size="lg">
-                  <Heart className="h-5 w-5" />
+                <Button className="bg-primary hover:bg-primary/90">
+                  <Heart className="h-4 w-4 mr-2" />
                   Donate to New Causes
-                </FundraisingButton>
+                </Button>
               </Link>
               <Link to="/campaigns">
-                <FundraisingButton
-                  variant="outline-trust"
-                  size="lg"
-                  className="bg-white/10 border-white/30 text-white hover:bg-white hover:text-blue-600"
-                >
-                  <Target className="h-5 w-5" />
+                <Button variant="outline">
+                  <Target className="h-4 w-4 mr-2" />
                   Browse All Campaigns
-                </FundraisingButton>
+                </Button>
               </Link>
             </div>
           </CardContent>
         </Card>
+
       </div>
     </div>
   );

@@ -11,12 +11,13 @@ import {
   revokeOrganizerApplication,
 } from "@/services/adminApi";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { FundraisingButton } from "@/components/ui/fundraising-button";
+import { Button } from "@/components/ui/button";
 import { AdminPageSkeleton } from "@/components/admin/AdminSkeletons";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { PageHeader, StatusBadge, FilterCard, EmptyState } from "@/components/admin/AdminUtils";
 import {
   Select,
   SelectContent,
@@ -38,8 +39,6 @@ import {
   CheckCircle,
   XCircle,
   Clock,
-  Search,
-  Filter,
   Mail,
   Phone,
   Globe,
@@ -173,41 +172,7 @@ export default function AdminApplications() {
     revokeMutation.mutate({ appId: revokeTargetAppId, reason: revokeReason });
   };
 
-  // Render status badges
-  const getStatusBadge = (status) => {
-    switch (status) {
-      case "pending":
-        return (
-          <Badge className="bg-amber-100 text-amber-800 border-amber-200">
-            <Clock className="h-3 w-3 mr-1" />
-            Pending
-          </Badge>
-        );
-      case "approved":
-        return (
-          <Badge className="bg-green-100 text-green-800 border-green-200">
-            <CheckCircle className="h-3 w-3 mr-1" />
-            Approved
-          </Badge>
-        );
-      case "rejected":
-        return (
-          <Badge className="bg-red-100 text-red-800 border-red-200">
-            <XCircle className="h-3 w-3 mr-1" />
-            Rejected
-          </Badge>
-        );
-      case "revoked":
-        return (
-          <Badge className="bg-gray-100 text-gray-800 border-gray-200">
-            <XCircle className="h-3 w-3 mr-1" />
-            Revoked
-          </Badge>
-        );
-      default:
-        return null;
-    }
-  };
+  const getStatusBadge = (status) => <StatusBadge status={status} />;
 
   // Compute status counts
   const getStatusCounts = () => ({
@@ -241,136 +206,71 @@ export default function AdminApplications() {
 
   return (
     <div className="surface-page min-h-screen py-8 px-4">
-      <div className="max-w-6xl mx-auto">
-        <div className="text-center mb-8">
-          <Badge className="bg-blue-100 text-blue-800 px-4 py-1.5 text-sm font-medium mb-5">
-            <Settings className="h-4 w-4 mr-2" />
-            Admin Dashboard
-          </Badge>
-          <h1 className="text-4xl md:text-5xl font-bold mb-4 text-slate-900">
-            Organizer Applications
-          </h1>
-          <p className="text-lg text-slate-600 max-w-2xl mx-auto leading-relaxed">
-            Review and manage organizer applications to maintain platform
-            quality and trust.
-          </p>
+      <div className="max-w-6xl mx-auto space-y-6">
+        <PageHeader
+          label="Admin"
+          title="Organizer Applications"
+          description="Review and manage organizer applications to maintain platform quality and trust."
+        />
+
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+          {[
+            { label: "Total", value: statusCounts.total, cls: "text-foreground", iconCls: "bg-chart-2/10 text-chart-2", Icon: FileText },
+            { label: "Pending", value: statusCounts.pending, cls: "text-chart-4", iconCls: "bg-chart-4/10 text-chart-4", Icon: Clock },
+            { label: "Approved", value: statusCounts.approved, cls: "text-primary", iconCls: "bg-primary/10 text-primary", Icon: CheckCircle },
+            { label: "Rejected", value: statusCounts.rejected, cls: "text-destructive", iconCls: "bg-destructive/10 text-destructive", Icon: XCircle },
+            { label: "Revoked", value: statusCounts.revoked, cls: "text-muted-foreground", iconCls: "bg-muted text-muted-foreground", Icon: XCircle },
+          ].map(({ label, value, cls, iconCls, Icon }) => (
+            <Card key={label} className="border bg-card">
+              <CardContent className="p-4 text-center">
+                <div className={`w-10 h-10 rounded-full flex items-center justify-center mx-auto mb-2 ${iconCls}`}>
+                  <Icon className="h-5 w-5" />
+                </div>
+                <div className={`text-2xl font-bold ${cls}`}>{value}</div>
+                <div className="text-xs text-muted-foreground mt-0.5">{label}</div>
+              </CardContent>
+            </Card>
+          ))}
         </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
-          <Card className="surface-card shadow-sm">
-            <CardContent className="p-4 text-center">
-              <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-2">
-                <FileText className="h-5 w-5 text-blue-600" />
-              </div>
-              <div className="text-2xl font-bold text-slate-900">
-                {statusCounts.total}
-              </div>
-              <div className="text-sm text-slate-600">Total</div>
-            </CardContent>
-          </Card>
-
-          <Card className="surface-card shadow-sm">
-            <CardContent className="p-4 text-center">
-              <div className="w-10 h-10 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-2">
-                <Clock className="h-5 w-5 text-amber-600" />
-              </div>
-              <div className="text-2xl font-bold text-amber-600">
-                {statusCounts.pending}
-              </div>
-              <div className="text-sm text-slate-600">Pending</div>
-            </CardContent>
-          </Card>
-
-          <Card className="surface-card shadow-sm">
-            <CardContent className="p-4 text-center">
-              <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-2">
-                <CheckCircle className="h-5 w-5 text-green-600" />
-              </div>
-              <div className="text-2xl font-bold text-green-600">
-                {statusCounts.approved}
-              </div>
-              <div className="text-sm text-slate-600">Approved</div>
-            </CardContent>
-          </Card>
-
-          <Card className="surface-card shadow-sm">
-            <CardContent className="p-4 text-center">
-              <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-2">
-                <XCircle className="h-5 w-5 text-red-600" />
-              </div>
-              <div className="text-2xl font-bold text-red-600">
-                {statusCounts.rejected}
-              </div>
-              <div className="text-sm text-slate-600">Rejected</div>
-            </CardContent>
-          </Card>
-
-          <Card className="surface-card shadow-sm">
-            <CardContent className="p-4 text-center">
-              <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-2">
-                <XCircle className="h-5 w-5 text-gray-600" />
-              </div>
-              <div className="text-2xl font-bold text-gray-600">
-                {statusCounts.revoked}
-              </div>
-              <div className="text-sm text-slate-600">Revoked</div>
-            </CardContent>
-          </Card>
-        </div>
-
-        <Card className="surface-card shadow-sm mb-8">
-          <CardContent className="p-6">
-            <div className="grid md:grid-cols-2 gap-4">
-              <div>
-                <Label className="text-sm font-medium text-slate-700 mb-2 block">
-                  <Search className="h-4 w-4 inline mr-2" />
-                  Search Applications
-                </Label>
-                <Input
-                  placeholder="Search by name, email, or organization..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="h-11 rounded-lg border-slate-300"
-                />
-              </div>
-              <div>
-                <Label className="text-sm font-medium text-slate-700 mb-2 block">
-                  <Filter className="h-4 w-4 inline mr-2" />
-                  Filter by Status
-                </Label>
-                <Select value={statusFilter} onValueChange={setStatusFilter}>
-                  <SelectTrigger className="h-11 rounded-lg border-slate-300">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Applications</SelectItem>
-                    <SelectItem value="pending">Pending Review</SelectItem>
-                    <SelectItem value="approved">Approved</SelectItem>
-                    <SelectItem value="rejected">Rejected</SelectItem>
-                    <SelectItem value="revoked">Revoked</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+        <FilterCard>
+          <div className="grid md:grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <Label className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+                Search Applications
+              </Label>
+              <Input
+                placeholder="Search by name, email, or organization..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
             </div>
-          </CardContent>
-        </Card>
+            <div className="space-y-1.5">
+              <Label className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+                Filter by Status
+              </Label>
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Applications</SelectItem>
+                  <SelectItem value="pending">Pending Review</SelectItem>
+                  <SelectItem value="approved">Approved</SelectItem>
+                  <SelectItem value="rejected">Rejected</SelectItem>
+                  <SelectItem value="revoked">Revoked</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        </FilterCard>
 
         {filteredApplications.length === 0 ? (
-          <Card className="surface-card shadow-sm">
-            <CardContent className="p-12 text-center">
-              <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <Users className="h-8 w-8 text-gray-400" />
-              </div>
-              <h3 className="text-xl font-semibold text-slate-900 mb-2">
-                No Applications Found
-              </h3>
-              <p className="text-slate-600">
-                {searchTerm || statusFilter !== "all"
-                  ? "Try adjusting your search or filter criteria"
-                  : "No organizer applications have been submitted yet"}
-              </p>
-            </CardContent>
-          </Card>
+          <EmptyState
+            icon={Users}
+            title="No Applications Found"
+            description={searchTerm || statusFilter !== "all" ? "Try adjusting your search or filter criteria" : "No organizer applications have been submitted yet"}
+          />
         ) : (
           <div className="space-y-6">
             {filteredApplications.map((app) => (
@@ -378,13 +278,13 @@ export default function AdminApplications() {
                 key={app._id}
                 className="surface-card shadow-sm overflow-hidden"
               >
-                <CardHeader className="bg-slate-50 border-b border-slate-200">
+                <CardHeader className="bg-muted/30 border-b border-border">
                   <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                     <div>
-                      <CardTitle className="text-xl text-slate-900 mb-2">
+                      <CardTitle className="text-xl text-foreground mb-2">
                         {app.user?.name || app.user?.email || "Unknown User"}
                       </CardTitle>
-                      <div className="flex items-center gap-2 text-slate-600">
+                      <div className="flex items-center gap-2 text-muted-foreground">
                         <Users className="h-4 w-4" />
                         <span className="font-medium">
                           {app.organizationName || "N/A"}
@@ -393,7 +293,7 @@ export default function AdminApplications() {
                     </div>
                     <div className="flex items-center gap-3">
                       {getStatusBadge(app.status)}
-                      <div className="text-sm text-slate-500 flex items-center gap-1">
+                      <div className="text-sm text-muted-foreground flex items-center gap-1">
                         <Calendar className="h-4 w-4" />
                         {new Date(app.createdAt).toLocaleDateString()}
                       </div>
@@ -405,31 +305,31 @@ export default function AdminApplications() {
                   {/* Contact Information */}
                   <div className="grid md:grid-cols-2 gap-6">
                     <div className="space-y-3">
-                      <h4 className="font-semibold text-slate-900 flex items-center gap-2">
-                        <Mail className="h-4 w-4 text-blue-600" />
+                      <h4 className="font-semibold text-foreground flex items-center gap-2">
+                        <Mail className="h-4 w-4 text-chart-2" />
                         Contact Information
                       </h4>
-                      <div className="space-y-2 text-sm text-slate-700">
+                      <div className="space-y-2 text-sm text-foreground">
                         <div className="flex items-center gap-2">
-                          <Mail className="h-3 w-3 text-gray-400" />
+                          <Mail className="h-3 w-3 text-muted-foreground" />
                           <span>
                             {app.contactEmail || app.user?.email || "N/A"}
                           </span>
                         </div>
                         {app.phoneNumber && (
                           <div className="flex items-center gap-2">
-                            <Phone className="h-3 w-3 text-gray-400" />
+                            <Phone className="h-3 w-3 text-muted-foreground" />
                             <span>{app.phoneNumber}</span>
                           </div>
                         )}
                         {app.website && (
                           <div className="flex items-center gap-2">
-                            <Globe className="h-3 w-3 text-gray-400" />
+                            <Globe className="h-3 w-3 text-muted-foreground" />
                             <a
                               href={app.website}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="text-blue-600 hover:underline"
+                              className="text-primary hover:underline"
                             >
                               {app.website}
                             </a>
@@ -440,11 +340,11 @@ export default function AdminApplications() {
 
                     {app.experience && (
                       <div className="space-y-3">
-                        <h4 className="font-semibold text-slate-900 flex items-center gap-2">
-                          <TrendingUp className="h-4 w-4 text-green-600" />
+                        <h4 className="font-semibold text-foreground flex items-center gap-2">
+                          <TrendingUp className="h-4 w-4 text-primary" />
                           Experience
                         </h4>
-                        <p className="text-sm text-slate-700 bg-slate-50 p-3 rounded-lg border border-slate-200">
+                        <p className="text-sm text-foreground bg-muted/50 p-3 rounded-lg border border-border">
                           {app.experience}
                         </p>
                       </div>
@@ -453,12 +353,12 @@ export default function AdminApplications() {
 
                   {/* Description */}
                   <div className="space-y-3">
-                    <h4 className="font-semibold text-slate-900 flex items-center gap-2">
-                      <FileText className="h-4 w-4 text-purple-600" />
+                    <h4 className="font-semibold text-foreground flex items-center gap-2">
+                      <FileText className="h-4 w-4 text-chart-2" />
                       Organization Description
                     </h4>
-                    <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
-                      <p className="text-slate-800 leading-relaxed">
+                    <div className="bg-chart-2/5 border border-chart-2/20 rounded-xl p-4">
+                      <p className="text-foreground leading-relaxed">
                         {app.description}
                       </p>
                     </div>
@@ -466,8 +366,8 @@ export default function AdminApplications() {
 
                   {/* Verification Documents */}
                   <div className="space-y-3">
-                    <h4 className="font-semibold text-slate-900 flex items-center gap-2">
-                      <FileText className="h-4 w-4 text-indigo-600" />
+                    <h4 className="font-semibold text-foreground flex items-center gap-2">
+                      <FileText className="h-4 w-4 text-chart-2" />
                       Verification Documents
                     </h4>
 
@@ -475,8 +375,8 @@ export default function AdminApplications() {
                       <div className="grid gap-4 md:grid-cols-3">
                         {/* Government ID */}
                         {app.documents.governmentId?.url && (
-                          <div className="border border-slate-200 rounded-lg p-3 bg-slate-50">
-                            <div className="text-sm font-medium text-slate-700 mb-2">
+                          <div className="border border-border rounded-lg p-3 bg-muted/30">
+                            <div className="text-sm font-medium text-foreground mb-2">
                               Government ID
                             </div>
                             {/\.(png|jpe?g|gif|webp)$/i.test(
@@ -498,7 +398,7 @@ export default function AdminApplications() {
                                 href={app.documents.governmentId.url}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="text-blue-600 hover:underline break-all"
+                                className="text-primary hover:underline break-all"
                               >
                                 View file
                               </a>
@@ -508,8 +408,8 @@ export default function AdminApplications() {
 
                         {/* Selfie with ID */}
                         {app.documents.selfieWithId?.url && (
-                          <div className="border border-slate-200 rounded-lg p-3 bg-slate-50">
-                            <div className="text-sm font-medium text-slate-700 mb-2">
+                          <div className="border border-border rounded-lg p-3 bg-muted/30">
+                            <div className="text-sm font-medium text-foreground mb-2">
                               Selfie with ID
                             </div>
                             {/\.(png|jpe?g|gif|webp)$/i.test(
@@ -531,7 +431,7 @@ export default function AdminApplications() {
                                 href={app.documents.selfieWithId.url}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="text-blue-600 hover:underline break-all"
+                                className="text-primary hover:underline break-all"
                               >
                                 View file
                               </a>
@@ -541,8 +441,8 @@ export default function AdminApplications() {
 
                         {/* Registration Certificate */}
                         {app.documents.registrationCertificate?.url && (
-                          <div className="border border-slate-200 rounded-lg p-3 bg-slate-50">
-                            <div className="text-sm font-medium text-slate-700 mb-2">
+                          <div className="border border-border rounded-lg p-3 bg-muted/30">
+                            <div className="text-sm font-medium text-foreground mb-2">
                               Registration Certificate
                             </div>
                             {/\.(png|jpe?g|gif|webp)$/i.test(
@@ -566,7 +466,7 @@ export default function AdminApplications() {
                                 href={app.documents.registrationCertificate.url}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="text-blue-600 hover:underline break-all"
+                                className="text-primary hover:underline break-all"
                               >
                                 View file
                               </a>
@@ -576,8 +476,8 @@ export default function AdminApplications() {
 
                         {/* Tax ID */}
                         {app.documents.taxId?.url && (
-                          <div className="border border-slate-200 rounded-lg p-3 bg-slate-50">
-                            <div className="text-sm font-medium text-slate-700 mb-2">
+                          <div className="border border-border rounded-lg p-3 bg-muted/30">
+                            <div className="text-sm font-medium text-foreground mb-2">
                               Tax ID / EIN
                             </div>
                             {/\.(png|jpe?g|gif|webp)$/i.test(
@@ -599,7 +499,7 @@ export default function AdminApplications() {
                                 href={app.documents.taxId.url}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="text-blue-600 hover:underline break-all"
+                                className="text-primary hover:underline break-all"
                               >
                                 View file
                               </a>
@@ -609,8 +509,8 @@ export default function AdminApplications() {
 
                         {/* Address Proof */}
                         {app.documents.addressProof?.url && (
-                          <div className="border border-slate-200 rounded-lg p-3 bg-slate-50">
-                            <div className="text-sm font-medium text-slate-700 mb-2">
+                          <div className="border border-border rounded-lg p-3 bg-muted/30">
+                            <div className="text-sm font-medium text-foreground mb-2">
                               Address Proof
                             </div>
                             {/\.(png|jpe?g|gif|webp)$/i.test(
@@ -632,7 +532,7 @@ export default function AdminApplications() {
                                 href={app.documents.addressProof.url}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="text-blue-600 hover:underline break-all"
+                                className="text-primary hover:underline break-all"
                               >
                                 View file
                               </a>
@@ -641,7 +541,7 @@ export default function AdminApplications() {
                         )}
                       </div>
                     ) : (
-                      <div className="text-sm text-slate-600">
+                      <div className="text-sm text-muted-foreground">
                         No documents uploaded.
                       </div>
                     )}
@@ -649,14 +549,14 @@ export default function AdminApplications() {
                     {/* Additional Documents */}
                     {app.documents?.additionalDocuments?.length > 0 && (
                       <div className="space-y-2">
-                        <div className="text-sm font-medium text-slate-700">
+                        <div className="text-sm font-medium text-foreground">
                           Additional Documents
                         </div>
                         <div className="grid gap-3 md:grid-cols-3">
                           {app.documents.additionalDocuments.map((doc, idx) => (
                             <div
                               key={idx}
-                              className="border border-slate-200 rounded-lg p-3 bg-slate-50"
+                              className="border border-border rounded-lg p-3 bg-muted/30"
                             >
                               {/\.(png|jpe?g|gif|webp)$/i.test(doc.url) ? (
                                 <a
@@ -678,7 +578,7 @@ export default function AdminApplications() {
                                   href={doc.url}
                                   target="_blank"
                                   rel="noopener noreferrer"
-                                  className="text-blue-600 hover:underline break-all text-sm"
+                                  className="text-primary hover:underline break-all text-sm"
                                 >
                                   {doc.name || doc.url}
                                 </a>
@@ -694,77 +594,62 @@ export default function AdminApplications() {
                   {(app.status === "rejected" || app.status === "revoked") &&
                     app.rejectionReason && (
                       <div className="space-y-3">
-                        <h4 className="font-semibold text-red-800 flex items-center gap-2">
+                        <h4 className="font-semibold text-destructive flex items-center gap-2">
                           <XCircle className="h-4 w-4" />
                           {app.status === "rejected"
                             ? "Rejection Reason"
                             : "Revocation Reason"}
                         </h4>
-                        <div className="bg-red-50 border border-red-200 rounded-xl p-4">
-                          <p className="text-red-800">{app.rejectionReason}</p>
+                        <div className="bg-destructive/5 border border-destructive/20 rounded-xl p-4">
+                          <p className="text-destructive">{app.rejectionReason}</p>
                         </div>
                       </div>
                     )}
 
                   {/* Action Buttons */}
-                  <div className="flex flex-col sm:flex-row gap-3 pt-4 border-t border-slate-200">
+                  <div className="flex flex-col sm:flex-row gap-3 pt-4 border-t border-border">
                     {app.status === "pending" && (
                       <>
-                        <FundraisingButton
-                          variant="success"
+                        <Button
                           size="lg"
+                          className="flex-1 bg-primary hover:bg-primary/90"
                           onClick={() => approveMutation.mutate(app._id)}
-                          loading={approveMutation.isPending}
-                          loadingText="Approving..."
-                          disabled={
-                            approveMutation.isPending ||
-                            rejectMutation.isPending
-                          }
-                          className="flex-1"
+                          disabled={approveMutation.isPending || rejectMutation.isPending}
                         >
-                          <CheckCircle className="h-5 w-5" />
-                          Approve Application
-                        </FundraisingButton>
+                          {approveMutation.isPending ? "Approving..." : <><CheckCircle className="h-4 w-4 mr-2" />Approve Application</>}
+                        </Button>
 
-                        <FundraisingButton
+                        <Button
                           variant="destructive"
                           size="lg"
-                          onClick={() => handleReject(app)}
-                          disabled={
-                            approveMutation.isPending ||
-                            rejectMutation.isPending
-                          }
                           className="flex-1"
+                          onClick={() => handleReject(app)}
+                          disabled={approveMutation.isPending || rejectMutation.isPending}
                         >
-                          <XCircle className="h-5 w-5" />
+                          <XCircle className="h-4 w-4 mr-2" />
                           Reject Application
-                        </FundraisingButton>
+                        </Button>
                       </>
                     )}
 
                     {app.status === "approved" && (
-                      <FundraisingButton
+                      <Button
                         variant="destructive"
                         size="lg"
+                        className="flex-1"
                         onClick={() => handleRevoke(app)}
                         disabled={revokeMutation.isPending}
-                        className="flex-1"
                       >
-                        <XCircle className="h-5 w-5" />
+                        <XCircle className="h-4 w-4 mr-2" />
                         Revoke Organizer
-                      </FundraisingButton>
+                      </Button>
                     )}
 
                     {app.status === "revoked" && (
-                      <FundraisingButton
-                        variant="ghost-trust"
-                        size="lg"
-                        disabled
-                        className="flex-1"
-                      >
-                        <XCircle className="h-5 w-5" />
+                      <Button variant="outline" size="lg" disabled className="flex-1">
+                        <XCircle className="h-4 w-4 mr-2" />
                         Already Revoked
-                      </FundraisingButton>
+                      </Button>
                     )}
                   </div>
                 </CardContent>
@@ -775,10 +660,10 @@ export default function AdminApplications() {
 
         {/* Reject Dialog */}
         <Dialog open={showRejectDialog} onOpenChange={setShowRejectDialog}>
-          <DialogContent className="sm:max-w-md surface-card border-slate-200">
+          <DialogContent className="sm:max-w-md">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
-                <XCircle className="h-5 w-5 text-red-600" />
+                <XCircle className="h-5 w-5 text-destructive" />
                 Reject Application
               </DialogTitle>
               <DialogDescription>
@@ -788,27 +673,22 @@ export default function AdminApplications() {
             </DialogHeader>
 
             <div className="space-y-4">
-              <div>
-                <Label
-                  htmlFor="rejection-reason"
-                  className="text-sm font-medium text-slate-700"
-                >
-                  Rejection Reason *
-                </Label>
+              <div className="space-y-1.5">
+                <Label htmlFor="rejection-reason">Rejection Reason *</Label>
                 <Textarea
                   id="rejection-reason"
                   rows={4}
                   value={rejectionReason}
                   onChange={(e) => setRejectionReason(e.target.value)}
                   placeholder="Please explain why this application is being rejected..."
-                  className="mt-2 rounded-xl border-slate-300 focus:border-red-500 resize-none"
+                  className="resize-none"
                 />
               </div>
             </div>
 
             <DialogFooter className="gap-2">
-              <FundraisingButton
-                variant="ghost-trust"
+              <Button
+                variant="outline"
                 onClick={() => {
                   setShowRejectDialog(false);
                   setRejectionReason("");
@@ -816,27 +696,25 @@ export default function AdminApplications() {
                 }}
               >
                 Cancel
-              </FundraisingButton>
-              <FundraisingButton
+              </Button>
+              <Button
                 variant="destructive"
                 onClick={confirmReject}
-                loading={rejectMutation.isPending}
-                loadingText="Rejecting..."
                 disabled={!rejectionReason.trim() || rejectMutation.isPending}
               >
-                <XCircle className="h-4 w-4" />
-                Reject Application
-              </FundraisingButton>
+                <XCircle className="h-4 w-4 mr-2" />
+                {rejectMutation.isPending ? "Rejecting..." : "Reject Application"}
+              </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
 
         {/* Revoke Dialog */}
         <Dialog open={showRevokeDialog} onOpenChange={setShowRevokeDialog}>
-          <DialogContent className="sm:max-w-md surface-card border-slate-200">
+          <DialogContent className="sm:max-w-md">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
-                <XCircle className="h-5 w-5 text-red-600" />
+                <XCircle className="h-5 w-5 text-destructive" />
                 Revoke Organizer Role
               </DialogTitle>
               <DialogDescription>
@@ -846,27 +724,22 @@ export default function AdminApplications() {
             </DialogHeader>
 
             <div className="space-y-4">
-              <div>
-                <Label
-                  htmlFor="revoke-reason"
-                  className="text-sm font-medium text-slate-700"
-                >
-                  Revocation Reason (optional)
-                </Label>
+              <div className="space-y-1.5">
+                <Label htmlFor="revoke-reason">Revocation Reason (optional)</Label>
                 <Textarea
                   id="revoke-reason"
                   rows={4}
                   value={revokeReason}
                   onChange={(e) => setRevokeReason(e.target.value)}
                   placeholder="Explain why you are revoking organizer status…"
-                  className="mt-2 rounded-xl border-slate-300 focus:border-red-500 resize-none"
+                  className="resize-none"
                 />
               </div>
             </div>
 
             <DialogFooter className="gap-2">
-              <FundraisingButton
-                variant="ghost-trust"
+              <Button
+                variant="outline"
                 onClick={() => {
                   setShowRevokeDialog(false);
                   setRevokeReason("");
@@ -874,17 +747,15 @@ export default function AdminApplications() {
                 }}
               >
                 Cancel
-              </FundraisingButton>
-              <FundraisingButton
+              </Button>
+              <Button
                 variant="destructive"
                 onClick={confirmRevoke}
-                loading={revokeMutation.isPending}
-                loadingText="Revoking..."
                 disabled={revokeMutation.isPending}
               >
-                <XCircle className="h-4 w-4" />
-                Revoke Organizer
-              </FundraisingButton>
+                <XCircle className="h-4 w-4 mr-2" />
+                {revokeMutation.isPending ? "Revoking..." : "Revoke Organizer"}
+              </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>

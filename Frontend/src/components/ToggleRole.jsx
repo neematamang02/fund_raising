@@ -2,15 +2,13 @@ import { useContext, useState } from "react";
 import { Switch } from "@/components/ui/switch";
 import { AuthContext } from "@/Context/AuthContext";
 import { toast } from "sonner";
-import { Loader2 } from "lucide-react";
+import { Loader2, Heart, UserRound } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { Heart, User } from "iconsax-reactjs";
 
 export default function ToggleRole({ mobile = false }) {
   const { user, switchRole } = useContext(AuthContext);
   const [loading, setLoading] = useState(false);
 
-  // If not logged in, don't show switch
   if (!user) return null;
 
   const isOrganizer = user.role === "organizer";
@@ -21,8 +19,10 @@ export default function ToggleRole({ mobile = false }) {
     const ok = await switchRole(desiredRole);
     if (!ok) {
       toast.error(
-        "You are not verified as organizer. If you want to be an organizer, apply for organizer."
+        "You are not verified as organizer. If you want to be an organizer, apply for organizer.",
       );
+    } else {
+      toast.success(`Switched to ${desiredRole} portal`);
     }
     setLoading(false);
   };
@@ -30,85 +30,66 @@ export default function ToggleRole({ mobile = false }) {
   return (
     <div
       className={cn(
-        "flex items-center gap-3 p-3 rounded-xl bg-white/10 backdrop-blur-sm border border-white/20",
-        mobile ? "mx-4 my-2" : ""
+        "flex items-center gap-2.5 rounded-lg border border-border bg-muted/60 px-3 py-2",
+        mobile ? "mx-1 my-1" : "",
       )}
     >
-      {/* Donor Label */}
+      {/* Donor label */}
       <div
         className={cn(
-          "flex items-center gap-2 transition-all duration-300",
-          !isOrganizer ? "text-white scale-105" : "text-white/60 scale-95"
+          "flex items-center gap-1.5 transition-all duration-200",
+          !isOrganizer
+            ? "text-chart-4 font-semibold"
+            : "text-muted-foreground/60",
         )}
       >
         <Heart
-          variant="Broken"
-          size={mobile ? 20 : 18}
           className={cn(
-            "transition-all duration-300",
-            !isOrganizer ? "text-amber-300 fill-amber-300/20" : "text-white/40"
+            "shrink-0 transition-all duration-200",
+            mobile ? "h-4.5 w-4.5" : "h-4 w-4",
+            !isOrganizer ? "fill-chart-4/20" : "",
           )}
         />
-        <span
-          className={cn(
-            "text-sm font-medium transition-all duration-300",
-            mobile ? "text-base" : ""
-          )}
-        >
-          Donor
-        </span>
+        <span className={cn("text-sm", mobile ? "text-base" : "")}>Donor</span>
       </div>
 
-      {/* Switch Component */}
+      {/* Switch */}
       <div className="relative">
         <Switch
           checked={isOrganizer}
           onCheckedChange={onToggle}
           disabled={loading}
           className={cn(
-            "cursor-pointer data-[state=checked]:bg-gradient-to-r data-[state=checked]:from-purple-500 data-[state=checked]:to-indigo-500",
-            "data-[state=unchecked]:bg-gradient-to-r data-[state=unchecked]:from-orange-500 data-[state=unchecked]:to-amber-500",
-            "border-0 shadow-lg transition-all duration-300",
-            "data-[state=checked]:shadow-purple-500/30 data-[state=unchecked]:shadow-amber-500/30",
-            mobile ? "scale-110" : ""
+            "cursor-pointer",
+            "data-[state=checked]:bg-primary data-[state=unchecked]:bg-chart-4",
+            "border-0 shadow-sm transition-all duration-200",
+            mobile ? "scale-110" : "",
           )}
         />
-
-        {/* Loading Spinner Overlay */}
         {loading && (
           <div className="absolute inset-0 flex items-center justify-center">
-            <Loader2 className="w-3 h-3 text-white animate-spin" />
+            <Loader2 className="h-3 w-3 animate-spin text-background" />
           </div>
         )}
       </div>
 
-      {/* Organizer Label */}
+      {/* Organizer label */}
       <div
         className={cn(
-          "flex items-center gap-2 transition-all duration-300",
-          isOrganizer ? "text-white scale-105" : "text-white/60 scale-95"
+          "flex items-center gap-1.5 transition-all duration-200",
+          isOrganizer ? "text-primary font-semibold" : "text-muted-foreground/60",
         )}
       >
-        <User
-          variant="Broken"
-          size={mobile ? 20 : 18}
+        <UserRound
           className={cn(
-            "transition-all duration-300",
-            isOrganizer ? "text-purple-300" : "text-white/40"
+            "shrink-0 transition-all duration-200",
+            mobile ? "h-4.5 w-4.5" : "h-4 w-4",
           )}
         />
-        <span
-          className={cn(
-            "text-sm font-medium transition-all duration-300",
-            mobile ? "text-base" : ""
-          )}
-        >
+        <span className={cn("text-sm", mobile ? "text-base" : "")}>
           Organizer
         </span>
       </div>
-
-      {/* Role Status Indicator */}
-      {/* Removed status indicator as per request */}
     </div>
   );
 }

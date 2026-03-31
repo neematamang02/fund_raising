@@ -79,17 +79,17 @@ export default function Home() {
     <div className="surface-page min-h-screen">
       <HeroSection />
 
-      <section className="border-b border-slate-200 bg-white py-14 sm:py-16">
+      <section className="border-b border-border bg-card py-14 sm:py-16">
         <div className="mx-auto w-full max-w-7xl px-4 sm:px-6">
           <div className="mx-auto mb-10 max-w-2xl text-center">
-            <Badge className="mb-4 bg-blue-100 px-4 py-1.5 text-blue-800">
+            <Badge className="mb-4 bg-primary/10 text-primary border-primary/20 px-4 py-1.5">
               <Sparkles className="h-4 w-4 mr-2" />
               Our Impact Together
             </Badge>
-            <h2 className="text-3xl font-bold text-slate-900 sm:text-4xl">
+            <h2 className="text-3xl font-bold text-foreground sm:text-4xl">
               Making a Real Difference
             </h2>
-            <p className="mt-3 text-slate-600">
+            <p className="mt-3 text-muted-foreground">
               Every donation contributes to transparent, measurable progress in
               communities that need support.
             </p>
@@ -99,13 +99,13 @@ export default function Home() {
             {impactStats.map((stat) => (
               <article
                 key={stat.label}
-                className="surface-card rounded-xl p-6 text-center transition-colors duration-200 hover:border-blue-200"
+                className="surface-card rounded-xl p-6 text-center transition-colors duration-200 hover:border-primary/30"
               >
                 <stat.icon className={`mx-auto mb-3 h-7 w-7 ${stat.tone}`} />
-                <p className="text-3xl font-bold text-slate-900">
+                <p className="text-3xl font-bold text-foreground">
                   {stat.value}
                 </p>
-                <p className="mt-1 font-medium text-slate-600">{stat.label}</p>
+                <p className="mt-1 font-medium text-muted-foreground">{stat.label}</p>
               </article>
             ))}
           </div>
@@ -115,14 +115,14 @@ export default function Home() {
       <section className="py-14 sm:py-16">
         <div className="mx-auto w-full max-w-7xl px-4 sm:px-6">
           <div className="mx-auto mb-10 max-w-2xl text-center">
-            <Badge className="mb-4 bg-amber-100 px-4 py-1.5 text-amber-800">
+            <Badge className="mb-4 bg-chart-4/10 text-chart-4 border-chart-4/20 px-4 py-1.5">
               <Heart className="h-4 w-4 mr-2" />
               Featured Campaigns
             </Badge>
-            <h2 className="text-3xl font-bold text-slate-900 sm:text-4xl">
+            <h2 className="text-3xl font-bold text-foreground sm:text-4xl">
               Urgent Causes Need Your Help
             </h2>
-            <p className="mt-3 text-slate-600">
+            <p className="mt-3 text-muted-foreground">
               Support campaigns with immediate needs and verified impact goals.
             </p>
           </div>
@@ -174,11 +174,11 @@ export default function Home() {
             </>
           ) : (
             <div className="surface-card rounded-xl py-12 text-center">
-              <Heart className="mx-auto mb-4 h-12 w-12 text-slate-300" />
-              <p className="text-lg font-semibold text-slate-700">
+              <Heart className="mx-auto mb-4 h-12 w-12 text-muted-foreground/30" />
+              <p className="text-lg font-semibold text-foreground">
                 No campaigns available right now.
               </p>
-              <p className="mt-1 text-slate-500">
+              <p className="mt-1 text-muted-foreground">
                 Please check back soon for new causes.
               </p>
             </div>
@@ -186,12 +186,12 @@ export default function Home() {
         </div>
       </section>
 
-      <section className="bg-secondary py-14 sm:py-16">
+      <section className="bg-foreground py-14 sm:py-16">
         <div className="mx-auto w-full max-w-5xl px-4 text-center sm:px-6">
-          <h2 className="text-3xl font-bold text-white sm:text-4xl">
+          <h2 className="text-3xl font-bold text-background sm:text-4xl">
             Ready to Make a Difference?
           </h2>
-          <p className="mx-auto mt-3 max-w-2xl text-blue-100">
+          <p className="mx-auto mt-3 max-w-2xl text-background/70">
             Join a growing community of donors creating meaningful outcomes
             through trusted campaigns.
           </p>
@@ -210,7 +210,7 @@ export default function Home() {
               asChild
               size="lg"
               variant="outline"
-              className="border-white bg-transparent text-white hover:bg-white hover:text-secondary"
+              className="border-background/30 bg-transparent text-background hover:bg-background hover:text-foreground"
             >
               <Link to={ROUTES.CREATE_CAMPAIGN}>
                 <Target className="h-5 w-5" />

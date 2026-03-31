@@ -1,44 +1,46 @@
 import { useState, useContext } from "react";
 import {
-  Home2,
-  InfoCircle,
+  Home,
+  Info,
   Heart,
-  MoneyRecive,
-  UserEdit,
-  Add,
-  Profile,
-  Logout as LogoutIcon,
-  Login,
-  UserAdd,
-  CloseSquare,
-  Grid2,
-  Setting2,
-} from "iconsax-reactjs";
+  Bell,
+  UserCog,
+  Plus,
+  UserCircle,
+  LogOut,
+  LogIn,
+  UserPlus,
+  X,
+  LayoutGrid,
+  Settings,
+  Wallet,
+  ClipboardList,
+  BadgeDollarSign,
+  ChevronDown,
+} from "lucide-react";
 import { AuthContext } from "@/Context/AuthContext";
 import ROUTES from "@/routes/routes";
-import { Link, useNavigate } from "react-router-dom";
-import { FundraisingButton } from "./ui/fundraising-button";
-import { Badge } from "./ui/badge";
+import { Link, useNavigate, useLocation } from "react-router-dom";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import ToggleRole from "./ToggleRole";
 
-// Shadcn UI Dialog
 import {
   Dialog,
-  DialogTrigger,
   DialogContent,
   DialogHeader,
   DialogTitle,
   DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
 
 export default function NavigationBar() {
   const [open, setOpen] = useState(false);
   const [logoutDialogOpen, setLogoutDialogOpen] = useState(false);
   const { user, logout } = useContext(AuthContext);
   const router = useNavigate();
+  const location = useLocation();
 
   const confirmLogout = () => {
     logout();
@@ -59,334 +61,244 @@ export default function NavigationBar() {
     return ROUTES.HOME;
   };
 
-  // Dynamically build navigation links
+  const isActive = (path) => location.pathname === path;
+
   const shouldShowPublicLinks = !user || user.role === "donor";
   const navLinks = [
     ...(shouldShowPublicLinks
       ? [
-          { name: "Home", path: ROUTES.HOME, icon: Home2 },
-          { name: "About Us", path: ROUTES.ABOUT, icon: InfoCircle },
+          { name: "Home", path: ROUTES.HOME, icon: Home },
+          { name: "About", path: ROUTES.ABOUT, icon: Info },
           { name: "Donate", path: ROUTES.DONATE, icon: Heart },
         ]
       : []),
     ...(user
-      ? [{ name: "Notifications", path: ROUTES.NOTIFICATIONS, icon: Setting2 }]
+      ? [{ name: "Notifications", path: ROUTES.NOTIFICATIONS, icon: Bell }]
       : []),
     ...(user?.role === "admin"
       ? [
-          {
-            name: "Admin Home",
-            path: ROUTES.ADMIN_DASHBOARD,
-            icon: Grid2,
-          },
-          {
-            name: "Applications",
-            path: ROUTES.ADMIN_APPLICATIONS,
-            icon: Setting2,
-          },
-          {
-            name: "Organizer Profiles",
-            path: ROUTES.ADMIN_ORGANIZER_PROFILES,
-            icon: UserEdit,
-          },
-          {
-            name: "Campaigns",
-            path: ROUTES.ADMIN_CAMPAIGNS,
-            icon: Heart,
-          },
-          {
-            name: "Users",
-            path: ROUTES.ADMIN_USERS,
-            icon: Profile,
-          },
-          {
-            name: "Withdrawals",
-            path: ROUTES.ADMIN_WITHDRAWALS,
-            icon: MoneyRecive,
-          },
-          {
-            name: "Donations",
-            path: ROUTES.ADMIN_DONATIONS,
-            icon: MoneyRecive,
-          },
-          {
-            name: "Activity Logs",
-            path: ROUTES.ADMIN_ACTIVITIES,
-            icon: Setting2,
-          },
+          { name: "Admin Home", path: ROUTES.ADMIN_DASHBOARD, icon: LayoutGrid },
+          { name: "Applications", path: ROUTES.ADMIN_APPLICATIONS, icon: ClipboardList },
+          { name: "Organizer Profiles", path: ROUTES.ADMIN_ORGANIZER_PROFILES, icon: UserCog },
+          { name: "Campaigns", path: ROUTES.ADMIN_CAMPAIGNS, icon: Heart },
+          { name: "Users", path: ROUTES.ADMIN_USERS, icon: UserCircle },
+          { name: "Withdrawals", path: ROUTES.ADMIN_WITHDRAWALS, icon: Wallet },
+          { name: "Donations", path: ROUTES.ADMIN_DONATIONS, icon: BadgeDollarSign },
+          { name: "Activity Logs", path: ROUTES.ADMIN_ACTIVITIES, icon: Settings },
         ]
       : user?.role === "organizer"
         ? [
-            {
-              name: "Organizer Home",
-              path: ROUTES.ORGANIZER_DASHBOARD,
-              icon: Grid2,
-            },
+            { name: "Organizer Home", path: ROUTES.ORGANIZER_DASHBOARD, icon: LayoutGrid },
             { name: "My Campaigns", path: ROUTES.MY_CAMPAIGNS, icon: Heart },
-            {
-              name: "Organizer Profile",
-              path: ROUTES.ORGANIZER_PROFILE,
-              icon: UserEdit,
-            },
+            { name: "Organizer Profile", path: ROUTES.ORGANIZER_PROFILE, icon: UserCog },
           ]
         : user
           ? [
-              {
-                name: "My Donations",
-                path: ROUTES.MY_DONATIONS,
-                icon: MoneyRecive,
-              },
-              {
-                name: "Apply Organizer",
-                path: ROUTES.APPLY_ORGANIZER,
-                icon: UserEdit,
-              },
-              {
-                name: "Application Status",
-                path: ROUTES.APPLICATION_STATUS,
-                icon: Setting2,
-              },
+              { name: "My Donations", path: ROUTES.MY_DONATIONS, icon: BadgeDollarSign },
+              { name: "Apply Organizer", path: ROUTES.APPLY_ORGANIZER, icon: UserCog },
+              { name: "Application Status", path: ROUTES.APPLICATION_STATUS, icon: ClipboardList },
             ]
           : []),
   ];
 
   return (
     <>
-      <nav className="bg-gradient-to-r from-indigo-900 via-blue-800 to-purple-900 text-white shadow-xl sticky top-0 w-full z-50 backdrop-blur-sm">
-        <div className="w-[100vw] px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between h-20 w-full items-center">
+      <nav className="sticky top-0 z-50 w-full border-b border-border bg-background/95 backdrop-blur-sm shadow-sm">
+        <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="flex h-16 items-center justify-between">
+
             {/* Logo */}
             <Link
               to={getRoleHomePath()}
-              className="text-2xl font-bold text-white hover:text-amber-300 transition-colors duration-300 flex items-center gap-2"
+              className="flex items-center gap-2 shrink-0"
             >
-              <Heart size={24} variant="Broken" className="text-amber-300" />
-              HopeOn
+              <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-primary text-primary-foreground text-sm font-black ring-2 ring-primary/20">
+                H
+              </span>
+              <span className="text-lg font-bold text-foreground">HopeOn</span>
             </Link>
 
-            {/* Desktop Menu */}
-            <div className="hidden lg:flex lg:items-center lg:space-x-1">
+            {/* Desktop links */}
+            <div className="hidden lg:flex lg:items-center lg:gap-1">
               {navLinks.map(({ name, path }) => (
                 <Link
                   key={path}
                   to={path}
-                  className="flex items-center gap-2 px-4 py-2 rounded-xl hover:bg-white/15 transition-all duration-300 hover:scale-105 group text-sm font-medium"
+                  className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    isActive(path)
+                      ? "bg-primary/10 text-primary"
+                      : "text-muted-foreground hover:text-foreground hover:bg-accent"
+                  }`}
                 >
-                  <span className="text-white/90 group-hover:text-white">
-                    {name}
-                  </span>
+                  {name}
                 </Link>
               ))}
 
               {user?.role === "organizer" && (
                 <Link to={ROUTES.CREATE_CAMPAIGN}>
-                  <FundraisingButton
-                    variant="warm"
-                    size="default"
-                    className="ml-2"
-                  >
-                    <Add size={18} variant="Broken" />
+                  <Button size="sm" className="ml-1 bg-primary hover:bg-primary/90">
+                    <Plus className="h-4 w-4 mr-1.5" />
                     Create Campaign
-                  </FundraisingButton>
+                  </Button>
                 </Link>
               )}
+            </div>
 
-              <div className="flex items-center ml-4">
-                {user?.role === "admin" ? (
-                  <Badge className="bg-gradient-to-r from-red-500 to-pink-500 text-white font-medium px-4 py-1 shadow-md shadow-red-500/20">
-                    Admin
-                  </Badge>
-                ) : (
-                  <ToggleRole />
-                )}
-              </div>
+            {/* Right section */}
+            <div className="hidden lg:flex lg:items-center lg:gap-3">
+              {user?.role === "admin" ? (
+                <Badge className="bg-destructive/10 text-destructive border-destructive/20">
+                  Admin
+                </Badge>
+              ) : (
+                <ToggleRole />
+              )}
 
-              {/* Auth Buttons */}
-              <div className="flex items-center gap-3 ml-6 pl-6 border-l border-white/20">
+              <div className="flex items-center gap-2 border-l border-border pl-3">
                 {user ? (
                   <>
-                    <FundraisingButton
-                      variant="trust"
-                      size="default"
+                    <Button
+                      variant="ghost"
+                      size="sm"
                       onClick={() => handleNavigation(getRoleHomePath())}
+                      className="gap-2"
                     >
-                      <Profile size={18} variant="Broken" />
+                      <UserCircle className="h-4 w-4" />
                       {user.name}
-                    </FundraisingButton>
-
-                    <Dialog
-                      open={logoutDialogOpen}
-                      onOpenChange={setLogoutDialogOpen}
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setLogoutDialogOpen(true)}
+                      className="text-muted-foreground hover:text-destructive hover:bg-destructive/10"
                     >
-                      <DialogTrigger asChild>
-                        <FundraisingButton variant="destructive" size="default">
-                          <LogoutIcon size={18} variant="Broken" />
-                          Logout
-                        </FundraisingButton>
-                      </DialogTrigger>
-                      <DialogContent>
-                        <DialogHeader>
-                          <DialogTitle>Confirm Logout</DialogTitle>
-                          <DialogDescription>
-                            Are you sure you want to log out?
-                          </DialogDescription>
-                        </DialogHeader>
-                        <DialogFooter className="space-x-2">
-                          <Button
-                            variant="outline"
-                            onClick={() => setLogoutDialogOpen(false)}
-                          >
-                            Cancel
-                          </Button>
-                          <Button variant="destructive" onClick={confirmLogout}>
-                            Yes, log out
-                          </Button>
-                        </DialogFooter>
-                      </DialogContent>
-                    </Dialog>
+                      <LogOut className="h-4 w-4 mr-1.5" />
+                      Logout
+                    </Button>
                   </>
                 ) : (
                   <>
                     <Link to={ROUTES.LOGIN}>
-                      <FundraisingButton variant="trust" size="default">
-                        <Login size={18} variant="Broken" />
+                      <Button variant="ghost" size="sm">
+                        <LogIn className="h-4 w-4 mr-1.5" />
                         Login
-                      </FundraisingButton>
+                      </Button>
                     </Link>
                     <Link to={ROUTES.REGISTER}>
-                      <FundraisingButton variant="donate" size="default">
-                        <UserAdd size={18} variant="Broken" />
+                      <Button size="sm" className="bg-primary hover:bg-primary/90">
+                        <UserPlus className="h-4 w-4 mr-1.5" />
                         Register
-                      </FundraisingButton>
+                      </Button>
                     </Link>
                   </>
                 )}
               </div>
             </div>
 
-            {/* Mobile Menu Button */}
-            <div className="flex items-center lg:hidden">
-              <button
-                onClick={() => setOpen(!open)}
-                className="inline-flex items-center justify-center p-2 rounded-xl hover:bg-white/15 transition-all duration-300 hover:scale-105"
-              >
-                {open ? (
-                  <CloseSquare
-                    size={24}
-                    variant="Broken"
-                    className="text-amber-300"
-                  />
-                ) : (
-                  <Grid2
-                    size={24}
-                    variant="Broken"
-                    className="text-amber-300"
-                  />
-                )}
-              </button>
-            </div>
+            {/* Mobile menu button */}
+            <button
+              onClick={() => setOpen(!open)}
+              className="lg:hidden p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+              aria-label="Toggle menu"
+            >
+              {open ? (
+                <X className="h-5 w-5" />
+              ) : (
+                <ChevronDown className="h-5 w-5" />
+              )}
+            </button>
           </div>
         </div>
 
-        {/* Mobile Menu */}
+        {/* Mobile menu */}
         {open && (
-          <div className="lg:hidden bg-gradient-to-b from-indigo-900/95 to-purple-900/95 backdrop-blur-md border-t border-white/10 animate-fadeIn">
-            <div className="px-4 py-4 space-y-2">
-              {navLinks.map(({ name, path }) => (
+          <div className="lg:hidden border-t border-border bg-background">
+            <div className="mx-auto max-w-7xl px-4 py-3 space-y-1">
+              {navLinks.map(({ name, path, icon: Icon }) => (
                 <Link
                   key={path}
                   to={path}
                   onClick={() => setOpen(false)}
-                  className="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-white/15 transition-all duration-300 group text-sm font-medium"
+                  className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+                    isActive(path)
+                      ? "bg-primary/10 text-primary"
+                      : "text-muted-foreground hover:text-foreground hover:bg-accent"
+                  }`}
                 >
-                  <span className="text-white/90 group-hover:text-white">
-                    {name}
-                  </span>
+                  <Icon className="h-4 w-4 shrink-0" />
+                  {name}
                 </Link>
               ))}
 
               {user?.role === "organizer" && (
-                <div className="px-4 py-2">
-                  <FundraisingButton
-                    variant="warm"
-                    size="default"
-                    fullWidth
-                    onClick={() => {
-                      handleNavigation(ROUTES.CREATE_CAMPAIGN);
-                      setOpen(false);
-                    }}
-                  >
-                    <Add size={20} variant="Broken" />
-                    Create Campaign
-                  </FundraisingButton>
-                </div>
+                <button
+                  onClick={() => {
+                    handleNavigation(ROUTES.CREATE_CAMPAIGN);
+                    setOpen(false);
+                  }}
+                  className="flex w-full items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-primary bg-primary/8 hover:bg-primary/15 transition-colors"
+                >
+                  <Plus className="h-4 w-4 shrink-0" />
+                  Create Campaign
+                </button>
               )}
 
-              <div className="py-2">
+              {/* Role switcher */}
+              <div className="pt-1 pb-1">
                 {user?.role === "admin" ? (
-                  <div className="px-4">
-                    <Badge className="bg-gradient-to-r from-red-500 to-pink-500 text-white font-medium px-4 py-1 shadow-md">
+                  <div className="px-3 py-2">
+                    <Badge className="bg-destructive/10 text-destructive border-destructive/20">
                       Admin
                     </Badge>
                   </div>
                 ) : (
-                  <ToggleRole mobile />
+                  <div className="px-3 py-2">
+                    <ToggleRole />
+                  </div>
                 )}
               </div>
 
-              <div className="border-t border-white/10 pt-4 mt-4 px-4 space-y-2">
+              <div className="border-t border-border pt-3 mt-2 space-y-1">
                 {user ? (
                   <>
-                    <FundraisingButton
-                      variant="trust"
-                      size="default"
-                      fullWidth
+                    <button
                       onClick={() => {
                         handleNavigation(getRoleHomePath());
                         setOpen(false);
                       }}
+                      className="flex w-full items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-foreground hover:bg-accent transition-colors"
                     >
-                      <Profile size={20} variant="Broken" />
+                      <UserCircle className="h-4 w-4 shrink-0" />
                       {user.name}
-                    </FundraisingButton>
-
-                    <Dialog
-                      open={logoutDialogOpen}
-                      onOpenChange={setLogoutDialogOpen}
+                    </button>
+                    <button
+                      onClick={() => {
+                        setOpen(false);
+                        setLogoutDialogOpen(true);
+                      }}
+                      className="flex w-full items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
                     >
-                      <DialogTrigger asChild>
-                        <FundraisingButton
-                          variant="destructive"
-                          size="default"
-                          fullWidth
-                        >
-                          <LogoutIcon size={20} variant="Broken" />
-                          Logout
-                        </FundraisingButton>
-                      </DialogTrigger>
-                    </Dialog>
+                      <LogOut className="h-4 w-4 shrink-0" />
+                      Logout
+                    </button>
                   </>
                 ) : (
                   <>
-                    <Link to={ROUTES.LOGIN} onClick={() => setOpen(false)}>
-                      <FundraisingButton
-                        variant="trust"
-                        size="default"
-                        fullWidth
-                      >
-                        <Login size={20} variant="Broken" />
-                        Login
-                      </FundraisingButton>
+                    <Link
+                      to={ROUTES.LOGIN}
+                      onClick={() => setOpen(false)}
+                      className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+                    >
+                      <LogIn className="h-4 w-4 shrink-0" />
+                      Login
                     </Link>
-                    <Link to={ROUTES.REGISTER} onClick={() => setOpen(false)}>
-                      <FundraisingButton
-                        variant="donate"
-                        size="default"
-                        fullWidth
-                      >
-                        <UserAdd size={20} variant="Broken" />
-                        Register
-                      </FundraisingButton>
+                    <Link
+                      to={ROUTES.REGISTER}
+                      onClick={() => setOpen(false)}
+                      className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium bg-primary/10 text-primary hover:bg-primary/15 transition-colors"
+                    >
+                      <UserPlus className="h-4 w-4 shrink-0" />
+                      Register
                     </Link>
                   </>
                 )}
@@ -396,7 +308,7 @@ export default function NavigationBar() {
         )}
       </nav>
 
-      {/* Shared Logout Dialog (desktop + mobile) */}
+      {/* Logout confirmation dialog */}
       <Dialog open={logoutDialogOpen} onOpenChange={setLogoutDialogOpen}>
         <DialogContent>
           <DialogHeader>
@@ -405,11 +317,8 @@ export default function NavigationBar() {
               Are you sure you want to log out?
             </DialogDescription>
           </DialogHeader>
-          <DialogFooter className="space-x-2">
-            <Button
-              variant="outline"
-              onClick={() => setLogoutDialogOpen(false)}
-            >
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setLogoutDialogOpen(false)}>
               Cancel
             </Button>
             <Button variant="destructive" onClick={confirmLogout}>
