@@ -47,7 +47,7 @@ export default function HeroSection() {
               <article
                 key={metric.label}
                 className="surface-card rounded-xl p-4 text-center transition-colors duration-200 hover:border-primary/30">
-              >
+              
                 <metric.icon className="mx-auto mb-2 h-5 w-5 text-secondary" />
                 <p className="text-xl font-bold text-foreground">
                   {metric.value}
