@@ -103,23 +103,23 @@ export default function LoginPage() {
 
   return (
     <div className="surface-page min-h-screen lg:grid lg:grid-cols-2">
-      <aside className="relative hidden overflow-hidden bg-secondary p-10 text-white lg:flex lg:flex-col lg:justify-between xl:p-14">
-        <div className="pointer-events-none absolute -left-14 top-10 h-52 w-52 rounded-full bg-blue-300/20 blur-3xl" />
-        <div className="pointer-events-none absolute -right-20 bottom-8 h-56 w-56 rounded-full bg-primary/30 blur-3xl" />
+      <aside className="relative hidden overflow-hidden bg-foreground p-10 lg:flex lg:flex-col lg:justify-between xl:p-14">
+        <div className="pointer-events-none absolute -left-14 top-10 h-52 w-52 rounded-full bg-primary/20 blur-3xl" />
+        <div className="pointer-events-none absolute -right-20 bottom-8 h-56 w-56 rounded-full bg-primary/15 blur-3xl" />
         <img
           src="https://images.unsplash.com/photo-1488521787991-ed7bbaae773c?q=80&w=2940&auto=format&fit=crop&ixlib=rb-4.1.0"
           alt="People helping each other"
-          className="absolute inset-0 h-full w-full object-cover opacity-30"
+          className="absolute inset-0 h-full w-full object-cover opacity-25"
         />
 
         <div className="relative z-10">
-          <Badge className="mb-6 border-blue-100/40 bg-blue-100/20 text-white">
+          <Badge className="mb-6 border-background/30 bg-background/15 text-background">
             Welcome Back
           </Badge>
-          <h1 className="max-w-lg text-4xl font-bold leading-tight xl:text-5xl text-white">
+          <h1 className="max-w-lg text-4xl font-bold leading-tight text-background xl:text-5xl">
             Continue Supporting Campaigns That Matter
           </h1>
-          <p className="mt-4 max-w-md text-base leading-7 text-blue-100">
+          <p className="mt-4 max-w-md text-base leading-7 text-background/70">
             Access your dashboard, monitor donations, and stay connected with
             causes you care about.
           </p>
@@ -133,10 +133,10 @@ export default function LoginPage() {
           ].map((item) => (
             <div
               key={item.text}
-              className="flex items-center gap-3 rounded-lg border border-blue-100/20 bg-blue-100/10 p-3"
+              className="flex items-center gap-3 rounded-lg border border-background/15 bg-background/10 p-3"
             >
               <item.icon className="h-5 w-5 text-primary" />
-              <span className="text-sm text-blue-50">{item.text}</span>
+              <span className="text-sm font-medium text-background/85">{item.text}</span>
             </div>
           ))}
         </div>
@@ -146,19 +146,19 @@ export default function LoginPage() {
         <div className="w-full max-w-md">
           <div className="mb-7 text-center lg:hidden">
             <div className="mb-3 inline-flex items-center gap-2">
-              <Heart className="h-4 w-4 mr-2" />
-              <span className="text-2xl font-bold text-secondary">HopeOn</span>
+              <Heart className="h-5 w-5 text-primary" />
+              <span className="text-2xl font-bold text-foreground">HopeOn</span>
             </div>
-            <h2 className="text-2xl font-bold text-slate-900">Sign In</h2>
-            <p className="text-slate-600">Welcome back to your dashboard.</p>
+            <h2 className="text-2xl font-bold text-foreground">Sign In</h2>
+            <p className="text-muted-foreground">Welcome back to your dashboard.</p>
           </div>
 
-          <Card className="surface-card border-slate-200 shadow-[0_12px_30px_rgba(15,23,42,0.08)]">
+          <Card className="surface-card shadow-[0_12px_30px_rgba(15,23,42,0.06)]">
             <CardHeader className="pb-4 text-center">
-              <CardTitle className="hidden text-2xl font-bold text-slate-900 lg:block">
+              <CardTitle className="hidden text-2xl font-bold text-foreground lg:block">
                 Sign In
               </CardTitle>
-              <p className="hidden text-slate-600 lg:block">
+              <p className="hidden text-muted-foreground lg:block">
                 Access your fundraising dashboard
               </p>
             </CardHeader>
@@ -174,16 +174,16 @@ export default function LoginPage() {
                     name="email"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="text-sm font-medium text-slate-700">
+                        <FormLabel className="text-sm font-medium text-foreground">
                           Email Address
                         </FormLabel>
                         <FormControl>
                           <div className="relative">
-                            <Mail className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" />
+                            <Mail className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
                             <Input
                               type="email"
                               placeholder="you@example.com"
-                              className="h-11 rounded-lg border-slate-300 pl-10"
+                              className="h-11 pl-10"
                               {...field}
                             />
                           </div>
@@ -198,22 +198,22 @@ export default function LoginPage() {
                     name="password"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="text-sm font-medium text-slate-700">
+                        <FormLabel className="text-sm font-medium text-foreground">
                           Password
                         </FormLabel>
                         <FormControl>
                           <div className="relative">
-                            <Lock className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" />
+                            <Lock className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
                             <Input
                               type={showPassword ? "text" : "password"}
                               placeholder="••••••••"
-                              className="h-11 rounded-lg border-slate-300 pl-10 pr-12"
+                              className="h-11 pl-10 pr-12"
                               {...field}
                             />
                             <button
                               type="button"
                               onClick={() => setShowPassword(!showPassword)}
-                              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 transition-colors hover:text-slate-700"
+                              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground transition-colors hover:text-foreground"
                               aria-label={
                                 showPassword ? "Hide password" : "Show password"
                               }
@@ -234,7 +234,7 @@ export default function LoginPage() {
                   <div className="text-right">
                     <Link
                       to={ROUTES.FORGOT_PASSWORD}
-                      className="text-sm font-medium text-secondary transition-colors hover:text-secondary/80"
+                      className="text-sm font-medium text-primary transition-colors hover:text-primary/80"
                     >
                       Forgot your password?
                     </Link>
@@ -251,11 +251,11 @@ export default function LoginPage() {
                   </Button>
 
                   <div className="text-center">
-                    <p className="text-slate-600">
+                    <p className="text-muted-foreground">
                       {"Don't have an account? "}
                       <Link
                         to={ROUTES.REGISTER}
-                        className="font-medium text-secondary transition-colors hover:text-secondary/80"
+                        className="font-medium text-primary transition-colors hover:text-primary/80"
                       >
                         Create one now
                       </Link>

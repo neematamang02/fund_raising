@@ -111,23 +111,23 @@ export default function RegisterPage() {
 
   return (
     <div className="surface-page min-h-screen lg:grid lg:grid-cols-2">
-      <aside className="relative hidden overflow-hidden bg-secondary p-10 text-white lg:flex lg:flex-col lg:justify-between xl:p-14">
-        <div className="pointer-events-none absolute -left-14 top-10 h-52 w-52 rounded-full bg-blue-300/20 blur-3xl" />
-        <div className="pointer-events-none absolute -right-20 bottom-8 h-56 w-56 rounded-full bg-primary/30 blur-3xl" />
+      <aside className="relative hidden overflow-hidden bg-foreground p-10 lg:flex lg:flex-col lg:justify-between xl:p-14">
+        <div className="pointer-events-none absolute -left-14 top-10 h-52 w-52 rounded-full bg-primary/20 blur-3xl" />
+        <div className="pointer-events-none absolute -right-20 bottom-8 h-56 w-56 rounded-full bg-primary/15 blur-3xl" />
         <img
           src="https://plus.unsplash.com/premium_photo-1683140538884-07fb31428ca6?q=80&w=2940&auto=format&fit=crop&ixlib=rb-4.1.0"
           alt="Community coming together"
-          className="absolute inset-0 h-full w-full object-cover opacity-30"
+          className="absolute inset-0 h-full w-full object-cover opacity-25"
         />
 
         <div className="relative z-10">
-          <Badge className="mb-6 border-blue-100/40 bg-blue-100/20 text-white">
+          <Badge className="mb-6 border-background/30 bg-background/15 text-background">
             Join Our Community
           </Badge>
-          <h1 className="max-w-lg text-4xl font-bold leading-tight xl:text-5xl">
+          <h1 className="max-w-lg text-4xl font-bold leading-tight text-background xl:text-5xl">
             Create Your HopeOn Account in Minutes
           </h1>
-          <p className="mt-4 max-w-md text-base leading-7 text-blue-100">
+          <p className="mt-4 max-w-md text-base leading-7 text-background/70">
             Join donors and organizers building trusted community impact through
             transparent fundraising.
           </p>
@@ -141,10 +141,10 @@ export default function RegisterPage() {
           ].map((item) => (
             <div
               key={item.text}
-              className="flex items-center gap-3 rounded-lg border border-blue-100/20 bg-blue-100/10 p-3"
+              className="flex items-center gap-3 rounded-lg border border-background/15 bg-background/10 p-3"
             >
               <item.icon className="h-5 w-5 text-primary" />
-              <span className="text-sm text-blue-50">{item.text}</span>
+              <span className="text-sm font-medium text-background/85">{item.text}</span>
             </div>
           ))}
         </div>
@@ -155,20 +155,20 @@ export default function RegisterPage() {
           <div className="mb-7 text-center lg:hidden">
             <div className="mb-3 inline-flex items-center gap-2">
               <Heart className="h-5 w-5 text-primary" />
-              <span className="text-2xl font-bold text-secondary">HopeOn</span>
+              <span className="text-2xl font-bold text-foreground">HopeOn</span>
             </div>
-            <h2 className="text-2xl font-bold text-slate-900">
+            <h2 className="text-2xl font-bold text-foreground">
               Create Account
             </h2>
-            <p className="text-slate-600">Start making a real difference.</p>
+            <p className="text-muted-foreground">Start making a real difference.</p>
           </div>
 
-          <Card className="surface-card border-slate-200 shadow-[0_12px_30px_rgba(15,23,42,0.08)]">
+          <Card className="surface-card shadow-[0_12px_30px_rgba(15,23,42,0.06)]">
             <CardHeader className="pb-4 text-center">
-              <CardTitle className="hidden text-2xl font-bold text-slate-900 lg:block">
+              <CardTitle className="hidden text-2xl font-bold text-foreground lg:block">
                 Create Account
               </CardTitle>
-              <p className="hidden text-slate-600 lg:block">
+              <p className="hidden text-muted-foreground lg:block">
                 Join our community of changemakers
               </p>
             </CardHeader>
@@ -184,15 +184,15 @@ export default function RegisterPage() {
                     name="name"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="text-sm font-medium text-slate-700">
+                        <FormLabel className="text-sm font-medium text-foreground">
                           Full Name
                         </FormLabel>
                         <FormControl>
                           <div className="relative">
-                            <User className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" />
+                            <User className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
                             <Input
                               placeholder="Enter your full name"
-                              className="h-11 rounded-lg border-slate-300 pl-10"
+                              className="h-11 pl-10"
                               {...field}
                             />
                           </div>
@@ -207,16 +207,16 @@ export default function RegisterPage() {
                     name="email"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="text-sm font-medium text-slate-700">
+                        <FormLabel className="text-sm font-medium text-foreground">
                           Email Address
                         </FormLabel>
                         <FormControl>
                           <div className="relative">
-                            <Mail className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" />
+                            <Mail className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
                             <Input
                               type="email"
                               placeholder="you@example.com"
-                              className="h-11 rounded-lg border-slate-300 pl-10"
+                              className="h-11 pl-10"
                               {...field}
                             />
                           </div>
@@ -231,22 +231,22 @@ export default function RegisterPage() {
                     name="password"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="text-sm font-medium text-slate-700">
+                        <FormLabel className="text-sm font-medium text-foreground">
                           Password
                         </FormLabel>
                         <FormControl>
                           <div className="relative">
-                            <Lock className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" />
+                            <Lock className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
                             <Input
                               type={showPassword ? "text" : "password"}
                               placeholder="••••••••"
-                              className="h-11 rounded-lg border-slate-300 pl-10 pr-12"
+                              className="h-11 pl-10 pr-12"
                               {...field}
                             />
                             <button
                               type="button"
                               onClick={() => setShowPassword(!showPassword)}
-                              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 transition-colors hover:text-slate-700"
+                              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground transition-colors hover:text-foreground"
                               aria-label={
                                 showPassword ? "Hide password" : "Show password"
                               }
@@ -269,22 +269,22 @@ export default function RegisterPage() {
                     name="confirmPassword"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="text-sm font-medium text-slate-700">
+                        <FormLabel className="text-sm font-medium text-foreground">
                           Confirm Password
                         </FormLabel>
                         <FormControl>
                           <div className="relative">
-                            <Lock className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" />
+                            <Lock className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
                             <Input
                               type={showConfirm ? "text" : "password"}
                               placeholder="••••••••"
-                              className="h-11 rounded-lg border-slate-300 pl-10 pr-12"
+                              className="h-11 pl-10 pr-12"
                               {...field}
                             />
                             <button
                               type="button"
                               onClick={() => setShowConfirm(!showConfirm)}
-                              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 transition-colors hover:text-slate-700"
+                              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground transition-colors hover:text-foreground"
                               aria-label={
                                 showConfirm ? "Hide password" : "Show password"
                               }
@@ -302,8 +302,8 @@ export default function RegisterPage() {
                     )}
                   />
 
-                  <div className="rounded-lg border border-blue-100 bg-blue-50 p-3">
-                    <p className="text-sm text-blue-800">
+                  <div className="rounded-lg border border-primary/20 bg-primary/8 p-3">
+                    <p className="text-sm text-primary">
                       By creating an account, you agree to our platform terms
                       and privacy standards.
                     </p>
@@ -322,11 +322,11 @@ export default function RegisterPage() {
                   </Button>
 
                   <div className="text-center">
-                    <p className="text-slate-600">
+                    <p className="text-muted-foreground">
                       Already have an account?{" "}
                       <Link
                         to={ROUTES.LOGIN}
-                        className="font-medium text-secondary transition-colors hover:text-secondary/80"
+                        className="font-medium text-primary transition-colors hover:text-primary/80"
                       >
                         Sign in now
                       </Link>
@@ -337,12 +337,12 @@ export default function RegisterPage() {
             </CardContent>
           </Card>
 
-          <div className="mt-5 text-center">
-            <div className="inline-flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1 text-sm text-slate-600">
+          {/* <div className="mt-5 text-center">
+            <div className="inline-flex items-center gap-2 rounded-full bg-muted px-3 py-1 text-sm text-muted-foreground">
               <ShieldCheck className="h-4 w-4 text-primary" />
               <span>Protected with enterprise-grade security</span>
             </div>
-          </div>
+          </div> */}
         </div>
       </main>
     </div>

@@ -609,7 +609,7 @@ export default function CreateCampaign() {
             </Card>
 
             {/* Platform Stats */}
-            <Card className="border bg-chart-2/5 border-chart-2/15">
+            {/* <Card className="border bg-chart-2/5 border-chart-2/15">
               <CardContent className="p-5">
                 <div className="flex items-center gap-2 mb-3">
                   <div className="w-8 h-8 bg-chart-2/10 rounded-full flex items-center justify-center">
@@ -628,7 +628,7 @@ export default function CreateCampaign() {
                   </div>
                 </div>
               </CardContent>
-            </Card>
+            </Card> */}
           </div>
         </div>
       </div>

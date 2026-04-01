@@ -97,7 +97,7 @@ export default function HeroSection() {
             className="w-full rounded-2xl border border-border object-cover shadow-[0_18px_40px_rgba(17,24,39,0.14)]"
           />
 
-          <div className="absolute -left-3 top-4 rounded-xl border border-border bg-card px-3 py-2 shadow-md sm:-left-6 sm:top-6 sm:px-4 sm:py-3">
+          {/* <div className="absolute -left-3 top-4 rounded-xl border border-border bg-card px-3 py-2 shadow-md sm:-left-6 sm:top-6 sm:px-4 sm:py-3">
             <p className="text-xs font-medium text-muted-foreground">Raised today</p>
             <p className="text-lg font-bold text-primary">$1,250</p>
           </div>
@@ -105,7 +105,7 @@ export default function HeroSection() {
           <div className="absolute -bottom-3 right-3 rounded-xl border border-border bg-card px-3 py-2 shadow-md sm:-bottom-6 sm:right-6 sm:px-4 sm:py-3">
             <p className="text-xs font-medium text-muted-foreground">New donors</p>
             <p className="text-lg font-bold text-secondary">47</p>
-          </div>
+          </div> */}
         </div>
       </div>
     </section>
