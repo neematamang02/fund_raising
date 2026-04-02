@@ -222,6 +222,35 @@ router.post(
         },
       });
 
+      // Notify all admins about the new withdrawal request
+      try {
+        const User = (await import("../Models/User.js")).default;
+        const admins = await User.find({ role: "admin" }).select("_id");
+        if (admins.length) {
+          await Promise.all(
+            admins.map((admin) =>
+              createInAppNotification({
+                recipient: admin._id,
+                eventType: "withdrawal_request_pending_review",
+                title: "New Withdrawal Request",
+                message: `A withdrawal request of $${amount} needs review for "${campaign.title}".`,
+                payload: {
+                  withdrawalRequestId: withdrawalRequest._id,
+                  campaignId: campaign._id,
+                  amount,
+                  status: "pending",
+                },
+              }),
+            ),
+          );
+        }
+      } catch (notifyError) {
+        console.error(
+          "Failed to create admin notification for withdrawal request:",
+          notifyError,
+        );
+      }
+
       // Send email notification to organizer
       try {
         const User = (await import("../Models/User.js")).default;

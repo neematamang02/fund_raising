@@ -83,15 +83,24 @@ const AdminWithdrawals = () => {
   });
 
   const updateStatusMutation = useMutation({
-    mutationFn: ({ withdrawalId, payload }) => updateAdminWithdrawalStatus(withdrawalId, payload),
-    onSuccess: async (_, variables) => {
+    mutationFn: ({ withdrawalId, payload }) => 
+      updateAdminWithdrawalStatus(withdrawalId, payload),
+    onSuccess: async (data, variables) => {
+      // Invalidate ALL withdrawal-related queries
       await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ["admin", "withdrawals"] }),
-        queryClient.invalidateQueries({ queryKey: adminQueryKeys.withdrawalDetails(variables.withdrawalId) }),
+        queryClient.invalidateQueries({ 
+          queryKey: ["admin", "withdrawals"] 
+        }),
+        queryClient.invalidateQueries({ 
+          queryKey: adminQueryKeys.withdrawalDetails(variables.withdrawalId) 
+        }),
       ]);
-      toast.success("Withdrawal request updated successfully");
+      toast.success(data?.message || "Withdrawal request updated successfully");
     },
-    onError: (error) => toast.error(error.message || "Failed to update withdrawal status"),
+    onError: (error) => {
+      console.error("Withdrawal update error:", error);
+      toast.error(error.message || "Failed to update withdrawal status");
+    },
   });
 
   useEffect(() => {
@@ -210,7 +219,7 @@ const AdminWithdrawals = () => {
                             </Button>
                           </DialogTrigger>
                           <DialogContent
-                            className="max-w-2xl max-h-[90vh] overflow-y-auto"
+                            className="max-w-4xl max-h-[90vh] overflow-y-auto"
                             onPointerDownOutside={() => setSelectedWithdrawalId(null)}
                           >
                             <DialogHeader>
@@ -235,7 +244,7 @@ const AdminWithdrawals = () => {
 
                                 {/* Request info */}
                                 <DetailSection icon={DollarSign} title="Request Information">
-                                  <div className="grid grid-cols-2 gap-3">
+                                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <InfoRow label="Campaign" value={selectedWithdrawal.campaign?.title} />
                                     <InfoRow label="Organizer" value={selectedWithdrawal.organizer?.name} />
                                   </div>
@@ -243,7 +252,7 @@ const AdminWithdrawals = () => {
 
                                 {/* Bank details */}
                                 <DetailSection icon={Building2} title="Bank Account Details">
-                                  <div className="grid grid-cols-2 gap-3">
+                                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <InfoRow label="Account Holder" value={selectedWithdrawal.bankDetails?.accountHolderName} />
                                     <InfoRow label="Bank Name" value={selectedWithdrawal.bankDetails?.bankName} />
                                     <InfoRow label="Account Number" value={selectedWithdrawal.bankDetails?.accountNumber} />
@@ -259,17 +268,18 @@ const AdminWithdrawals = () => {
 
                                 {/* KYC */}
                                 <DetailSection icon={User} title="KYC Information">
-                                  <div className="grid grid-cols-2 gap-3">
+                                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <InfoRow label="Full Legal Name" value={selectedWithdrawal.kycInfo?.fullLegalName} />
                                     <InfoRow label="Date of Birth" value={new Date(selectedWithdrawal.kycInfo?.dateOfBirth).toLocaleDateString()} />
                                     <InfoRow label="Nationality" value={selectedWithdrawal.kycInfo?.nationality} />
                                     <InfoRow label="Phone" value={selectedWithdrawal.kycInfo?.phoneNumber} />
                                     <InfoRow
-                                      className="col-span-2"
+                                      className="col-span-1 md:col-span-2"
                                       label="Address"
                                       value={[
                                         selectedWithdrawal.kycInfo?.address?.street,
                                         selectedWithdrawal.kycInfo?.address?.city,
+                                        selectedWithdrawal.kycInfo?.address?.state,
                                         selectedWithdrawal.kycInfo?.address?.postalCode,
                                         selectedWithdrawal.kycInfo?.address?.country,
                                       ].filter(Boolean).join(", ")}
@@ -303,7 +313,7 @@ const AdminWithdrawals = () => {
                                   </div>
                                 </DetailSection>
 
-                                {/* Action area */}
+                                {/* Action area for pending and under_review requests */}
                                 {(selectedWithdrawal.status === "pending" || selectedWithdrawal.status === "under_review") && (
                                   <div className="space-y-3 border-t border-border pt-4">
                                     <div>
@@ -320,6 +330,20 @@ const AdminWithdrawals = () => {
                                       />
                                     </div>
                                     <div className="flex gap-2">
+                                      {/* Only show Start Review button if status is pending */}
+                                      {selectedWithdrawal.status === "pending" && (
+                                        <Button
+                                          variant="outline"
+                                          size="sm"
+                                          className="flex-1"
+                                          onClick={() => handleStatusUpdate(selectedWithdrawal._id, "under_review")}
+                                          disabled={processing}
+                                        >
+                                          <Eye className="h-4 w-4 mr-2" />
+                                          Start Review
+                                        </Button>
+                                      )}
+                                      
                                       <Dialog>
                                         <DialogTrigger asChild>
                                           <Button variant="outline" size="sm" className="flex-1 border-destructive/30 text-destructive hover:bg-destructive/10">
@@ -366,7 +390,7 @@ const AdminWithdrawals = () => {
                                         disabled={processing}
                                       >
                                         {processing ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <CheckCircle className="h-4 w-4 mr-2" />}
-                                        Approve
+                                        {selectedWithdrawal.status === "pending" ? "Directly Approve" : "Approve"}
                                       </Button>
                                     </div>
                                   </div>
@@ -403,18 +427,6 @@ const AdminWithdrawals = () => {
                             )}
                           </DialogContent>
                         </Dialog>
-
-                        {withdrawal.status === "pending" && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleStatusUpdate(withdrawal._id, "under_review")}
-                            disabled={processing}
-                          >
-                            <Eye className="h-3.5 w-3.5 mr-1.5" />
-                            Start review
-                          </Button>
-                        )}
                       </div>
                     </div>
                   </div>

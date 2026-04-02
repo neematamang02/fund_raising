@@ -517,7 +517,7 @@ export const sendWithdrawalStatusEmail = async (
         <div style="background: #d1fae5; border-left: 4px solid #10b981; padding: 15px; border-radius: 5px; margin: 20px 0;">
           <p style="margin: 0;"><strong>⏱️ Processing Time:</strong> Funds will be transferred to your bank account within 3-7 business days.</p>
         </div>
-        <p>You'll receive a confirmation email once the transfer is completed.</p>
+        <p>You'll receive a confirmation email with transaction reference once the transfer is completed.</p>
       `;
       break;
 
@@ -561,18 +561,42 @@ export const sendWithdrawalStatusEmail = async (
           <h2 style="margin-top: 0; color: #059669;">🎉 Success!</h2>
           <p style="margin: 0; font-size: 16px;">Your withdrawal has been completed and funds have been transferred to your bank account.</p>
         </div>
-        <div class="info-box">
-          <h3 style="margin-top: 0; color: #10b981;">💰 Transfer Details</h3>
-          <p><strong>Amount:</strong> $${amount.toFixed(2)}</p>
-          <p><strong>Campaign:</strong> ${campaignTitle}</p>
-          <p><strong>Status:</strong> Completed</p>
-          ${transactionReference ? `<p><strong>Transaction Reference:</strong> ${transactionReference}</p>` : ""}
-          ${reviewNotes ? `<p><strong>Admin Notes:</strong> ${reviewNotes}</p>` : ""}
+        
+        <!-- Receipt Card -->
+        <div style="background: white; border: 2px solid #10b981; padding: 25px; border-radius: 10px; margin: 25px 0; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
+          <h3 style="margin-top: 0; color: #059669; text-align: center; border-bottom: 2px solid #d1fae5; padding-bottom: 15px;">📄 Payment Receipt</h3>
+          
+          <table style="width: 100%; border-collapse: collapse; margin: 15px 0;">
+            <tr>
+              <td style="padding: 10px 0; border-bottom: 1px solid #f3f4f6; color: #6b7280; font-size: 14px;">Transaction Reference</td>
+              <td style="padding: 10px 0; border-bottom: 1px solid #f3f4f6; text-align: right; font-weight: bold; color: #1f2937;">${transactionReference || "N/A"}</td>
+            </tr>
+            <tr>
+              <td style="padding: 10px 0; border-bottom: 1px solid #f3f4f6; color: #6b7280; font-size: 14px;">Amount Transferred</td>
+              <td style="padding: 10px 0; border-bottom: 1px solid #f3f4f6; text-align: right; font-weight: bold; color: #10b981; font-size: 18px;">$${amount.toFixed(2)}</td>
+            </tr>
+            <tr>
+              <td style="padding: 10px 0; border-bottom: 1px solid #f3f4f6; color: #6b7280; font-size: 14px;">Campaign</td>
+              <td style="padding: 10px 0; border-bottom: 1px solid #f3f4f6; text-align: right; color: #1f2937;">${campaignTitle}</td>
+            </tr>
+            <tr>
+              <td style="padding: 10px 0; border-bottom: 1px solid #f3f4f6; color: #6b7280; font-size: 14px;">Status</td>
+              <td style="padding: 10px 0; border-bottom: 1px solid #f3f4f6; text-align: right; color: #10b981; font-weight: bold;">✓ Completed</td>
+            </tr>
+          </table>
+          
+          ${reviewNotes ? `<div style="background: #f9fafb; padding: 12px; border-radius: 5px; margin-top: 15px;"><p style="margin: 0; font-size: 14px; color: #6b7280;"><strong>Admin Notes:</strong> ${reviewNotes}</p></div>` : ""}
         </div>
+        
         <div style="background: #d1fae5; border-left: 4px solid #10b981; padding: 15px; border-radius: 5px; margin: 20px 0;">
           <p style="margin: 0;"><strong>💡 Note:</strong> It may take 1-2 business days for the funds to appear in your bank account depending on your bank's processing time.</p>
         </div>
-        <p>Thank you for using our platform to make a positive impact!</p>
+        
+        <div style="background: #fef3c7; border-left: 4px solid #f59e0b; padding: 15px; border-radius: 5px; margin: 20px 0;">
+          <p style="margin: 0; font-size: 14px;"><strong>⚠️ Important:</strong> Please save this email as your payment receipt. Keep the transaction reference for your records.</p>
+        </div>
+        
+        <p style="text-align: center; margin-top: 25px; color: #6b7280; font-size: 14px;">Thank you for using our platform to make a positive impact!</p>
       `;
       break;
 

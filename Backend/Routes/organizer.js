@@ -309,6 +309,34 @@ router.post(
         },
       });
 
+      // Notify all admins about the new organizer profile verification request
+      try {
+        const User = (await import("../Models/User.js")).default;
+        const admins = await User.find({ role: "admin" }).select("_id");
+        if (admins.length) {
+          await Promise.all(
+            admins.map((admin) =>
+              createInAppNotification({
+                recipient: admin._id,
+                eventType: "organizer_profile_pending_review",
+                title: "Organizer Profile Verification Required",
+                message: `An organizer profile needs verification for ${kycInfo.fullLegalName || "an organizer"}.`,
+                payload: {
+                  organizerProfileId: profile._id,
+                  organizerId: profile.organizer,
+                  verificationStatus: "pending",
+                },
+              }),
+            ),
+          );
+        }
+      } catch (notifyError) {
+        console.error(
+          "Failed to create admin notification for organizer profile submission:",
+          notifyError,
+        );
+      }
+
       return res.status(existingProfile ? 200 : 201).json({
         message: existingProfile
           ? "Organizer profile updated and submitted for verification."
@@ -391,6 +419,36 @@ router.patch(
           rejectionReason: profile.rejectionReason,
         },
       });
+
+      // Notify admins when profile is submitted for verification (initial submission)
+      if (verificationStatus === "pending_review") {
+        try {
+          const User = (await import("../Models/User.js")).default;
+          const admins = await User.find({ role: "admin" }).select("_id");
+          if (admins.length) {
+            await Promise.all(
+              admins.map((admin) =>
+                createInAppNotification({
+                  recipient: admin._id,
+                  eventType: "organizer_profile_pending_review",
+                  title: "Organizer Profile Verification Required",
+                  message: `An organizer profile needs verification for ${profile.kycInfo?.fullLegalName || "an organizer"}.`,
+                  payload: {
+                    organizerProfileId: profile._id,
+                    organizerId: profile.organizer,
+                    verificationStatus: "pending_review",
+                  },
+                }),
+              ),
+            );
+          }
+        } catch (notifyError) {
+          console.error(
+            "Failed to create admin notification for organizer profile verification:",
+            notifyError,
+          );
+        }
+      }
 
       return res.json({
         message:

@@ -11,10 +11,15 @@ const WITHDRAWAL_STATUSES = [
 ];
 
 const TRANSITIONS = {
-  pending: ["under_review", "rejected"],
+  // From pending, admin can directly approve, reject, or first mark as under review
+  pending: ["under_review", "approved", "rejected"],
+  // From under review, admin can approve or reject
   under_review: ["approved", "rejected"],
+  // From approved, admin can complete the payment or reject (if issues found)
   approved: ["completed", "rejected"],
+  // Rejected is a terminal state (can be reconsidered by creating new request)
   rejected: [],
+  // Completed is a terminal state
   completed: [],
 };
 
@@ -69,6 +74,14 @@ export async function getWithdrawalRequestDetails({
     return { status: 404, message: "Withdrawal request not found" };
   }
 
+  // Convert to plain object and ensure bank details are accessible
+  const withdrawalRequestObj = withdrawalRequest.toObject();
+  
+  // Get decrypted bank details for admin view
+  if (withdrawalRequest.getDecryptedBankDetails) {
+    withdrawalRequestObj.bankDetails = withdrawalRequest.getDecryptedBankDetails();
+  }
+
   if (
     requesterRole === "organizer" &&
     withdrawalRequest.organizer._id.toString() !== requesterUserId
@@ -76,7 +89,7 @@ export async function getWithdrawalRequestDetails({
     return { status: 403, message: "Access denied" };
   }
 
-  return { withdrawalRequest };
+  return { withdrawalRequest: withdrawalRequestObj };
 }
 
 export async function updateWithdrawalStatus({
