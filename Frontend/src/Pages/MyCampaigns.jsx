@@ -529,13 +529,20 @@ export default function MyCampaigns() {
             ) : donors.length === 0 ? (
               <p className="text-sm text-muted-foreground py-4 text-center">No donors yet for this campaign.</p>
             ) : (
-              <div className="overflow-auto max-h-80 rounded-lg border border-border">
-                <table className="w-full text-sm">
-                  <thead className="bg-muted/50 sticky top-0">
+              <div className="overflow-x-auto max-h-80 rounded-lg border border-border">
+                <table className="w-full text-sm" style={{ tableLayout: "fixed" }}>
+                  <colgroup>
+                    <col style={{ width: "25%" }} />
+                    <col style={{ width: "30%" }} />
+                    <col style={{ width: "20%" }} />
+                    <col style={{ width: "25%" }} />
+                  </colgroup>
+                  <thead className="bg-muted/50 sticky top-0 z-10">
                     <tr>
-                      {["Name", "Email", "Amount", "Date"].map((h) => (
-                        <th key={h} className="px-4 py-2.5 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">{h}</th>
-                      ))}
+                      <th className="px-4 py-2.5 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground truncate">Name</th>
+                      <th className="px-4 py-2.5 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground truncate">Email</th>
+                      <th className="px-4 py-2.5 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground truncate">Amount</th>
+                      <th className="px-4 py-2.5 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground truncate">Date</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border">
@@ -543,16 +550,16 @@ export default function MyCampaigns() {
                       const isAnon = donation.isAnonymous === true;
                       return (
                         <tr key={donation._id} className="hover:bg-accent/30 transition-colors">
-                          <td className="px-4 py-2.5 font-medium text-foreground">
+                          <td className="px-4 py-2.5 font-medium text-foreground truncate" title={isAnon ? "Anonymous" : donation.donor?.name || donation.payerName || "–"}>
                             {isAnon ? "Anonymous" : donation.donor?.name || donation.payerName || "–"}
                           </td>
-                          <td className="px-4 py-2.5 text-muted-foreground">
+                          <td className="px-4 py-2.5 text-muted-foreground truncate" title={isAnon ? "Hidden" : donation.donor?.email || donation.donorEmail || "–"}>
                             {isAnon ? "Hidden" : donation.donor?.email || donation.donorEmail || "–"}
                           </td>
-                          <td className="px-4 py-2.5 font-semibold text-primary">
+                          <td className="px-4 py-2.5 font-semibold text-primary whitespace-nowrap">
                             {formatCurrency(donation.amount)}
                           </td>
-                          <td className="px-4 py-2.5 text-muted-foreground">
+                          <td className="px-4 py-2.5 text-muted-foreground whitespace-nowrap">
                             {new Date(donation.createdAt).toLocaleDateString()}
                           </td>
                         </tr>

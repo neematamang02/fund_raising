@@ -170,8 +170,8 @@ function EmptyState({ icon: Icon = Target, message, action }) {
 
 function CampaignProgressRow({ campaign }) {
   const raised = Number(campaign.raised ?? 0);
-  const goal = Number(campaign.goal ?? 0);
-  const pct = goal > 0 ? Math.min(100, Math.round((raised / goal) * 100)) : 0;
+  const target = Number(campaign.target ?? 0);
+  const pct = target > 0 ? Math.min(100, Math.round((raised / target) * 100)) : 0;
 
   return (
     <div className="space-y-2">
@@ -203,7 +203,7 @@ function CampaignProgressRow({ campaign }) {
         </span>
       </div>
       <p className="text-xs text-muted-foreground">
-        {currency.format(raised)} raised of {goal > 0 ? currency.format(goal) : "—"} goal
+        {currency.format(raised)} raised of {target > 0 ? currency.format(target) : "—"} goal
       </p>
     </div>
   );
