@@ -1,5 +1,5 @@
 import { useContext, useState, useMemo } from "react";
-import { useQuery, useQueries } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { AuthContext } from "@/Context/AuthContext";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -71,10 +71,10 @@ function PayoutStatusBadge({ status }) {
         Paid Out
       </Badge>
     );
-  if (status === "scheduled")
+  if (status === "scheduled" || status === "pending")
     return (
       <Badge className="bg-chart-2/15 text-chart-2 border-chart-2/25">
-        Scheduled
+        Pending
       </Badge>
     );
   if (status === "processing")
@@ -209,36 +209,6 @@ export default function MyDonations() {
   });
 
   const donations = donationsData?.donations || [];
-
-  const campaignIds = useMemo(
-    () => [
-      ...new Set(donations.map((item) => item.campaign?._id).filter(Boolean)),
-    ],
-    [donations],
-  );
-
-  const campaignPayoutQueries = useQueries({
-    queries: campaignIds.map((id) => ({
-      queryKey: ["campaignPayoutHistory", id],
-      queryFn: async () => {
-        const res = await fetch(`/api/campaigns/${id}/payout-history`);
-        if (!res.ok)
-          throw new Error(`Failed to load payout history for campaign ${id}`);
-        const data = await res.json();
-        return { campaignId: id, ...data };
-      },
-      staleTime: 1000 * 60,
-      retry: 1,
-    })),
-  });
-
-  const payoutHistoryByCampaign = useMemo(() => {
-    return campaignPayoutQueries.reduce((acc, queryResult) => {
-      if (queryResult.data?.campaignId)
-        acc[queryResult.data.campaignId] = queryResult.data;
-      return acc;
-    }, {});
-  }, [campaignPayoutQueries]);
 
   const donationStats = useMemo(() => {
     if (!donations || donations.length === 0) return null;
@@ -586,11 +556,6 @@ export default function MyDonations() {
         {/* Donation list */}
         <div className="space-y-3">
           {filteredDonations.map((donation) => {
-            const campaignTransparency =
-              payoutHistoryByCampaign[donation.campaign?._id];
-            const latestPayout =
-              campaignTransparency?.timeline?.[0] || null;
-
             return (
               <Card
                 key={donation._id}
@@ -650,6 +615,9 @@ export default function MyDonations() {
                         <div className="text-xs text-muted-foreground mt-0.5">
                           ID: {donation.transactionId || "N/A"}
                         </div>
+                        <div className="text-xs text-muted-foreground mt-0.5">
+                          Hash: {donation.transactionHash || donation.transactionId || "N/A"}
+                        </div>
                       </div>
 
                       <div className="flex flex-col items-center lg:items-end gap-2">
@@ -674,44 +642,38 @@ export default function MyDonations() {
                   {/* Transparency row */}
                   <div className="mt-4 pt-4 border-t border-border">
                     <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
-                      <p className="text-sm font-medium text-foreground">
-                        Fund transparency
-                      </p>
-                      <PayoutStatusBadge status={latestPayout?.status} />
+                      <p className="text-sm font-medium text-foreground">Fund transparency</p>
+                      <PayoutStatusBadge
+                        status={
+                          donation.payoutStatus === "Paid Out"
+                            ? "paid_out"
+                            : "pending"
+                        }
+                      />
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5 text-sm">
                       <div className="rounded-lg bg-muted/50 border border-border/50 p-3">
                         <p className="text-muted-foreground text-xs mb-1">
-                          Raised
+                          Donated Amount
                         </p>
                         <p className="font-semibold text-foreground">
-                          $
-                          {Number(
-                            campaignTransparency?.summary?.totalRaised ||
-                              donation.campaign?.raised ||
-                              0,
-                          ).toLocaleString()}
+                          ${Number(donation.amount || 0).toLocaleString()}
                         </p>
                       </div>
                       <div className="rounded-lg bg-muted/50 border border-border/50 p-3">
                         <p className="text-muted-foreground text-xs mb-1">
-                          Paid Out
+                          Payout Status
                         </p>
-                        <p className="font-semibold text-foreground">
-                          $
-                          {Number(
-                            campaignTransparency?.summary?.totalPaidOut || 0,
-                          ).toLocaleString()}
-                        </p>
+                        <p className="font-semibold text-foreground">{donation.payoutStatus || "Pending"}</p>
                       </div>
                       <div className="rounded-lg bg-muted/50 border border-border/50 p-3">
                         <p className="text-muted-foreground text-xs mb-1">
-                          Last Transfer
+                          Payout Date
                         </p>
                         <p className="font-semibold text-foreground">
-                          {latestPayout?.eventDate
+                          {donation.payoutDate
                             ? new Date(
-                                latestPayout.eventDate,
+                                donation.payoutDate,
                               ).toLocaleDateString("en-US", {
                                 year: "numeric",
                                 month: "short",

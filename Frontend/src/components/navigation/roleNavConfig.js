@@ -108,6 +108,11 @@ export function getTopNavItems(user) {
       ...base,
       { label: "Dashboard", to: ROUTES.DASHBOARD, icon: LayoutDashboard },
       { label: "My Donations", to: ROUTES.MY_DONATIONS, icon: HandCoins },
+      {
+        label: "Blockchain Transparency",
+        to: ROUTES.BLOCKCHAIN_TRANSPARENCY,
+        icon: Shield,
+      },
     ];
 
     if (!isOrganizerApproved) {

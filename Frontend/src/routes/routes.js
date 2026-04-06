@@ -5,6 +5,7 @@ const ROUTES = {
   DONATE: "/donate",
   DONATE_DETAIL: "/donate/:campaignId",
   MY_DONATIONS: "/my-donations",
+  BLOCKCHAIN_TRANSPARENCY: "/blockchain-transparency",
   APPLY_ORGANIZER: "/apply-organizer",
   APPLICATION_STATUS: "/application-status",
   MY_CAMPAIGNS: "/my-campaigns",

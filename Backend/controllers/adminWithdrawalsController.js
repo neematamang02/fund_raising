@@ -14,6 +14,7 @@ import {
   createInAppNotification,
   notifyCampaignDonorsInApp,
 } from "../services/notificationService.js";
+import { recordPayoutFromWithdrawal } from "../services/blockchainService.js";
 
 const DONOR_TRANSPARENCY_STATUSES = new Set(["approved", "completed"]);
 
@@ -97,6 +98,23 @@ export async function updateAdminWithdrawalRequestStatus(req, res) {
 
     if (result.status) {
       return res.status(result.status).json({ message: result.message });
+    }
+
+    let payoutLedgerResult = null;
+    if (status === "completed") {
+      try {
+        payoutLedgerResult = await recordPayoutFromWithdrawal({
+          withdrawalRequestId: result.withdrawalRequest._id,
+          paidDate:
+            result.withdrawalRequest.completedAt?.toISOString?.() ||
+            new Date().toISOString(),
+          amount: result.withdrawalRequest.amount,
+          campaignId: result.withdrawalRequest.campaign._id,
+          transactionReference,
+        });
+      } catch (ledgerError) {
+        console.error("Payout block record failed:", ledgerError);
+      }
     }
 
     try {
@@ -227,6 +245,8 @@ export async function updateAdminWithdrawalRequestStatus(req, res) {
     return res.json({
       message: `Withdrawal request ${status} successfully`,
       withdrawalRequest: result.withdrawalRequest,
+      payoutTransactionHash: payoutLedgerResult?.transactionHash || null,
+      payoutLedgerBlock: payoutLedgerResult?.block || null,
     });
   } catch (error) {
     console.error("Error updating withdrawal request:", error);

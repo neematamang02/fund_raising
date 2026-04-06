@@ -16,6 +16,7 @@ import withdrawalRouter from "./Routes/withdrawals.js";
 import adminRouter from "./Routes/admin.js";
 import notificationsRouter from "./Routes/notifications.js";
 import uploadRouter from "./Routes/upload.js";
+import blockchainRouter from "./Routes/blockchain.js";
 
 // Load environment variables
 dotenv.config();
@@ -155,6 +156,7 @@ app.use("/api", withdrawalRouter);
 app.use("/api", adminRouter);
 app.use("/api", notificationsRouter);
 app.use("/api", uploadRouter);
+app.use("/api", blockchainRouter);
 
 // 404 handler
 app.use((req, res) => {

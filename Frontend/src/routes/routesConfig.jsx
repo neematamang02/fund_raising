@@ -4,6 +4,7 @@ import LoginPage from "@/Pages/Authentication/Loginpage";
 import RegisterPage from "@/Pages/Authentication/Registerpage";
 import Donate from "@/Pages/Donate";
 import MyDonations from "@/Pages/MyDonations";
+import BlockchainTransparency from "@/Pages/BlockchainTransparency";
 import ApplyOrganizer from "@/Pages/ApplyOrganizer";
 import ApplicationStatus from "@/Pages/Donor/ApplicationStatus";
 import WithdrawalRequest from "@/Pages/WithdrawalRequest";
@@ -61,6 +62,14 @@ const routesConfig = [
     Component: () => (
       <RequireRole role="donor">
         <MyDonations />
+      </RequireRole>
+    ),
+  },
+  {
+    path: ROUTES.BLOCKCHAIN_TRANSPARENCY,
+    Component: () => (
+      <RequireRole role={["donor", "admin"]}>
+        <BlockchainTransparency />
       </RequireRole>
     ),
   },

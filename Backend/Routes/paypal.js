@@ -10,6 +10,7 @@ import {
   getStoredIdempotentResponse,
   storeIdempotentResponse,
 } from "../utils/idempotency.js";
+import { recordDonationBlock } from "../services/blockchainService.js";
 
 const router = express.Router();
 
@@ -327,17 +328,37 @@ router.post(
       console.log("✅ Donation Recorded:", donation._id);
 
       // Build a "bill" or receipt object to return to frontend
+      let transparencyBlock = null;
+      try {
+        transparencyBlock = await recordDonationBlock({
+          donorName: donation.payerName || req.user.name || "Anonymous Donor",
+          amount: parsedAmount,
+          campaignId,
+          donationId: donation._id,
+          transactionId: donation.transactionId,
+          donatedAt: donation.createdAt?.toISOString?.() || new Date().toISOString(),
+        });
+      } catch (ledgerError) {
+        console.error("Donation block record failed:", ledgerError);
+      }
+
       const billReceipt = {
         donationId: donation._id,
         campaignTitle: campaign.title,
         amount: amountValue,
         currency: purchaseUnit.payments.captures[0].amount.currency_code,
         transactionId: captureId,
+        transactionHash: transparencyBlock?.hash || captureId,
         payerName: donation.payerName,
         payerEmail: donation.payerEmail,
         timestamp: donation.createdAt,
       };
-      const responseBody = { donation, billReceipt };
+      const responseBody = {
+        donation,
+        transactionHash: transparencyBlock?.hash || captureId,
+        ledgerBlock: transparencyBlock,
+        billReceipt,
+      };
 
       await storeIdempotentResponse({
         idempotencyKey,

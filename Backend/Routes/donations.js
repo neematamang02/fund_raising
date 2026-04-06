@@ -2,6 +2,7 @@ import { Router } from "express";
 import { requireAuth, requireRole } from "../middleware/auth.js";
 import Donation from "../Models/Donation.js";
 import Campaign from "../Models/Campaign.js";
+import { getMyDonationTransparency } from "../services/blockchainService.js";
 
 const router = Router();
 
@@ -36,15 +37,12 @@ router.get("/me", requireAuth, async (req, res) => {
       });
     }
 
-    const [donations, total] = await Promise.all([
-      Donation.find({ donorEmail: req.user.email })
-        .populate("campaign", "title imageURL status endedAt isDonationEnabled")
-        .sort({ createdAt: -1 })
-        .skip(skip)
-        .limit(limit)
-        .lean(),
+    const [allDonations, total] = await Promise.all([
+      getMyDonationTransparency({ donorEmail: req.user.email }),
       Donation.countDocuments({ donorEmail: req.user.email }),
     ]);
+
+    const donations = allDonations.slice(skip, skip + limit);
 
     console.log(`✅ Returning ${donations.length} donations (total: ${total})`);
     console.log("=".repeat(60) + "\n");
