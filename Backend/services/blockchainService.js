@@ -174,9 +174,32 @@ export async function getMyDonationTransparency({ donorEmail, campaignId }) {
     .sort({ createdAt: -1 })
     .lean();
 
-  const payoutBlocks = await BlockchainBlock.find({ type: "PAYOUT" })
-    .sort({ index: 1 })
-    .lean();
+  const campaignIds = [
+    ...new Set(
+      donations
+        .map((donation) => normalizeCampaignId(donation.campaign?._id || donation.campaign))
+        .filter(Boolean),
+    ),
+  ];
+
+  const [payoutBlocks, donationBlocks] = await Promise.all([
+    BlockchainBlock.find({
+      type: "PAYOUT",
+      ...(campaignIds.length
+        ? { "data.campaignId": { $in: campaignIds } }
+        : {}),
+    })
+      .sort({ index: 1 })
+      .lean(),
+    BlockchainBlock.find({
+      type: "DONATION",
+      ...(campaignIds.length
+        ? { "data.campaignId": { $in: campaignIds } }
+        : {}),
+    })
+      .sort({ index: 1 })
+      .lean(),
+  ]);
 
   const latestPayoutByCampaign = new Map();
   payoutBlocks.forEach((block) => {
@@ -188,15 +211,43 @@ export async function getMyDonationTransparency({ donorEmail, campaignId }) {
     latestPayoutByCampaign.set(payoutCampaignId, block);
   });
 
+  const donationBlockByDonationId = new Map();
+  const donationBlockByTransactionId = new Map();
+
+  donationBlocks.forEach((block) => {
+    const donationId = block.data?.donationId ? String(block.data.donationId) : null;
+    const txId = block.data?.transactionId || null;
+
+    if (donationId) {
+      donationBlockByDonationId.set(donationId, block);
+    }
+
+    if (txId) {
+      donationBlockByTransactionId.set(String(txId), block);
+    }
+  });
+
   const enriched = donations.map((donation) => {
     const donationCampaignId = normalizeCampaignId(donation.campaign?._id || donation.campaign);
     const payoutBlock = latestPayoutByCampaign.get(donationCampaignId) || null;
+    const donationBlock =
+      donationBlockByDonationId.get(String(donation._id)) ||
+      donationBlockByTransactionId.get(String(donation.transactionId || "")) ||
+      null;
+    const donationHash = donationBlock?.hash || donation.transactionId || null;
+    const payoutHash = payoutBlock?.hash || null;
 
     return {
       ...donation,
-      transactionHash: donation.transactionId || null,
+      transactionHash: donationHash,
       payoutStatus: payoutBlock ? "Paid Out" : "Pending",
       payoutDate: payoutBlock ? payoutBlock.data?.paidDate || payoutBlock.timestamp : null,
+      payoutTransactionHash: payoutHash,
+      traceability: {
+        donationHash,
+        payoutHash,
+        isLinked: Boolean(payoutHash),
+      },
     };
   });
 

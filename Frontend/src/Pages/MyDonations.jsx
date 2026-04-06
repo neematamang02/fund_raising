@@ -29,6 +29,8 @@ import {
   ArrowUpRight,
   Gift,
   Loader2,
+  Copy,
+  Check,
 } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 
@@ -175,6 +177,24 @@ export default function MyDonations() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [sortBy, setSortBy] = useState("newest");
   const [timeFilter, setTimeFilter] = useState("all");
+  const [copiedHash, setCopiedHash] = useState("");
+
+  const copyToClipboard = async (value) => {
+    if (!value) return;
+
+    try {
+      await navigator.clipboard.writeText(value);
+      setCopiedHash(value);
+      window.setTimeout(() => setCopiedHash(""), 1200);
+    } catch (_err) {
+      // Ignore clipboard failures in unsupported environments.
+    }
+  };
+
+  const shortenHash = (value) => {
+    if (!value || value.length < 16) return value || "N/A";
+    return `${value.slice(0, 8)}...${value.slice(-8)}`;
+  };
 
   const {
     data: donationsData,
@@ -615,8 +635,26 @@ export default function MyDonations() {
                         <div className="text-xs text-muted-foreground mt-0.5">
                           ID: {donation.transactionId || "N/A"}
                         </div>
-                        <div className="text-xs text-muted-foreground mt-0.5">
-                          Hash: {donation.transactionHash || donation.transactionId || "N/A"}
+                        <div className="text-xs text-muted-foreground mt-0.5 flex items-center justify-center lg:justify-end gap-1.5">
+                          <span>Hash: {shortenHash(donation.transactionHash || donation.transactionId)}</span>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="h-5 w-5"
+                            onClick={() =>
+                              copyToClipboard(
+                                donation.transactionHash || donation.transactionId,
+                              )
+                            }
+                          >
+                            {copiedHash ===
+                            (donation.transactionHash || donation.transactionId) ? (
+                              <Check className="h-3.5 w-3.5" />
+                            ) : (
+                              <Copy className="h-3.5 w-3.5" />
+                            )}
+                          </Button>
                         </div>
                       </div>
 
@@ -651,7 +689,7 @@ export default function MyDonations() {
                         }
                       />
                     </div>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5 text-sm">
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-2.5 text-sm">
                       <div className="rounded-lg bg-muted/50 border border-border/50 p-3">
                         <p className="text-muted-foreground text-xs mb-1">
                           Donated Amount
@@ -681,6 +719,34 @@ export default function MyDonations() {
                               })
                             : "Not yet"}
                         </p>
+                      </div>
+                      <div className="rounded-lg bg-muted/50 border border-border/50 p-3">
+                        <p className="text-muted-foreground text-xs mb-1">
+                          Traceability
+                        </p>
+                        <p className="font-semibold text-foreground break-all">
+                          {donation.traceability?.isLinked
+                            ? `${shortenHash(donation.traceability?.donationHash)} -> ${shortenHash(donation.traceability?.payoutHash)}`
+                            : `${shortenHash(donation.traceability?.donationHash || donation.transactionHash)} -> Pending payout`}
+                        </p>
+                        {donation.traceability?.payoutHash ? (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="h-6 px-2 mt-1"
+                            onClick={() =>
+                              copyToClipboard(donation.traceability?.payoutHash)
+                            }
+                          >
+                            {copiedHash === donation.traceability?.payoutHash ? (
+                              <Check className="h-3.5 w-3.5 mr-1" />
+                            ) : (
+                              <Copy className="h-3.5 w-3.5 mr-1" />
+                            )}
+                            Copy payout hash
+                          </Button>
+                        ) : null}
                       </div>
                     </div>
                   </div>

@@ -1,6 +1,13 @@
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { AlertCircle, CheckCircle2, ShieldAlert, ShieldCheck } from "lucide-react";
+import {
+  AlertCircle,
+  Check,
+  CheckCircle2,
+  Copy,
+  ShieldAlert,
+  ShieldCheck,
+} from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -63,6 +70,20 @@ export default function BlockchainTransparency() {
   const [chainState, setChainState] = useState(null);
   const [simulatedState, setSimulatedState] = useState(null);
   const [actionError, setActionError] = useState("");
+  const [copiedHash, setCopiedHash] = useState("");
+  const [expandedHashKey, setExpandedHashKey] = useState("");
+
+  const copyToClipboard = async (value) => {
+    if (!value) return;
+
+    try {
+      await navigator.clipboard.writeText(value);
+      setCopiedHash(value);
+      window.setTimeout(() => setCopiedHash(""), 1200);
+    } catch (_err) {
+      // Ignore clipboard failures in unsupported environments.
+    }
+  };
 
   const { data, isLoading, error, refetch, isFetching } = useQuery({
     queryKey: ["blockchain", campaignId],
@@ -224,11 +245,75 @@ export default function BlockchainTransparency() {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     <div className="rounded-md border bg-muted/40 p-3">
                       <p className="text-xs text-muted-foreground">Hash</p>
-                      <p title={block.hash} className="font-mono text-foreground break-all">{trimHash(block.hash)}</p>
+                      <div className="flex items-center gap-2">
+                        <p title={block.hash} className="font-mono text-foreground break-all flex-1">
+                          {expandedHashKey === `${block.index}-hash`
+                            ? block.hash
+                            : trimHash(block.hash)}
+                        </p>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7"
+                          onClick={() => copyToClipboard(block.hash)}
+                        >
+                          {copiedHash === block.hash ? (
+                            <Check className="h-3.5 w-3.5" />
+                          ) : (
+                            <Copy className="h-3.5 w-3.5" />
+                          )}
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="h-7"
+                          onClick={() =>
+                            setExpandedHashKey((prev) =>
+                              prev === `${block.index}-hash` ? "" : `${block.index}-hash`,
+                            )
+                          }
+                        >
+                          {expandedHashKey === `${block.index}-hash` ? "Hide" : "Show"}
+                        </Button>
+                      </div>
                     </div>
                     <div className="rounded-md border bg-muted/40 p-3">
                       <p className="text-xs text-muted-foreground">Previous Hash</p>
-                      <p title={block.previousHash} className="font-mono text-foreground break-all">{trimHash(block.previousHash)}</p>
+                      <div className="flex items-center gap-2">
+                        <p title={block.previousHash} className="font-mono text-foreground break-all flex-1">
+                          {expandedHashKey === `${block.index}-prev`
+                            ? block.previousHash
+                            : trimHash(block.previousHash)}
+                        </p>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7"
+                          onClick={() => copyToClipboard(block.previousHash)}
+                        >
+                          {copiedHash === block.previousHash ? (
+                            <Check className="h-3.5 w-3.5" />
+                          ) : (
+                            <Copy className="h-3.5 w-3.5" />
+                          )}
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="h-7"
+                          onClick={() =>
+                            setExpandedHashKey((prev) =>
+                              prev === `${block.index}-prev` ? "" : `${block.index}-prev`,
+                            )
+                          }
+                        >
+                          {expandedHashKey === `${block.index}-prev` ? "Hide" : "Show"}
+                        </Button>
+                      </div>
                     </div>
                   </div>
                 </CardContent>
