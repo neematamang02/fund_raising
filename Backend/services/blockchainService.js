@@ -64,6 +64,43 @@ function normalizeCampaignId(value) {
   return String(value);
 }
 
+async function enrichBlocksWithCampaignTitle(blocks) {
+  const campaignIds = [
+    ...new Set(
+      blocks
+        .map((block) => normalizeCampaignId(block.data?.campaignId))
+        .filter(Boolean),
+    ),
+  ];
+
+  if (!campaignIds.length) {
+    return blocks;
+  }
+
+  const campaigns = await Campaign.find({ _id: { $in: campaignIds } })
+    .select("_id title")
+    .lean();
+
+  const titleById = new Map(
+    campaigns.map((campaign) => [String(campaign._id), campaign.title]),
+  );
+
+  return blocks.map((block) => {
+    const campaignId = normalizeCampaignId(block.data?.campaignId);
+    if (!campaignId) {
+      return block;
+    }
+
+    return {
+      ...block,
+      data: {
+        ...block.data,
+        campaignTitle: block.data?.campaignTitle || titleById.get(campaignId) || null,
+      },
+    };
+  });
+}
+
 export async function recordDonationBlock({
   donorName,
   amount,
@@ -108,7 +145,8 @@ export async function recordPayoutBlock({
 
 export async function getBlockchain({ campaignId } = {}) {
   const query = campaignId ? { "data.campaignId": String(campaignId) } : {};
-  const blocks = await BlockchainBlock.find(query).sort({ index: 1 }).lean();
+  const rawBlocks = await BlockchainBlock.find(query).sort({ index: 1 }).lean();
+  const blocks = await enrichBlocksWithCampaignTitle(rawBlocks);
   const chain = toBlockchain(blocks);
 
   return {
