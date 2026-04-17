@@ -90,8 +90,8 @@ export default function RoleSidebarLayout({ role, children }) {
   const [logoutDialogOpen, setLogoutDialogOpen] = useState(false);
   const { unreadCount } = useUnreadNotificationCount();
 
-  const navItems = useMemo(() => getSidebarItems(role), [role]);
-  const navSections = useMemo(() => getSidebarSections(role), [role]);
+  const navItems = useMemo(() => getSidebarItems(role, user), [role, user]);
+  const navSections = useMemo(() => getSidebarSections(role, user), [role, user]);
 
   const pageTitle = useMemo(() => {
     const matched = navItems.find((item) =>
@@ -232,8 +232,8 @@ export default function RoleSidebarLayout({ role, children }) {
 
       {/* Footer */}
       <div className="shrink-0 border-t border-sidebar-border p-3 space-y-1.5">
-        {/* Role mode switcher (organizer only) */}
-        {role === "organizer" ? (
+        {/* Role mode switcher (donor and organizer) */}
+        {role === "organizer" || role === "donor" ? (
           <RoleModeSwitcher currentRole={role} compact={collapsed} />
         ) : null}
 

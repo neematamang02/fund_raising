@@ -21,7 +21,7 @@ export default function AppShell({ children }) {
   const isAuthRoute = AUTH_ROUTES.has(location.pathname);
   const role = user?.role;
   const useSidebarLayout =
-    !isAuthRoute && (role === "admin" || role === "organizer");
+    !isAuthRoute && (role === "admin" || role === "organizer" || role === "donor");
 
   if (isAuthRoute) {
     return <main className="surface-page min-h-screen">{children}</main>;

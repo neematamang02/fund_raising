@@ -74,6 +74,56 @@ const ORGANIZER_SECTIONS = [
   },
 ];
 
+function getDonorSections(user) {
+  const isOrganizerApproved =
+    user?.isOrganizerApproved ||
+    user?.organizerApplicationStatus === "approved";
+
+  const accountItems = [
+    { label: "My Donations", to: ROUTES.MY_DONATIONS, icon: HandCoins },
+    {
+      label: "Blockchain Transparency",
+      to: ROUTES.BLOCKCHAIN_TRANSPARENCY,
+      icon: Shield,
+    },
+    { label: "Notifications", to: ROUTES.NOTIFICATIONS, icon: Bell },
+  ];
+
+  if (!isOrganizerApproved) {
+    accountItems.unshift(
+      {
+        label: "Apply Organizer",
+        to: ROUTES.APPLY_ORGANIZER,
+        icon: ClipboardList,
+      },
+      {
+        label: "Application Status",
+        to: ROUTES.APPLICATION_STATUS,
+        icon: Shield,
+      },
+    );
+  }
+
+  return [
+    {
+      title: "Explore",
+      items: [
+        { label: "Home", to: ROUTES.HOME, icon: Home },
+        { label: "About", to: ROUTES.ABOUT, icon: Info },
+        { label: "Donate", to: ROUTES.DONATE, icon: Heart },
+      ],
+    },
+    {
+      title: "Workspace",
+      items: [{ label: "Dashboard", to: ROUTES.DASHBOARD, icon: LayoutDashboard }],
+    },
+    {
+      title: "Account",
+      items: accountItems,
+    },
+  ];
+}
+
 export function getRoleHomePath(role) {
   if (role === "admin") return ROUTES.ADMIN_DASHBOARD;
   if (role === "organizer") return ROUTES.ORGANIZER_DASHBOARD;
@@ -81,13 +131,20 @@ export function getRoleHomePath(role) {
   return ROUTES.HOME;
 }
 
-export function getSidebarItems(role) {
-  const sections = role === "admin" ? ADMIN_SECTIONS : ORGANIZER_SECTIONS;
+export function getSidebarItems(role, user) {
+  const sections =
+    role === "admin"
+      ? ADMIN_SECTIONS
+      : role === "organizer"
+        ? ORGANIZER_SECTIONS
+        : getDonorSections(user);
   return sections.flatMap((section) => section.items);
 }
 
-export function getSidebarSections(role) {
-  return role === "admin" ? ADMIN_SECTIONS : ORGANIZER_SECTIONS;
+export function getSidebarSections(role, user) {
+  if (role === "admin") return ADMIN_SECTIONS;
+  if (role === "organizer") return ORGANIZER_SECTIONS;
+  return getDonorSections(user);
 }
 
 export function getTopNavItems(user) {
