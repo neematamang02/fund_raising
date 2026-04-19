@@ -4,6 +4,7 @@ import dns from "node:dns/promises";
 
 import {
   isDisposableEmail,
+  validateEmailForOtp,
   validateEmailDomainReachability,
 } from "../utils/validation.js";
 
@@ -68,4 +69,18 @@ test("validateEmailDomainReachability accepts common valid domain", async () => 
   } finally {
     dns.resolveMx = originalResolveMx;
   }
+});
+
+test("validateEmailForOtp rejects malformed emails with code", async () => {
+  const result = await validateEmailForOtp("not-an-email");
+
+  assert.equal(result.isValid, false);
+  assert.equal(result.code, "INVALID_EMAIL_FORMAT");
+});
+
+test("validateEmailForOtp rejects disposable domains with code", async () => {
+  const result = await validateEmailForOtp("person@mailinator.com");
+
+  assert.equal(result.isValid, false);
+  assert.equal(result.code, "DISPOSABLE_EMAIL_BLOCKED");
 });

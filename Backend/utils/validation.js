@@ -48,6 +48,15 @@ export function isValidEmail(email) {
   return emailRegex.test(email);
 }
 
+export function getEmailDomain(email) {
+  if (typeof email !== "string") return "";
+
+  const atIndex = email.lastIndexOf("@");
+  if (atIndex === -1) return "";
+
+  return email.slice(atIndex + 1).toLowerCase().trim();
+}
+
 /**
  * Check if an email domain is disposable/temporary.
  * Includes parent-domain fallback so subdomains are also blocked.
@@ -164,6 +173,60 @@ export async function validateEmailDomainReachability(email) {
   }
 
   return { isValid: false, isUncertain: false };
+}
+
+/**
+ * Evaluate email suitability for OTP-based auth flows.
+ * Returns a structured result so routes can map stable API error codes.
+ * @param {string} email - Email address to validate
+ * @returns {Promise<{ isValid: boolean, isUncertain: boolean, code: string, message: string }>}
+ */
+export async function validateEmailForOtp(email) {
+  if (!isValidEmail(email)) {
+    return {
+      isValid: false,
+      isUncertain: false,
+      code: "INVALID_EMAIL_FORMAT",
+      message: "Invalid email format.",
+    };
+  }
+
+  if (isDisposableEmail(email)) {
+    return {
+      isValid: false,
+      isUncertain: false,
+      code: "DISPOSABLE_EMAIL_BLOCKED",
+      message: "Please use a real personal or work email address.",
+    };
+  }
+
+  const domainStatus = await validateEmailDomainReachability(email);
+  if (!domainStatus.isValid) {
+    return {
+      isValid: false,
+      isUncertain: false,
+      code: "EMAIL_DOMAIN_UNREACHABLE",
+      message:
+        "This email domain does not look real. Please use a valid email address.",
+    };
+  }
+
+  if (domainStatus.isUncertain) {
+    return {
+      isValid: true,
+      isUncertain: true,
+      code: "EMAIL_DOMAIN_UNCERTAIN",
+      message:
+        "We could not fully verify this email domain right now, but you can continue.",
+    };
+  }
+
+  return {
+    isValid: true,
+    isUncertain: false,
+    code: "EMAIL_ACCEPTED",
+    message: "Email accepted.",
+  };
 }
 
 /**

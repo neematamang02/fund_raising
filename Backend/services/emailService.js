@@ -7,6 +7,13 @@ import nodemailer from "nodemailer";
 
 let transporter;
 
+function isEmailAuthFailure(error) {
+  return (
+    error?.message?.includes("Invalid login") ||
+    error?.responseCode === 535
+  );
+}
+
 function getTransporter() {
   if (!transporter) {
     // Create transporter on first use so runtime env values are available.
@@ -748,6 +755,36 @@ export const testEmailConnection = async () => {
   } catch (error) {
     console.error("❌ Email service configuration error:", error);
     return false;
+  }
+};
+
+export const sendOtpEmail = async ({ to, subject, html }) => {
+  try {
+    const info = await getTransporter().sendMail({
+      to,
+      from: process.env.EMAIL_USER,
+      subject,
+      html,
+    });
+
+    return { ok: true, info };
+  } catch (error) {
+    if (isEmailAuthFailure(error)) {
+      return {
+        ok: false,
+        code: "EMAIL_AUTH_FAILED",
+        message:
+          "Email delivery is temporarily unavailable. SMTP credentials are invalid. Please contact support.",
+        error,
+      };
+    }
+
+    return {
+      ok: false,
+      code: "EMAIL_SERVICE_UNAVAILABLE",
+      message: "Email delivery is temporarily unavailable. Please try again later.",
+      error,
+    };
   }
 };
 

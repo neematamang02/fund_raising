@@ -5,34 +5,38 @@ import jwt from "jsonwebtoken";
 import { requireAuth } from "../middleware/auth.js";
 import { strictRateLimiter } from "../middleware/rateLimiter.js";
 import OrganizerApplication from "../Models/OrganizerApplication.js";
-import nodemailer from "nodemailer";
 import Otp from "../Models/Otp.js";
 import {
   sanitizeString,
   isValidEmail,
-  isDisposableEmail,
-  validateEmailDomainReachability,
+  getEmailDomain,
+  validateEmailForOtp,
   isValidAmount,
 } from "../utils/validation.js";
 import { logError, logSecurityEvent, logInfo } from "../utils/logger.js";
+import { sendOtpEmail } from "../services/emailService.js";
 
 const router = Router();
+const registerOtpCooldownStore = new Map();
+const forgotOtpCooldownStore = new Map();
+const REGISTER_OTP_COOLDOWN_MS = Number(
+  process.env.REGISTER_OTP_COOLDOWN_MS || 60_000,
+);
+const FORGOT_OTP_COOLDOWN_MS = Number(
+  process.env.FORGOT_OTP_COOLDOWN_MS || 60_000,
+);
 
-let mailTransporter;
+function getOtpCooldownRemainingMs(store, email, cooldownMs) {
+  const lastSentAt = store.get(email);
+  if (!lastSentAt) return 0;
 
-function getMailTransporter() {
-  if (!mailTransporter) {
-    // Build transporter lazily so env vars are available after dotenv initialization.
-    mailTransporter = nodemailer.createTransport({
-      service: "gmail",
-      auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS,
-      },
-    });
+  const elapsed = Date.now() - lastSentAt;
+  if (elapsed >= cooldownMs) {
+    store.delete(email);
+    return 0;
   }
 
-  return mailTransporter;
+  return cooldownMs - elapsed;
 }
 
 /**
@@ -52,27 +56,18 @@ router.post("/register", strictRateLimiter, async (req, res) => {
     const sanitizedEmail = sanitizeString(email).toLowerCase();
     const sanitizedName = sanitizeString(name);
 
-    // Validate email format
-    if (!isValidEmail(sanitizedEmail)) {
-      return res.status(400).json({ message: "Invalid email format." });
-    }
-
-    if (isDisposableEmail(sanitizedEmail)) {
+    const emailValidation = await validateEmailForOtp(sanitizedEmail);
+    if (!emailValidation.isValid) {
       return res.status(400).json({
-        message: "Please use a real personal or work email address.",
+        message: emailValidation.message,
+        code: emailValidation.code,
       });
     }
 
-    const domainStatus = await validateEmailDomainReachability(sanitizedEmail);
-    if (!domainStatus.isValid) {
-      return res.status(400).json({
-        message: "This email domain does not look real. Please use a valid email address.",
-      });
-    }
-
-    if (domainStatus.isUncertain) {
+    if (emailValidation.isUncertain) {
       logInfo("Email domain DNS check uncertain; allowing OTP fallback", {
-        email: sanitizedEmail,
+        emailDomain: getEmailDomain(sanitizedEmail),
+        reason: emailValidation.code,
       });
     }
 
@@ -98,22 +93,66 @@ router.post("/register", strictRateLimiter, async (req, res) => {
     const existing = await User.findOne({ email: sanitizedEmail });
     if (existing) {
       logSecurityEvent("Registration attempt with existing email", {
-        email: sanitizedEmail,
+        emailDomain: getEmailDomain(sanitizedEmail),
       });
-      return res.status(409).json({ message: "Email already in use." });
+      return res
+        .status(409)
+        .json({ message: "Email already in use.", code: "EMAIL_ALREADY_IN_USE" });
     }
 
     // Check if email service is configured
     if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
       logError("Email service not configured");
-      return res.status(500).json({ message: "Email service not configured." });
+      return res.status(500).json({
+        message: "Email service not configured.",
+        code: "EMAIL_SERVICE_NOT_CONFIGURED",
+      });
+    }
+
+    const cooldownRemainingMs = getOtpCooldownRemainingMs(
+      registerOtpCooldownStore,
+      sanitizedEmail,
+      REGISTER_OTP_COOLDOWN_MS,
+    );
+    if (cooldownRemainingMs > 0) {
+      const retryAfterSeconds = Math.ceil(cooldownRemainingMs / 1000);
+      return res.status(429).json({
+        message: `Please wait ${retryAfterSeconds}s before requesting another OTP.`,
+        code: "OTP_REQUEST_COOLDOWN",
+        retryAfterSeconds,
+      });
     }
 
     // Generate OTP
     const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
     const expiresAt = new Date(Date.now() + 3 * 60 * 1000); // 3 minutes
 
-    // Store OTP
+    const sendResult = await sendOtpEmail({
+      to: sanitizedEmail,
+      subject: "OTP code for registration",
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2>Welcome to Fundraising Platform!</h2>
+          <p>Your OTP code is:</p>
+          <h1 style="color: #4F46E5; font-size: 32px; letter-spacing: 5px;">${otpCode}</h1>
+          <p>This code will expire in 3 minutes.</p>
+          <p style="color: #666; font-size: 14px;">If you didn't request this, please ignore this email.</p>
+        </div>
+      `,
+    });
+
+    if (!sendResult.ok) {
+      logError("Register Email Send Error", sendResult.error, {
+        emailDomain: getEmailDomain(sanitizedEmail),
+      });
+
+      return res.status(503).json({
+        message: sendResult.message,
+        code: sendResult.code,
+      });
+    }
+
+    // Persist OTP only after successful send to avoid orphan OTP records.
     await Otp.findOneAndUpdate(
       { email: sanitizedEmail, purpose: "register" },
       {
@@ -126,50 +165,17 @@ router.post("/register", strictRateLimiter, async (req, res) => {
       { upsert: true, new: true },
     );
 
-    // Send OTP email
-    try {
-      await getMailTransporter().sendMail({
-        to: sanitizedEmail,
-        from: process.env.EMAIL_USER,
-        subject: "OTP code for registration",
-        html: `
-          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-            <h2>Welcome to Fundraising Platform!</h2>
-            <p>Your OTP code is:</p>
-            <h1 style="color: #4F46E5; font-size: 32px; letter-spacing: 5px;">${otpCode}</h1>
-            <p>This code will expire in 3 minutes.</p>
-            <p style="color: #666; font-size: 14px;">If you didn't request this, please ignore this email.</p>
-          </div>
-        `,
-      });
-    } catch (mailError) {
-      logError("Register Email Send Error", mailError, {
-        email: sanitizedEmail,
-      });
+    registerOtpCooldownStore.set(sanitizedEmail, Date.now());
 
-      if (
-        mailError?.message?.includes("Invalid login") ||
-        mailError?.responseCode === 535
-      ) {
-        return res.status(503).json({
-          message:
-            "Email delivery is temporarily unavailable. SMTP credentials are invalid. Please contact support.",
-          code: "EMAIL_AUTH_FAILED",
-        });
-      }
-
-      return res.status(503).json({
-        message:
-          "Email delivery is temporarily unavailable. Please try again later.",
-        code: "EMAIL_SERVICE_UNAVAILABLE",
-      });
-    }
-
-    logInfo("OTP sent for registration", { email: sanitizedEmail });
+    logInfo("OTP sent for registration", {
+      emailDomain: getEmailDomain(sanitizedEmail),
+      messageId: sendResult.info?.messageId,
+    });
 
     return res.status(200).json({
       message:
         "OTP sent to your email. Please verify to complete registration.",
+      code: "REGISTER_OTP_SENT",
     });
   } catch (err) {
     logError("Register Error", err);
@@ -435,8 +441,19 @@ router.post("/forgot-password", strictRateLimiter, async (req, res) => {
 
     const sanitizedEmail = sanitizeString(email).toLowerCase();
 
-    if (!isValidEmail(sanitizedEmail)) {
-      return res.status(400).json({ message: "Invalid email format." });
+    const emailValidation = await validateEmailForOtp(sanitizedEmail);
+    if (!emailValidation.isValid) {
+      return res.status(400).json({
+        message: emailValidation.message,
+        code: emailValidation.code,
+      });
+    }
+
+    if (emailValidation.isUncertain) {
+      logInfo("Forgot-password DNS check uncertain; allowing OTP fallback", {
+        emailDomain: getEmailDomain(sanitizedEmail),
+        reason: emailValidation.code,
+      });
     }
 
     // Validate environment
@@ -444,7 +461,24 @@ router.post("/forgot-password", strictRateLimiter, async (req, res) => {
       logError("Email service not configured");
       return res
         .status(500)
-        .json({ message: "Email server not configured properly." });
+        .json({
+          message: "Email server not configured properly.",
+          code: "EMAIL_SERVICE_NOT_CONFIGURED",
+        });
+    }
+
+    const cooldownRemainingMs = getOtpCooldownRemainingMs(
+      forgotOtpCooldownStore,
+      sanitizedEmail,
+      FORGOT_OTP_COOLDOWN_MS,
+    );
+    if (cooldownRemainingMs > 0) {
+      const retryAfterSeconds = Math.ceil(cooldownRemainingMs / 1000);
+      return res.status(429).json({
+        message: `Please wait ${retryAfterSeconds}s before requesting another OTP.`,
+        code: "OTP_REQUEST_COOLDOWN",
+        retryAfterSeconds,
+      });
     }
 
     // Find user
@@ -452,16 +486,43 @@ router.post("/forgot-password", strictRateLimiter, async (req, res) => {
     if (!user) {
       // Don't reveal if email exists (security best practice)
       logInfo("Password reset requested for non-existent email", {
-        requestedEmail: sanitizedEmail,
+        emailDomain: getEmailDomain(sanitizedEmail),
       });
       return res.json({
         message: "If that email exists, an OTP has been sent.",
+        code: "FORGOT_PASSWORD_OTP_DISPATCHED",
       });
     }
 
     // Generate reset OTP and store it for forgot-password flow
     const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
     const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+
+    const sendResult = await sendOtpEmail({
+      to: user.email,
+      subject: "Password Reset OTP",
+      html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2>Password Reset OTP</h2>
+        <p>You requested a password reset for your account.</p>
+        <p>Your one-time password (OTP) is:</p>
+        <h1 style="color: #4F46E5; font-size: 32px; letter-spacing: 5px; margin: 16px 0;">${otpCode}</h1>
+        <p>This OTP will expire in 10 minutes.</p>
+        <p style="color: #666; font-size: 14px;">If you didn't request this, please ignore this email.</p>
+      </div>
+      `,
+    });
+
+    if (!sendResult.ok) {
+      logError("Forgot Password Email Send Error", sendResult.error, {
+        emailDomain: getEmailDomain(sanitizedEmail),
+      });
+
+      return res.status(503).json({
+        message: sendResult.message,
+        code: sendResult.code,
+      });
+    }
 
     await Otp.findOneAndUpdate(
       { email: sanitizedEmail, purpose: "forget-password" },
@@ -475,37 +536,24 @@ router.post("/forgot-password", strictRateLimiter, async (req, res) => {
       { upsert: true, new: true },
     );
 
-    const emailInfo = await getMailTransporter().sendMail({
-      to: user.email,
-      from: process.env.EMAIL_USER,
-      subject: "Password Reset OTP",
-      html: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <h2>Password Reset OTP</h2>
-          <p>You requested a password reset for your account.</p>
-          <p>Your one-time password (OTP) is:</p>
-          <h1 style="color: #4F46E5; font-size: 32px; letter-spacing: 5px; margin: 16px 0;">${otpCode}</h1>
-          <p>This OTP will expire in 10 minutes.</p>
-          <p style="color: #666; font-size: 14px;">If you didn't request this, please ignore this email.</p>
-        </div>
-      `,
-    });
+    forgotOtpCooldownStore.set(sanitizedEmail, Date.now());
 
     // Detailed logging for debugging
     logInfo("Password reset email sent successfully", {
       userId: user._id,
-      userEmail: user.email,
-      messageId: emailInfo.messageId,
-      accepted: emailInfo.accepted,
+      emailDomain: getEmailDomain(user.email),
+      messageId: sendResult.info?.messageId,
+      accepted: sendResult.info?.accepted,
       from: process.env.EMAIL_USER,
     });
 
     return res.json({
       message: "If that email exists, an OTP has been sent.",
+      code: "FORGOT_PASSWORD_OTP_DISPATCHED",
     });
   } catch (err) {
     logError("Forgot Password Error", err, {
-      requestedEmail: req.body.email,
+      emailDomain: getEmailDomain(req.body.email),
     });
     return res.status(500).json({ message: "Server error." });
   }

@@ -25,11 +25,12 @@ const OtpVerification = () => {
         body: JSON.stringify({ name, email, password, otp }),
       });
       if (!res.ok) {
-        throw new Error(
-          await res
-            .json()
-            .then((data) => data.message || "Failed to verify OTP"),
-        );
+        const data = await res
+          .json()
+          .catch(() => ({ message: "Failed to verify OTP" }));
+        const enrichedError = new Error(data.message || "Failed to verify OTP");
+        enrichedError.code = data.code;
+        throw enrichedError;
       }
       return res.json();
     },
@@ -39,7 +40,21 @@ const OtpVerification = () => {
       navigate(ROUTES.LOGIN);
     },
     onError: (error) => {
-      toast.error(error.message || "Failed to verify OTP");
+      const code = error.code || "UNKNOWN_ERROR";
+      const message = error.message || "Failed to verify OTP";
+
+      if (/expired|invalid/i.test(message)) {
+        toast.error(`${message} Please request a new OTP from registration.`);
+        return;
+      }
+
+      if (code === "EMAIL_ALREADY_IN_USE") {
+        toast.error("This email is already registered. Please sign in instead.");
+        navigate(ROUTES.LOGIN);
+        return;
+      }
+
+      toast.error(message);
     },
   });
 
@@ -56,7 +71,7 @@ const OtpVerification = () => {
       reg = null;
     }
     if (!reg || !reg.name || !reg.email || !reg.password) {
-      toast.error("Registration data missing. Please register again.");
+      toast.error("Session expired. Please register again to get a new OTP.");
       navigate(ROUTES.REGISTER);
       return;
     }
@@ -98,7 +113,7 @@ const OtpVerification = () => {
             Verify OTP
           </CardTitle>
           <p className="text-sm text-slate-600">
-            Enter the 6-digit code sent to your email.
+            Enter the 6-digit code sent to your inbox.
           </p>
         </CardHeader>
 

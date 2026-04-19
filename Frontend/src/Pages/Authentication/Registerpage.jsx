@@ -85,12 +85,14 @@ export default function RegisterPage() {
       });
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
-        throw new Error(err.message || "Registration failed");
+        const enrichedError = new Error(err.message || "Registration failed");
+        enrichedError.code = err.code;
+        throw enrichedError;
       }
       return res.json();
     },
     onSuccess: (data, variables) => {
-      toast.success("Otp send to your email");
+      toast.success("Check your inbox for a 6-digit verification code.");
       try {
         sessionStorage.setItem(
           "registrationData",
@@ -108,8 +110,23 @@ export default function RegisterPage() {
     },
     onError: (error) => {
       const message = error.message || "Failed to send OTP";
+      const code = error.code || "UNKNOWN_ERROR";
 
-      if (/email/i.test(message)) {
+      const emailScopedCodes = new Set([
+        "INVALID_EMAIL_FORMAT",
+        "DISPOSABLE_EMAIL_BLOCKED",
+        "EMAIL_DOMAIN_UNREACHABLE",
+        "EMAIL_ALREADY_IN_USE",
+      ]);
+
+      if (emailScopedCodes.has(code) || /email/i.test(message)) {
+        form.setError("email", {
+          type: "server",
+          message,
+        });
+      }
+
+      if (code === "OTP_REQUEST_COOLDOWN") {
         form.setError("email", {
           type: "server",
           message,
@@ -276,6 +293,9 @@ export default function RegisterPage() {
                             />
                           </div>
                         </FormControl>
+                        <p className="text-xs text-muted-foreground">
+                          Use a real inbox you can access right now.
+                        </p>
                         <FormMessage />
                       </FormItem>
                     )}
