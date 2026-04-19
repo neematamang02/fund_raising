@@ -191,6 +191,26 @@
     @apply bg-background;
   }
 
+  .surface-home {
+    background:
+      radial-gradient(
+        1300px 560px at 100% -12%,
+        color-mix(in oklab, var(--primary) 20%, transparent),
+        transparent 62%
+      ),
+      radial-gradient(
+        820px 420px at -8% 14%,
+        color-mix(in oklab, var(--chart-5) 18%, transparent),
+        transparent 68%
+      ),
+      linear-gradient(
+        180deg,
+        color-mix(in oklab, var(--muted) 78%, var(--background)) 0%,
+        color-mix(in oklab, var(--muted) 58%, var(--background)) 45%,
+        var(--background) 100%
+      );
+  }
+
   .surface-card {
     @apply bg-card text-card-foreground border border-border;
   }

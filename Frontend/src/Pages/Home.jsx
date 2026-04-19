@@ -76,7 +76,7 @@ export default function Home() {
   ];
 
   return (
-    <div className="surface-page min-h-screen">
+    <div className="surface-home min-h-screen">
       <HeroSection />
 
       <section className="border-b border-border bg-card py-14 sm:py-16">

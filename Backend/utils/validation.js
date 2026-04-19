@@ -3,6 +3,27 @@
  * Provides sanitization and validation for user inputs
  */
 
+import { createRequire } from "module";
+import dns from "node:dns/promises";
+
+const require = createRequire(import.meta.url);
+const disposableEmailDomains = new Set(require("disposable-email-domains"));
+
+const DNS_TIMEOUT_MS = 2500;
+
+function withTimeout(promise, timeoutMs = DNS_TIMEOUT_MS) {
+  return Promise.race([
+    promise,
+    new Promise((_, reject) => {
+      setTimeout(() => {
+        const timeoutError = new Error("DNS lookup timeout");
+        timeoutError.code = "ETIMEOUT";
+        reject(timeoutError);
+      }, timeoutMs);
+    }),
+  ]);
+}
+
 /**
  * Sanitize string input - remove dangerous characters
  * @param {string} input - Input string
@@ -25,6 +46,124 @@ export function sanitizeString(input) {
 export function isValidEmail(email) {
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   return emailRegex.test(email);
+}
+
+/**
+ * Check if an email domain is disposable/temporary.
+ * Includes parent-domain fallback so subdomains are also blocked.
+ * @param {string} email - Email address
+ * @returns {boolean} True when email uses a disposable domain
+ */
+export function isDisposableEmail(email) {
+  if (typeof email !== "string") return false;
+
+  const atIndex = email.lastIndexOf("@");
+  if (atIndex === -1) return false;
+
+  const rawDomain = email.slice(atIndex + 1).toLowerCase().trim();
+  if (!rawDomain) return false;
+
+  if (disposableEmailDomains.has(rawDomain)) {
+    return true;
+  }
+
+  const domainParts = rawDomain.split(".");
+  for (let i = 1; i < domainParts.length - 1; i += 1) {
+    const parentDomain = domainParts.slice(i).join(".");
+    if (disposableEmailDomains.has(parentDomain)) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+/**
+ * Check whether email domain appears real/reachable.
+ * Returns invalid when domain has no MX and no A/AAAA records.
+ * Returns uncertain for transient DNS issues so registration can continue.
+ * @param {string} email - Email address
+ * @returns {Promise<{ isValid: boolean, isUncertain: boolean }>}
+ */
+export async function validateEmailDomainReachability(email) {
+  if (typeof email !== "string") {
+    return { isValid: false, isUncertain: false };
+  }
+
+  const atIndex = email.lastIndexOf("@");
+  if (atIndex === -1) {
+    return { isValid: false, isUncertain: false };
+  }
+
+  const domain = email.slice(atIndex + 1).toLowerCase().trim();
+  if (!domain) {
+    return { isValid: false, isUncertain: false };
+  }
+
+  let mxTimedOut = false;
+
+  try {
+    const mxRecords = await withTimeout(dns.resolveMx(domain));
+    if (Array.isArray(mxRecords) && mxRecords.length > 0) {
+      return { isValid: true, isUncertain: false };
+    }
+  } catch (error) {
+    if (error?.code === "ETIMEOUT") {
+      mxTimedOut = true;
+    }
+  }
+
+  const domainMissingCodes = new Set([
+    "ENOTFOUND",
+    "ENODATA",
+    "ESERVFAIL",
+    "ENODOMAIN",
+    "EREFUSED",
+  ]);
+
+  try {
+    const [aRecords, aaaaRecords] = await Promise.allSettled([
+      withTimeout(dns.resolve4(domain)),
+      withTimeout(dns.resolve6(domain)),
+    ]);
+
+    const hasA =
+      aRecords.status === "fulfilled" &&
+      Array.isArray(aRecords.value) &&
+      aRecords.value.length > 0;
+    const hasAaaa =
+      aaaaRecords.status === "fulfilled" &&
+      Array.isArray(aaaaRecords.value) &&
+      aaaaRecords.value.length > 0;
+
+    if (hasA || hasAaaa) {
+      return { isValid: true, isUncertain: false };
+    }
+
+    const aErrCode =
+      aRecords.status === "rejected" ? aRecords.reason?.code : null;
+    const aaaaErrCode =
+      aaaaRecords.status === "rejected" ? aaaaRecords.reason?.code : null;
+
+    if (
+      (aErrCode && domainMissingCodes.has(aErrCode)) ||
+      (aaaaErrCode && domainMissingCodes.has(aaaaErrCode))
+    ) {
+      return { isValid: false, isUncertain: false };
+    }
+
+    if (
+      mxTimedOut ||
+      aErrCode === "ETIMEOUT" ||
+      aaaaErrCode === "ETIMEOUT"
+    ) {
+      return { isValid: true, isUncertain: true };
+    }
+  } catch {
+    return { isValid: true, isUncertain: true };
+  }
+
+  return { isValid: false, isUncertain: false };
 }
 
 /**

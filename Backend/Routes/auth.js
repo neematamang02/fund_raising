@@ -10,6 +10,8 @@ import Otp from "../Models/Otp.js";
 import {
   sanitizeString,
   isValidEmail,
+  isDisposableEmail,
+  validateEmailDomainReachability,
   isValidAmount,
 } from "../utils/validation.js";
 import { logError, logSecurityEvent, logInfo } from "../utils/logger.js";
@@ -53,6 +55,25 @@ router.post("/register", strictRateLimiter, async (req, res) => {
     // Validate email format
     if (!isValidEmail(sanitizedEmail)) {
       return res.status(400).json({ message: "Invalid email format." });
+    }
+
+    if (isDisposableEmail(sanitizedEmail)) {
+      return res.status(400).json({
+        message: "Please use a real personal or work email address.",
+      });
+    }
+
+    const domainStatus = await validateEmailDomainReachability(sanitizedEmail);
+    if (!domainStatus.isValid) {
+      return res.status(400).json({
+        message: "This email domain does not look real. Please use a valid email address.",
+      });
+    }
+
+    if (domainStatus.isUncertain) {
+      logInfo("Email domain DNS check uncertain; allowing OTP fallback", {
+        email: sanitizedEmail,
+      });
     }
 
     // Validate password strength

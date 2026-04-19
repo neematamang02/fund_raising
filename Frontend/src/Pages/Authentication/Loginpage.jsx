@@ -65,6 +65,7 @@ export default function LoginPage() {
 
   const form = useForm({
     resolver: zodResolver(loginSchema),
+    shouldFocusError: true,
     defaultValues: { email: "", password: "" },
   });
 
@@ -100,6 +101,25 @@ export default function LoginPage() {
   const onSubmit = (values) => {
     mutation.mutate(values);
   };
+
+  const fieldLabels = {
+    email: "Email Address",
+    password: "Password",
+  };
+
+  const priorityOrder = ["email", "password"];
+  const visibleErrorEntries =
+    form.formState.submitCount > 0
+      ? Object.entries(form.formState.errors).filter(
+          ([, error]) => typeof error?.message === "string" && error.message,
+        )
+      : [];
+
+  const primaryError =
+    priorityOrder
+      .map((field) => form.formState.errors[field])
+      .find((error) => typeof error?.message === "string" && error.message)
+      ?.message || visibleErrorEntries[0]?.[1]?.message;
 
   return (
     <div className="surface-page min-h-screen lg:grid lg:grid-cols-2">
@@ -169,6 +189,21 @@ export default function LoginPage() {
                   onSubmit={form.handleSubmit(onSubmit)}
                   className="space-y-5"
                 >
+                  {visibleErrorEntries.length > 0 && (
+                    <div className="rounded-lg border border-destructive/35 bg-destructive/10 p-3 text-sm">
+                      <p className="font-semibold text-destructive">
+                        {primaryError}
+                      </p>
+                      <ul className="mt-2 list-disc space-y-1 pl-5 text-destructive/90">
+                        {visibleErrorEntries.map(([field, error]) => (
+                          <li key={field}>
+                            {fieldLabels[field] || field}: {String(error.message)}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
                   <FormField
                     control={form.control}
                     name="email"

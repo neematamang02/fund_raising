@@ -41,10 +41,19 @@ const registerSchema = z
     email: z.string().email({ message: "Invalid email address." }),
     password: z
       .string()
-      .min(6, { message: "Password must be at least 6 characters." }),
+      .min(8, { message: "Password must be at least 8 characters." })
+      .regex(/[A-Z]/, {
+        message: "Password must include at least one uppercase letter.",
+      })
+      .regex(/[a-z]/, {
+        message: "Password must include at least one lowercase letter.",
+      })
+      .regex(/[0-9]/, {
+        message: "Password must include at least one number.",
+      }),
     confirmPassword: z
       .string()
-      .min(6, { message: "Please confirm your password." }),
+      .min(8, { message: "Please confirm your password." }),
   })
   .refine((data) => data.password === data.confirmPassword, {
     path: ["confirmPassword"],
@@ -58,6 +67,7 @@ export default function RegisterPage() {
 
   const form = useForm({
     resolver: zodResolver(registerSchema),
+    shouldFocusError: true,
     defaultValues: {
       name: "",
       email: "",
@@ -97,7 +107,16 @@ export default function RegisterPage() {
       navigate(ROUTES.OTP_VERIFICATION, { replace: true });
     },
     onError: (error) => {
-      toast.error(error.message || "Failed to send OTP");
+      const message = error.message || "Failed to send OTP";
+
+      if (/email/i.test(message)) {
+        form.setError("email", {
+          type: "server",
+          message,
+        });
+      }
+
+      toast.error(message);
     },
   });
 
@@ -108,6 +127,27 @@ export default function RegisterPage() {
       password: values.password,
     });
   };
+
+  const fieldLabels = {
+    name: "Full Name",
+    email: "Email Address",
+    password: "Password",
+    confirmPassword: "Confirm Password",
+  };
+
+  const priorityOrder = ["email", "password", "confirmPassword", "name"];
+  const visibleErrorEntries =
+    form.formState.submitCount > 0
+      ? Object.entries(form.formState.errors).filter(
+          ([, error]) => typeof error?.message === "string" && error.message,
+        )
+      : [];
+
+  const primaryError =
+    priorityOrder
+      .map((field) => form.formState.errors[field])
+      .find((error) => typeof error?.message === "string" && error.message)
+      ?.message || visibleErrorEntries[0]?.[1]?.message;
 
   return (
     <div className="surface-page min-h-screen lg:grid lg:grid-cols-2">
@@ -179,6 +219,21 @@ export default function RegisterPage() {
                   onSubmit={form.handleSubmit(onSubmit)}
                   className="space-y-5"
                 >
+                  {visibleErrorEntries.length > 0 && (
+                    <div className="rounded-lg border border-destructive/35 bg-destructive/10 p-3 text-sm">
+                      <p className="font-semibold text-destructive">
+                        {primaryError}
+                      </p>
+                      <ul className="mt-2 list-disc space-y-1 pl-5 text-destructive/90">
+                        {visibleErrorEntries.map(([field, error]) => (
+                          <li key={field}>
+                            {fieldLabels[field] || field}: {String(error.message)}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
                   <FormField
                     control={form.control}
                     name="name"
