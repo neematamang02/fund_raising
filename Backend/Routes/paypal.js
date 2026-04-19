@@ -11,6 +11,10 @@ import {
   storeIdempotentResponse,
 } from "../utils/idempotency.js";
 import { recordDonationBlock } from "../services/blockchainService.js";
+import {
+  getCampaignRemainingAmount,
+  tryIncrementCampaignRaisedWithinTarget,
+} from "../services/donationCapacityService.js";
 
 const router = express.Router();
 
@@ -42,6 +46,25 @@ async function getCampaignWithLifecycleChecks(campaignId) {
   }
 
   return { campaign };
+}
+
+async function refundCapturedPayment({
+  captureId,
+  amountValue,
+  currencyCode,
+  noteToPayer,
+}) {
+  const request = new paypal.payments.CapturesRefundRequest(captureId);
+  request.requestBody({
+    amount: {
+      value: Number.parseFloat(amountValue).toFixed(2),
+      currency_code: currencyCode,
+    },
+    note_to_payer: noteToPayer,
+  });
+
+  const refundResponse = await paypalClient().execute(request);
+  return refundResponse.result;
 }
 
 // ───────────────────────────────────────────────────────────────
@@ -97,6 +120,26 @@ router.post(
         await getCampaignWithLifecycleChecks(campaignId);
       if (error) {
         return res.status(error.status).json({ error: error.message });
+      }
+
+      const parsedRequestedAmount = Number.parseFloat(amount);
+      if (Number.isNaN(parsedRequestedAmount) || parsedRequestedAmount <= 0) {
+        return res.status(400).json({ error: "Invalid input" });
+      }
+
+      const remainingAmount = getCampaignRemainingAmount(campaign);
+      if (remainingAmount <= 0) {
+        return res.status(409).json({
+          error: "This campaign has already reached its target amount.",
+          remainingAmount,
+        });
+      }
+
+      if (parsedRequestedAmount > remainingAmount) {
+        return res.status(400).json({
+          error: "Donation amount exceeds the remaining campaign target.",
+          remainingAmount,
+        });
       }
 
       // Build PayPal order request
@@ -227,6 +270,12 @@ router.post(
         return res.json(replayBody);
       }
 
+      const { campaign, error } =
+        await getCampaignWithLifecycleChecks(campaignId);
+      if (error) {
+        return res.status(error.status).json({ error: error.message });
+      }
+
       // Capture the order
       const request = new paypal.orders.OrdersCaptureRequest(orderID);
       request.requestBody({});
@@ -241,13 +290,8 @@ router.post(
       const captureId = purchaseUnit.payments.captures[0].id;
       const captureStatus = purchaseUnit.payments.captures[0].status; // e.g. "COMPLETED"
       const amountValue = purchaseUnit.payments.captures[0].amount.value; // string
+      const currencyCode = purchaseUnit.payments.captures[0].amount.currency_code;
       const payer = result.payer; // payer object
-
-      const { campaign, error } =
-        await getCampaignWithLifecycleChecks(campaignId);
-      if (error) {
-        return res.status(error.status).json({ error: error.message });
-      }
 
       const parsedAmount = parseFloat(amountValue);
       if (Number.isNaN(parsedAmount) || parsedAmount <= 0) {
@@ -256,13 +300,44 @@ router.post(
           .json({ error: "Invalid capture amount from PayPal" });
       }
 
-      // Use atomic increment to avoid full-document validation on legacy records.
-      let raisedIncremented = false;
-      await Campaign.updateOne(
-        { _id: campaignId },
-        { $inc: { raised: parsedAmount } },
-      );
-      raisedIncremented = true;
+      const incrementResult = await tryIncrementCampaignRaisedWithinTarget({
+        campaignId,
+        amount: parsedAmount,
+      });
+
+      if (!incrementResult.ok) {
+        let refundResult = null;
+        let refundFailed = false;
+
+        try {
+          refundResult = await refundCapturedPayment({
+            captureId,
+            amountValue,
+            currencyCode,
+            noteToPayer:
+              "This campaign reached its funding limit before your payment was finalized. Your payment has been refunded.",
+          });
+        } catch (refundError) {
+          refundFailed = true;
+          console.error(
+            "❌ Failed to refund captured PayPal payment after campaign cap rejection:",
+            refundError,
+          );
+        }
+
+        const responsePayload = {
+          error: refundFailed
+            ? "Payment captured but automatic refund failed. Support has been notified."
+            : "Campaign target was reached while processing payment. Your payment has been refunded.",
+          code: incrementResult.code,
+          remainingAmount: incrementResult.remainingAmount,
+          refundId: refundResult?.id,
+        };
+
+        return res.status(incrementResult.status).json(responsePayload);
+      }
+
+      let raisedIncremented = true;
 
       // Create a Donation record
       const donation = new Donation({
@@ -313,7 +388,7 @@ router.post(
             donationId: donation._id,
             transactionId: donation.transactionId,
             amount: parsedAmount,
-            currency: purchaseUnit.payments.captures[0].amount.currency_code,
+            currency: currencyCode,
             method: "paypal",
           },
           relatedEntity: {
@@ -346,7 +421,7 @@ router.post(
         donationId: donation._id,
         campaignTitle: campaign.title,
         amount: amountValue,
-        currency: purchaseUnit.payments.captures[0].amount.currency_code,
+        currency: currencyCode,
         transactionId: captureId,
         transactionHash: transparencyBlock?.hash || captureId,
         payerName: donation.payerName,

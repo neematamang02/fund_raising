@@ -3,6 +3,7 @@ import { requireAuth, requireRole } from "../middleware/auth.js";
 import Donation from "../Models/Donation.js";
 import Campaign from "../Models/Campaign.js";
 import { getMyDonationTransparency } from "../services/blockchainService.js";
+import { tryIncrementCampaignRaisedWithinTarget } from "../services/donationCapacityService.js";
 
 const router = Router();
 
@@ -72,33 +73,48 @@ router.get("/me", requireAuth, async (req, res) => {
 router.post("/", requireAuth, requireRole("donor"), async (req, res) => {
   try {
     const { campaign: campaignId, amount, method } = req.body;
+    const parsedAmount = Number.parseFloat(amount);
 
     // Validate input
     if (!campaignId || !amount || !method) {
       return res.status(400).json({ message: "All fields are required." });
     }
-    if (amount <= 0) {
+    if (Number.isNaN(parsedAmount) || parsedAmount <= 0) {
       return res.status(400).json({ message: "Amount must be positive." });
     }
 
-    // 1) Ensure the campaign exists
-    const campaign = await Campaign.findById(campaignId);
-    if (!campaign) {
-      return res.status(404).json({ message: "Campaign not found." });
-    }
-
-    // 2) Create the Donation
-    const donation = await Donation.create({
-      campaign: campaignId,
-      donorEmail: req.user.email,
-      amount,
-      method,
+    const incrementResult = await tryIncrementCampaignRaisedWithinTarget({
+      campaignId,
+      amount: parsedAmount,
     });
 
-    // 3) Increment the campaign's raised amount atomically
-    await Campaign.updateOne({ _id: campaignId }, { $inc: { raised: amount } });
+    if (!incrementResult.ok) {
+      return res.status(incrementResult.status).json({
+        message: incrementResult.message,
+        code: incrementResult.code,
+        remainingAmount: incrementResult.remainingAmount,
+      });
+    }
 
-    // 4) Return the newly created donation (populated with campaign title)
+    let donation;
+    try {
+      donation = await Donation.create({
+        campaign: campaignId,
+        donor: req.user.userId,
+        donorEmail: req.user.email,
+        amount: parsedAmount,
+        method,
+        transactionId: `manual-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`,
+        status: "COMPLETED",
+        payerEmail: req.user.email,
+        payerName: req.user.name || "Direct Donor",
+      });
+    } catch (createError) {
+      await Campaign.updateOne({ _id: campaignId }, { $inc: { raised: -parsedAmount } });
+      throw createError;
+    }
+
+    // Return the newly created donation (populated with campaign title)
     await donation.populate("campaign", "title");
     return res.status(201).json(donation);
   } catch (err) {

@@ -3,6 +3,7 @@ import Donation from "../Models/Donation.js";
 import WithdrawalRequest from "../Models/WithdrawalRequest.js";
 import Campaign from "../Models/Campaign.js";
 import { Block, Blockchain } from "../lib/blockchain.js";
+import { tryIncrementCampaignRaisedWithinTarget } from "./donationCapacityService.js";
 
 function toPublicBlock(block) {
   return {
@@ -298,42 +299,48 @@ export async function createManualDonationAndBlock({
   amount,
   donorName,
 }) {
-  const campaign = await Campaign.findById(campaignId);
-  if (!campaign) {
-    return { status: 404, message: "Campaign not found" };
-  }
+  const incrementResult = await tryIncrementCampaignRaisedWithinTarget({
+    campaignId,
+    amount,
+  });
 
-  if (campaign.status !== "active" || campaign.isDonationEnabled === false) {
+  if (!incrementResult.ok) {
     return {
-      status: 400,
-      message: "This campaign is no longer accepting donations.",
+      status: incrementResult.status,
+      message: incrementResult.message,
+      code: incrementResult.code,
+      remainingAmount: incrementResult.remainingAmount,
     };
   }
 
   const transactionId = `manual-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
 
-  const donation = await Donation.create({
-    campaign: campaignId,
-    donor: user.userId,
-    donorEmail: user.email,
-    isAnonymous: false,
-    amount,
-    method: "paypal",
-    transactionId,
-    status: "COMPLETED",
-    payerEmail: user.email,
-    payerName: donorName || user.name || "Anonymous Donor",
-    captureDetails: {
-      source: "manual-api",
-      note: "Academic blockchain-inspired transparency demo flow",
-    },
-  });
-
-  await Campaign.updateOne({ _id: campaignId }, { $inc: { raised: amount } });
+  let donation;
+  try {
+    donation = await Donation.create({
+      campaign: campaignId,
+      donor: user.userId,
+      donorEmail: user.email,
+      isAnonymous: false,
+      amount: incrementResult.amount,
+      method: "paypal",
+      transactionId,
+      status: "COMPLETED",
+      payerEmail: user.email,
+      payerName: donorName || user.name || "Anonymous Donor",
+      captureDetails: {
+        source: "manual-api",
+        note: "Academic blockchain-inspired transparency demo flow",
+      },
+    });
+  } catch (donationError) {
+    await Campaign.updateOne({ _id: campaignId }, { $inc: { raised: -incrementResult.amount } });
+    throw donationError;
+  }
 
   const block = await recordDonationBlock({
     donorName: donorName || user.name || "Anonymous Donor",
-    amount,
+    amount: incrementResult.amount,
     campaignId,
     donationId: donation._id,
     transactionId,
