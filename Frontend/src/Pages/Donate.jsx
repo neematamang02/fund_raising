@@ -21,6 +21,8 @@ import {
   DollarSign,
   Sparkles,
 } from "lucide-react";
+import { generateUniqueId } from "@/utils/helpers";
+import { initiatePayment } from "@/services/paymentApi";
 
 const API_BASE_URL = import.meta.env.VITE_BACKEND_URL
   ? `${import.meta.env.VITE_BACKEND_URL}/api`
@@ -36,6 +38,9 @@ export default function Donate() {
   const [selectedPreset, setSelectedPreset] = useState(null);
   const [paypalClientId, setPaypalClientId] = useState(null);
   const [isAnonymousDonation, setIsAnonymousDonation] = useState(false);
+  const [paymentGateway, setPaymentGateway] = useState("esewa");
+  const activeCurrency = paymentGateway === "paypal" ? "USD" : "NPR";
+  const activeCurrencySymbol = paymentGateway === "paypal" ? "$" : "Rs ";
 
   // Preset donation amounts
   const presetAmounts = [25, 50, 100, 250, 500, 1000];
@@ -151,6 +156,24 @@ export default function Donate() {
     onError: (err) => setErrorMsg(err.message || "Error capturing payment"),
   });
 
+  const initiateGatewayPaymentMutation = useMutation({
+    mutationFn: async ({ productId, parsedAmount }) => {
+      return initiatePayment(
+        {
+          amount: parsedAmount,
+          productId,
+          paymentGateway,
+          customerName: user?.name || "Donor",
+          customerEmail: user?.email || "",
+          customerPhone: user?.phone || "9800000000",
+          productName: campaign.title,
+          campaignId,
+        },
+        token,
+      );
+    },
+  });
+
   const handleValidateBeforePayPal = () => {
     if (!user) {
       navigate(ROUTES.LOGIN + `?redirect=/donate/${campaignId}`);
@@ -170,6 +193,54 @@ export default function Donate() {
     }
 
     return true;
+  };
+
+  const handleValidateBeforeRedirectPayment = () => {
+    if (!user) {
+      navigate(ROUTES.LOGIN + `?redirect=/donate/${campaignId}`);
+      return null;
+    }
+
+    const parsedAmount = parseFloat(amount);
+    if (!amount || isNaN(parsedAmount) || parsedAmount <= 0) {
+      setErrorMsg("Please enter a valid donation amount (greater than 0).");
+      return null;
+    }
+
+    if (parsedAmount > 1000000) {
+      setErrorMsg("Donation amount exceeds maximum limit.");
+      return null;
+    }
+
+    return parsedAmount;
+  };
+
+  const handleGatewayRedirectPayment = async () => {
+    setErrorMsg("");
+    const parsedAmount = handleValidateBeforeRedirectPayment();
+    if (!parsedAmount) {
+      return;
+    }
+
+    const productId = generateUniqueId();
+
+    sessionStorage.setItem("current_transaction_id", productId);
+    sessionStorage.setItem("current_payment_gateway", paymentGateway);
+
+    try {
+      const response = await initiateGatewayPaymentMutation.mutateAsync({
+        productId,
+        parsedAmount,
+      });
+
+      if (!response?.url) {
+        throw new Error("Gateway did not return a redirect URL");
+      }
+
+      window.location.assign(response.url);
+    } catch (error) {
+      setErrorMsg(error.message || "Failed to initiate payment");
+    }
   };
 
   const handlePresetAmount = (presetAmount) => {
@@ -329,7 +400,9 @@ export default function Donate() {
                   Donor Information
                 </Label>
                 <p className="text-lg text-foreground">{bill.payerName}</p>
-                <p className="text-sm text-muted-foreground">{bill.payerEmail}</p>
+                <p className="text-sm text-muted-foreground">
+                  {bill.payerEmail}
+                </p>
               </div>
 
               <div className="flex flex-col sm:flex-row gap-4 pt-6">
@@ -427,7 +500,9 @@ export default function Donate() {
                       <div className="text-2xl font-bold text-primary">
                         ${campaign.raised.toLocaleString()}
                       </div>
-                      <div className="text-sm text-muted-foreground">Raised</div>
+                      <div className="text-sm text-muted-foreground">
+                        Raised
+                      </div>
                     </div>
                     <div className="rounded-xl bg-muted/50 border border-border p-4 text-center">
                       <div className="text-2xl font-bold text-foreground">
@@ -549,13 +624,23 @@ export default function Donate() {
 
                 {campaignEnded ? (
                   <div className="text-center">
-                    <Button variant="outline" size="lg" className="w-full" disabled>
+                    <Button
+                      variant="outline"
+                      size="lg"
+                      className="w-full"
+                      disabled
+                    >
                       Donations Disabled (Campaign Ended)
                     </Button>
                   </div>
                 ) : remainingAmount <= 0 ? (
                   <div className="text-center">
-                    <Button variant="outline" size="lg" className="w-full" disabled>
+                    <Button
+                      variant="outline"
+                      size="lg"
+                      className="w-full"
+                      disabled
+                    >
                       Donation Target Completed
                     </Button>
                   </div>
@@ -576,7 +661,10 @@ export default function Donate() {
                                 : "border-border hover:border-primary/60"
                             }`}
                           >
-                            <div className="text-lg font-bold">${preset}</div>
+                            <div className="text-lg font-bold">
+                              {activeCurrencySymbol}
+                              {preset}
+                            </div>
                           </button>
                         ))}
                       </div>
@@ -587,7 +675,7 @@ export default function Donate() {
                         htmlFor="donation-amount"
                         className="text-sm font-medium text-foreground"
                       >
-                        Custom Amount (USD)
+                        Custom Amount ({activeCurrency})
                       </Label>
                       <div className="relative mt-2">
                         <DollarSign className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" />
@@ -603,12 +691,37 @@ export default function Donate() {
                       </div>
                     </div>
 
+                    <div>
+                      <Label className="mb-2 block text-sm font-medium text-foreground">
+                        Payment Gateway
+                      </Label>
+                      <select
+                        value={paymentGateway}
+                        onChange={(event) =>
+                          setPaymentGateway(event.target.value)
+                        }
+                        className="h-12 w-full rounded-lg border border-border bg-background px-3 text-sm"
+                      >
+                        <option value="esewa">eSewa</option>
+                        <option value="khalti">Khalti</option>
+                        <option value="paypal">PayPal</option>
+                      </select>
+                    </div>
+
                     <div className="rounded-xl border border-chart-2/20 bg-chart-2/8 p-4">
                       <div className="flex items-center gap-2 text-chart-2">
                         <Shield className="h-5 w-5" />
                         <span className="text-sm font-medium">
-                          Secure payment powered by PayPal. Your information is
-                          protected.
+                          Secure payment powered by{" "}
+                          {paymentGateway === "paypal"
+                            ? "PayPal"
+                            : paymentGateway === "esewa"
+                              ? "eSewa"
+                              : "Khalti"}
+                          .{" "}
+                          {paymentGateway === "paypal"
+                            ? "PayPal donations are processed in USD."
+                            : "eSewa and Khalti donations are processed in NPR."}
                         </span>
                       </div>
                     </div>
@@ -629,72 +742,87 @@ export default function Donate() {
                     </label>
 
                     <div className="space-y-4">
-                      {paypalClientId ? (
-                        <PayPalScriptProvider
-                          options={{
-                            "client-id": paypalClientId,
-                            currency: "USD",
-                            intent: "capture",
-                            components: "buttons",
-                            "disable-funding": "credit,card",
-                            "enable-funding": "venmo",
-                          }}
-                        >
-                          <PayPalButtons
-                            style={{
-                              layout: "vertical",
-                              color: "gold",
-                              shape: "rect",
-                              height: 50,
+                      {paymentGateway === "paypal" ? (
+                        paypalClientId ? (
+                          <PayPalScriptProvider
+                            options={{
+                              "client-id": paypalClientId,
+                              currency: "USD",
+                              intent: "capture",
+                              components: "buttons",
+                              "disable-funding": "credit,card",
+                              "enable-funding": "venmo",
                             }}
-                            createOrder={async () => {
-                              setErrorMsg("");
-                              if (!handleValidateBeforePayPal())
-                                return Promise.reject();
-                              try {
-                                const { orderID } =
-                                  await createOrderMutation.mutateAsync(amount);
-                                return orderID;
-                              } catch (error) {
+                          >
+                            <PayPalButtons
+                              style={{
+                                layout: "vertical",
+                                color: "gold",
+                                shape: "rect",
+                                height: 50,
+                              }}
+                              createOrder={async () => {
+                                setErrorMsg("");
+                                if (!handleValidateBeforePayPal())
+                                  return Promise.reject();
+                                try {
+                                  const { orderID } =
+                                    await createOrderMutation.mutateAsync(
+                                      amount,
+                                    );
+                                  return orderID;
+                                } catch (error) {
+                                  setErrorMsg(
+                                    error.message ||
+                                      "Failed to create PayPal order",
+                                  );
+                                  throw error;
+                                }
+                              }}
+                              onApprove={async (data) => {
+                                try {
+                                  await captureOrderMutation.mutateAsync(
+                                    data.orderID,
+                                  );
+                                } catch (error) {
+                                  setErrorMsg(
+                                    error.message ||
+                                      "An error occurred with PayPal. Please try again.",
+                                  );
+                                }
+                              }}
+                              onError={(err) => {
+                                console.error("PayPal error:", err);
+                                console.error(
+                                  "Error details:",
+                                  JSON.stringify(err, null, 2),
+                                );
                                 setErrorMsg(
-                                  error.message ||
-                                    "Failed to create PayPal order",
+                                  "PayPal payment failed. This is usually a sandbox account issue. Please try: 1) Creating a new sandbox test account at developer.paypal.com, or 2) Using a different sandbox account.",
                                 );
-                                throw error;
-                              }
-                            }}
-                            onApprove={async (data) => {
-                              try {
-                                await captureOrderMutation.mutateAsync(
-                                  data.orderID,
-                                );
-                              } catch (error) {
-                                setErrorMsg(
-                                  error.message ||
-                                    "An error occurred with PayPal. Please try again.",
-                                );
-                              }
-                            }}
-                            onError={(err) => {
-                              console.error("PayPal error:", err);
-                              console.error(
-                                "Error details:",
-                                JSON.stringify(err, null, 2),
-                              );
-                              setErrorMsg(
-                                "PayPal payment failed. This is usually a sandbox account issue. Please try: 1) Creating a new sandbox test account at developer.paypal.com, or 2) Using a different sandbox account.",
-                              );
-                            }}
-                            onCancel={() => setErrorMsg("Payment canceled.")}
-                          />
-                        </PayPalScriptProvider>
+                              }}
+                              onCancel={() => setErrorMsg("Payment canceled.")}
+                            />
+                          </PayPalScriptProvider>
+                        ) : (
+                          <div className="rounded-xl border border-destructive/20 bg-destructive/5 p-4">
+                            <p className="text-destructive text-sm">
+                              Payment system is currently unavailable. Please
+                              try again later.
+                            </p>
+                          </div>
+                        )
                       ) : (
-                        <div className="rounded-xl border border-destructive/20 bg-destructive/5 p-4">
-                          <p className="text-destructive text-sm">
-                            Payment system is currently unavailable. Please try
-                            again later.
-                          </p>
-                        </div>
+                        <Button
+                          className="w-full h-12"
+                          size="lg"
+                          onClick={handleGatewayRedirectPayment}
+                          disabled={initiateGatewayPaymentMutation.isPending}
+                        >
+                          {initiateGatewayPaymentMutation.isPending
+                            ? "Redirecting..."
+                            : `Pay with ${paymentGateway === "esewa" ? "eSewa" : "Khalti"}`}
+                        </Button>
                       )}
                     </div>
 

@@ -24,6 +24,36 @@ import {
 } from "@/components/admin/AdminUtils";
 import { HandCoins, CircleDollarSign, Hash } from "lucide-react";
 
+function normalizeCurrency(currency) {
+  return String(currency || "USD").toUpperCase() === "NPR" ? "NPR" : "USD";
+}
+
+function formatDonationAmount(amount, currency, maximumFractionDigits = 2) {
+  const parsed = Number(amount || 0);
+  const safeAmount = Number.isFinite(parsed) ? parsed : 0;
+  return new Intl.NumberFormat("en-NP", {
+    style: "currency",
+    currency: normalizeCurrency(currency),
+    maximumFractionDigits,
+  }).format(safeAmount);
+}
+
+function formatCurrencySummary(totals) {
+  const nprTotal = Number(totals?.NPR || 0);
+  const usdTotal = Number(totals?.USD || 0);
+
+  const parts = [];
+  if (nprTotal > 0)
+    parts.push(
+      `NPR ${nprTotal.toLocaleString(undefined, { maximumFractionDigits: 2 })}`,
+    );
+  if (usdTotal > 0)
+    parts.push(
+      `USD ${usdTotal.toLocaleString(undefined, { maximumFractionDigits: 2 })}`,
+    );
+  return parts.length ? parts.join(" | ") : "-";
+}
+
 // ─── Stat tile ────────────────────────────────────────────────────────────────
 
 function StatTile({ icon: Icon, label, value, accent }) {
@@ -35,12 +65,18 @@ function StatTile({ icon: Icon, label, value, accent }) {
   return (
     <Card className="border bg-card">
       <CardContent className="p-5 flex items-center gap-4">
-        <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border ${accentMap[accent ?? "muted"]}`}>
+        <div
+          className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border ${accentMap[accent ?? "muted"]}`}
+        >
           <Icon className="h-5 w-5" />
         </div>
         <div>
-          <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground">{label}</p>
-          <p className="text-2xl font-bold text-foreground leading-tight">{value}</p>
+          <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground">
+            {label}
+          </p>
+          <p className="text-2xl font-bold text-foreground leading-tight">
+            {value}
+          </p>
         </div>
       </CardContent>
     </Card>
@@ -72,7 +108,7 @@ function DonationCard({ donation }) {
 
           <div className="flex items-center gap-3 shrink-0">
             <p className="text-xl font-bold text-primary">
-              ${Number(donation.amount || 0).toFixed(2)}
+              {formatDonationAmount(donation.amount, donation.currency)}
             </p>
             <StatusBadge status={donation.status?.toLowerCase()} />
           </div>
@@ -114,11 +150,19 @@ export default function AdminDonations() {
   const total = Number(data?.total || 0);
   const totalPages = Number(data?.totalPages || 1);
 
-  const completedAmount = useMemo(
+  const completedTotalsByCurrency = useMemo(
     () =>
       donations
         .filter((d) => String(d.status || "").toUpperCase() === "COMPLETED")
-        .reduce((sum, d) => sum + Number(d.amount || 0), 0),
+        .reduce(
+          (acc, donation) => {
+            const currency = normalizeCurrency(donation.currency);
+            acc[currency] =
+              Number(acc[currency] || 0) + Number(donation.amount || 0);
+            return acc;
+          },
+          { NPR: 0, USD: 0 },
+        ),
     [donations],
   );
 
@@ -129,7 +173,6 @@ export default function AdminDonations() {
   return (
     <div className="min-h-screen surface-page px-4 py-8">
       <div className="mx-auto max-w-5xl space-y-6">
-
         {/* Header */}
         <PageHeader
           label="Admin"
@@ -139,7 +182,9 @@ export default function AdminDonations() {
             <RefreshButton
               disabled={isFetching}
               onClick={() =>
-                queryClient.invalidateQueries({ queryKey: ["admin", "donations"] })
+                queryClient.invalidateQueries({
+                  queryKey: ["admin", "donations"],
+                })
               }
             />
           }
@@ -147,12 +192,22 @@ export default function AdminDonations() {
 
         {/* Stats */}
         <div className="grid sm:grid-cols-3 gap-4">
-          <StatTile icon={HandCoins} label="Visible records" value={donations.length} accent="muted" />
-          <StatTile icon={Hash} label="Total records" value={total} accent="blue" />
+          <StatTile
+            icon={HandCoins}
+            label="Visible records"
+            value={donations.length}
+            accent="muted"
+          />
+          <StatTile
+            icon={Hash}
+            label="Total records"
+            value={total}
+            accent="blue"
+          />
           <StatTile
             icon={CircleDollarSign}
             label="Completed amount"
-            value={`$${completedAmount.toFixed(2)}`}
+            value={formatCurrencySummary(completedTotalsByCurrency)}
             accent="primary"
           />
         </div>

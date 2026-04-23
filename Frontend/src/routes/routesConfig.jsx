@@ -22,6 +22,8 @@ import ForgotPasswordPage from "@/Pages/Authentication/ForgotPasswordPage";
 import ResetPasswordPage from "@/Pages/Authentication/ResetPasswordPage";
 import Otpverification from "@/Pages/Authentication/Otpverification";
 import ImageUploadDemo from "@/Pages/ImageUploadDemo";
+import PaymentSuccess from "@/Pages/PaymentSuccess";
+import PaymentFailure from "@/Pages/PaymentFailure";
 
 const AdminDashboard = lazy(() => import("@/Pages/AdminDashboard"));
 const AdminCampaigns = lazy(() => import("@/Pages/AdminCampaigns"));
@@ -44,6 +46,8 @@ const routesConfig = [
   { path: ROUTES.RESET_PASSWORD, Component: ResetPasswordPage },
   { path: ROUTES.OTP_VERIFICATION, Component: Otpverification },
   { path: ROUTES.IMAGE_UPLOAD_DEMO, Component: ImageUploadDemo },
+  { path: ROUTES.PAYMENT_SUCCESS, Component: PaymentSuccess },
+  { path: ROUTES.PAYMENT_FAILURE, Component: PaymentFailure },
   {
     path: ROUTES.DONATE, // "/donate"
     Component: CampaignList,

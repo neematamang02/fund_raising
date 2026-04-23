@@ -28,6 +28,8 @@ const ROUTES = {
   RESET_PASSWORD: "/reset-password",
   OTP_VERIFICATION: "/otp-verification",
   IMAGE_UPLOAD_DEMO: "/image-upload-demo",
+  PAYMENT_SUCCESS: "/payment-success",
+  PAYMENT_FAILURE: "/payment-failure",
 };
 
 export default ROUTES;

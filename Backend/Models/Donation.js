@@ -26,12 +26,46 @@ const DonationSchema = new mongoose.Schema(
       default: false,
       index: true,
     },
+    customerDetails: {
+      name: { type: String, trim: true },
+      email: { type: String, trim: true, lowercase: true },
+      phone: { type: String, trim: true },
+    },
+    product_name: {
+      type: String,
+      trim: true,
+    },
+    product_id: {
+      type: String,
+      trim: true,
+      index: true,
+      sparse: true,
+    },
     amount: { type: Number, required: true, min: 0 },
-    method: { type: String, enum: ["paypal"], default: "paypal" },
+    method: {
+      type: String,
+      enum: ["paypal", "esewa", "khalti", "manual"],
+      default: "paypal",
+    },
+    payment_gateway: {
+      type: String,
+      enum: ["paypal", "esewa", "khalti"],
+    },
+    currency: {
+      type: String,
+      enum: ["USD", "NPR"],
+      default: "USD",
+    },
     paypalOrderId: {
       type: String,
       trim: true,
       index: true,
+    },
+    khaltiPidx: {
+      type: String,
+      trim: true,
+      index: true,
+      sparse: true,
     },
     transactionId: { type: String, required: true, unique: true, index: true },
     payerEmail: { type: String, lowercase: true, trim: true },
@@ -39,7 +73,7 @@ const DonationSchema = new mongoose.Schema(
     payerCountry: String,
     status: {
       type: String,
-      enum: ["COMPLETED", "PENDING", "FAILED"],
+      enum: ["COMPLETED", "PENDING", "FAILED", "REFUNDED"],
       default: "PENDING",
       index: true,
     },

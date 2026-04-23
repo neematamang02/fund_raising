@@ -2,6 +2,7 @@ import BlockchainBlock from "../Models/BlockchainBlock.js";
 import Donation from "../Models/Donation.js";
 import WithdrawalRequest from "../Models/WithdrawalRequest.js";
 import Campaign from "../Models/Campaign.js";
+import mongoose from "mongoose";
 import { Block, Blockchain } from "../lib/blockchain.js";
 import { tryIncrementCampaignRaisedWithinTarget } from "./donationCapacityService.js";
 
@@ -74,11 +75,15 @@ async function enrichBlocksWithCampaignTitle(blocks) {
     ),
   ];
 
-  if (!campaignIds.length) {
+  const validCampaignIds = campaignIds.filter((id) =>
+    mongoose.Types.ObjectId.isValid(id),
+  );
+
+  if (!validCampaignIds.length) {
     return blocks;
   }
 
-  const campaigns = await Campaign.find({ _id: { $in: campaignIds } })
+  const campaigns = await Campaign.find({ _id: { $in: validCampaignIds } })
     .select("_id title")
     .lean();
 
@@ -96,7 +101,8 @@ async function enrichBlocksWithCampaignTitle(blocks) {
       ...block,
       data: {
         ...block.data,
-        campaignTitle: block.data?.campaignTitle || titleById.get(campaignId) || null,
+        campaignTitle:
+          block.data?.campaignTitle || titleById.get(campaignId) || null,
       },
     };
   });
@@ -137,7 +143,9 @@ export async function recordPayoutBlock({
       amount,
       campaignId: normalizeCampaignId(campaignId),
       paidDate: paidDate || new Date().toISOString(),
-      withdrawalRequestId: withdrawalRequestId ? String(withdrawalRequestId) : null,
+      withdrawalRequestId: withdrawalRequestId
+        ? String(withdrawalRequestId)
+        : null,
       transactionReference: transactionReference || null,
     },
     timestamp: paidDate || new Date().toISOString(),
@@ -173,7 +181,9 @@ export async function simulateTampering({ campaignId, blockIndex } = {}) {
   }
 
   const targetIndex =
-    typeof blockIndex === "number" && blockIndex >= 0 && blockIndex < blocks.length
+    typeof blockIndex === "number" &&
+    blockIndex >= 0 &&
+    blockIndex < blocks.length
       ? blockIndex
       : Math.min(1, blocks.length - 1);
 
@@ -198,7 +208,8 @@ export async function simulateTampering({ campaignId, blockIndex } = {}) {
     blocks: tamperedBlocks,
     isValid: chain.isChainValid(),
     tamperedIndex: targetIndex,
-    message: "Tampering was simulated in memory only. Stored blockchain remains unchanged.",
+    message:
+      "Tampering was simulated in memory only. Stored blockchain remains unchanged.",
   };
 }
 
@@ -216,7 +227,9 @@ export async function getMyDonationTransparency({ donorEmail, campaignId }) {
   const campaignIds = [
     ...new Set(
       donations
-        .map((donation) => normalizeCampaignId(donation.campaign?._id || donation.campaign))
+        .map((donation) =>
+          normalizeCampaignId(donation.campaign?._id || donation.campaign),
+        )
         .filter(Boolean),
     ),
   ];
@@ -254,7 +267,9 @@ export async function getMyDonationTransparency({ donorEmail, campaignId }) {
   const donationBlockByTransactionId = new Map();
 
   donationBlocks.forEach((block) => {
-    const donationId = block.data?.donationId ? String(block.data.donationId) : null;
+    const donationId = block.data?.donationId
+      ? String(block.data.donationId)
+      : null;
     const txId = block.data?.transactionId || null;
 
     if (donationId) {
@@ -267,7 +282,9 @@ export async function getMyDonationTransparency({ donorEmail, campaignId }) {
   });
 
   const enriched = donations.map((donation) => {
-    const donationCampaignId = normalizeCampaignId(donation.campaign?._id || donation.campaign);
+    const donationCampaignId = normalizeCampaignId(
+      donation.campaign?._id || donation.campaign,
+    );
     const payoutBlock = latestPayoutByCampaign.get(donationCampaignId) || null;
     const donationBlock =
       donationBlockByDonationId.get(String(donation._id)) ||
@@ -280,7 +297,9 @@ export async function getMyDonationTransparency({ donorEmail, campaignId }) {
       ...donation,
       transactionHash: donationHash,
       payoutStatus: payoutBlock ? "Paid Out" : "Pending",
-      payoutDate: payoutBlock ? payoutBlock.data?.paidDate || payoutBlock.timestamp : null,
+      payoutDate: payoutBlock
+        ? payoutBlock.data?.paidDate || payoutBlock.timestamp
+        : null,
       payoutTransactionHash: payoutHash,
       traceability: {
         donationHash,
@@ -334,7 +353,10 @@ export async function createManualDonationAndBlock({
       },
     });
   } catch (donationError) {
-    await Campaign.updateOne({ _id: campaignId }, { $inc: { raised: -incrementResult.amount } });
+    await Campaign.updateOne(
+      { _id: campaignId },
+      { $inc: { raised: -incrementResult.amount } },
+    );
     throw donationError;
   }
 
@@ -366,7 +388,9 @@ export async function recordPayoutFromWithdrawal({
   let resolvedPaidDate = paidDate;
 
   if (withdrawalRequestId) {
-    const withdrawalRequest = await WithdrawalRequest.findById(withdrawalRequestId)
+    const withdrawalRequest = await WithdrawalRequest.findById(
+      withdrawalRequestId,
+    )
       .populate("campaign", "_id")
       .lean();
 

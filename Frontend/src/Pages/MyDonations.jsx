@@ -106,14 +106,59 @@ function CampaignEndedBadge({ campaign }) {
   );
 }
 
+function normalizeCurrency(currency) {
+  return String(currency || "USD").toUpperCase() === "NPR" ? "NPR" : "USD";
+}
+
+function formatDonationAmount(amount, currency, maximumFractionDigits = 2) {
+  const parsed = Number(amount || 0);
+  const safeAmount = Number.isFinite(parsed) ? parsed : 0;
+
+  return new Intl.NumberFormat("en-NP", {
+    style: "currency",
+    currency: normalizeCurrency(currency),
+    maximumFractionDigits,
+  }).format(safeAmount);
+}
+
+function buildCurrencySummary({ totalsByCurrency, countsByCurrency, mode }) {
+  const nprTotal = Number(totalsByCurrency.NPR || 0);
+  const usdTotal = Number(totalsByCurrency.USD || 0);
+
+  if (mode === "average") {
+    const nprCount = Number(countsByCurrency.NPR || 0);
+    const usdCount = Number(countsByCurrency.USD || 0);
+    const parts = [];
+
+    if (nprCount > 0) {
+      parts.push(
+        `NPR ${(nprTotal / nprCount).toLocaleString(undefined, { maximumFractionDigits: 2 })}`,
+      );
+    }
+
+    if (usdCount > 0) {
+      parts.push(
+        `USD ${(usdTotal / usdCount).toLocaleString(undefined, { maximumFractionDigits: 2 })}`,
+      );
+    }
+
+    return parts.length ? parts.join(" | ") : "-";
+  }
+
+  const totals = [];
+  if (nprTotal > 0) totals.push(`NPR ${nprTotal.toLocaleString()}`);
+  if (usdTotal > 0) totals.push(`USD ${usdTotal.toLocaleString()}`);
+  return totals.length ? totals.join(" | ") : "-";
+}
+
 // ── Stat tile ────────────────────────────────────────────────────────────────
 
 const STAT_CONFIGS = [
   {
-    key: "totalAmount",
+    key: "totalAmountLabel",
     label: "Total Donated",
     icon: DollarSign,
-    fmt: (v) => `$${Number(v).toLocaleString()}`,
+    fmt: (v) => v,
     bg: "bg-primary/8 border-primary/15",
     icon_bg: "bg-primary/15",
     text: "text-primary",
@@ -137,10 +182,10 @@ const STAT_CONFIGS = [
     text: "text-chart-2",
   },
   {
-    key: "averageDonation",
+    key: "averageDonationLabel",
     label: "Average Donation",
     icon: TrendingUp,
-    fmt: (v) => `$${Number(v).toFixed(0)}`,
+    fmt: (v) => v,
     bg: "bg-chart-3/8 border-chart-3/15",
     icon_bg: "bg-chart-3/15",
     text: "text-chart-3",
@@ -234,7 +279,23 @@ export default function MyDonations() {
     if (!donations || donations.length === 0) return null;
     const totalAmount = donations.reduce((sum, d) => sum + (d.amount || 0), 0);
     const totalDonations = donations.length;
-    const averageDonation = totalAmount / totalDonations;
+    const totalsByCurrency = donations.reduce(
+      (acc, donation) => {
+        const currency = normalizeCurrency(donation.currency);
+        acc[currency] =
+          Number(acc[currency] || 0) + Number(donation.amount || 0);
+        return acc;
+      },
+      { NPR: 0, USD: 0 },
+    );
+    const countsByCurrency = donations.reduce(
+      (acc, donation) => {
+        const currency = normalizeCurrency(donation.currency);
+        acc[currency] = Number(acc[currency] || 0) + 1;
+        return acc;
+      },
+      { NPR: 0, USD: 0 },
+    );
     const completedDonations = donations.filter(
       (d) => d.status === "COMPLETED" || d.status === "completed",
     ).length;
@@ -245,7 +306,16 @@ export default function MyDonations() {
     return {
       totalAmount,
       totalDonations,
-      averageDonation,
+      totalAmountLabel: buildCurrencySummary({
+        totalsByCurrency,
+        countsByCurrency,
+        mode: "total",
+      }),
+      averageDonationLabel: buildCurrencySummary({
+        totalsByCurrency,
+        countsByCurrency,
+        mode: "average",
+      }),
       successRate,
       uniqueCampaigns,
       recentDonation: donations[0]?.createdAt,
@@ -428,7 +498,6 @@ export default function MyDonations() {
   return (
     <div className="min-h-screen surface-page py-10 px-4">
       <div className="max-w-6xl mx-auto space-y-6">
-
         {/* Page header */}
         <div>
           <Badge className="bg-primary/10 text-primary border-primary/20 mb-3">
@@ -448,7 +517,11 @@ export default function MyDonations() {
         {donationStats && (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {STAT_CONFIGS.map((cfg) => (
-              <StatTile key={cfg.key} config={cfg} value={donationStats[cfg.key]} />
+              <StatTile
+                key={cfg.key}
+                config={cfg}
+                value={donationStats[cfg.key]}
+              />
             ))}
           </div>
         )}
@@ -565,7 +638,11 @@ export default function MyDonations() {
                 Showing {filteredDonations.length} of {donations.length}{" "}
                 donations
               </span>
-              <Button variant="ghost" size="sm" className="text-muted-foreground">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-muted-foreground"
+              >
                 <Download className="h-4 w-4 mr-2" />
                 Export History
               </Button>
@@ -630,13 +707,22 @@ export default function MyDonations() {
                     <div className="flex flex-col lg:flex-row lg:items-center gap-4">
                       <div className="text-center lg:text-right">
                         <div className="text-xl font-bold text-foreground">
-                          ${(donation.amount || 0).toFixed(2)}
+                          {formatDonationAmount(
+                            donation.amount,
+                            donation.currency,
+                          )}
                         </div>
                         <div className="text-xs text-muted-foreground mt-0.5">
                           ID: {donation.transactionId || "N/A"}
                         </div>
                         <div className="text-xs text-muted-foreground mt-0.5 flex items-center justify-center lg:justify-end gap-1.5">
-                          <span>Hash: {shortenHash(donation.transactionHash || donation.transactionId)}</span>
+                          <span>
+                            Hash:{" "}
+                            {shortenHash(
+                              donation.transactionHash ||
+                                donation.transactionId,
+                            )}
+                          </span>
                           <Button
                             type="button"
                             variant="ghost"
@@ -644,12 +730,14 @@ export default function MyDonations() {
                             className="h-5 w-5"
                             onClick={() =>
                               copyToClipboard(
-                                donation.transactionHash || donation.transactionId,
+                                donation.transactionHash ||
+                                  donation.transactionId,
                               )
                             }
                           >
                             {copiedHash ===
-                            (donation.transactionHash || donation.transactionId) ? (
+                            (donation.transactionHash ||
+                              donation.transactionId) ? (
                               <Check className="h-3.5 w-3.5" />
                             ) : (
                               <Copy className="h-3.5 w-3.5" />
@@ -680,7 +768,9 @@ export default function MyDonations() {
                   {/* Transparency row */}
                   <div className="mt-4 pt-4 border-t border-border">
                     <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
-                      <p className="text-sm font-medium text-foreground">Fund transparency</p>
+                      <p className="text-sm font-medium text-foreground">
+                        Fund transparency
+                      </p>
                       <PayoutStatusBadge
                         status={
                           donation.payoutStatus === "Paid Out"
@@ -695,14 +785,19 @@ export default function MyDonations() {
                           Donated Amount
                         </p>
                         <p className="font-semibold text-foreground">
-                          ${Number(donation.amount || 0).toLocaleString()}
+                          {formatDonationAmount(
+                            donation.amount,
+                            donation.currency,
+                          )}
                         </p>
                       </div>
                       <div className="rounded-lg bg-muted/50 border border-border/50 p-3">
                         <p className="text-muted-foreground text-xs mb-1">
                           Payout Status
                         </p>
-                        <p className="font-semibold text-foreground">{donation.payoutStatus || "Pending"}</p>
+                        <p className="font-semibold text-foreground">
+                          {donation.payoutStatus || "Pending"}
+                        </p>
                       </div>
                       <div className="rounded-lg bg-muted/50 border border-border/50 p-3">
                         <p className="text-muted-foreground text-xs mb-1">
@@ -710,13 +805,14 @@ export default function MyDonations() {
                         </p>
                         <p className="font-semibold text-foreground">
                           {donation.payoutDate
-                            ? new Date(
-                                donation.payoutDate,
-                              ).toLocaleDateString("en-US", {
-                                year: "numeric",
-                                month: "short",
-                                day: "numeric",
-                              })
+                            ? new Date(donation.payoutDate).toLocaleDateString(
+                                "en-US",
+                                {
+                                  year: "numeric",
+                                  month: "short",
+                                  day: "numeric",
+                                },
+                              )
                             : "Not yet"}
                         </p>
                       </div>
@@ -739,7 +835,8 @@ export default function MyDonations() {
                               copyToClipboard(donation.traceability?.payoutHash)
                             }
                           >
-                            {copiedHash === donation.traceability?.payoutHash ? (
+                            {copiedHash ===
+                            donation.traceability?.payoutHash ? (
                               <Check className="h-3.5 w-3.5 mr-1" />
                             ) : (
                               <Copy className="h-3.5 w-3.5 mr-1" />
@@ -785,7 +882,6 @@ export default function MyDonations() {
             </div>
           </CardContent>
         </Card>
-
       </div>
     </div>
   );

@@ -11,6 +11,7 @@ import authRouter from "./Routes/auth.js";
 import campaignRouter from "./Routes/campaigns.js";
 import donationRouter from "./Routes/donations.js";
 import paypalrouter from "./Routes/paypal.js";
+import paymentRouter from "./Routes/PaymentRoutes.js";
 import organizerRouter from "./Routes/organizer.js";
 import withdrawalRouter from "./Routes/withdrawals.js";
 import adminRouter from "./Routes/admin.js";
@@ -22,12 +23,39 @@ import blockchainRouter from "./Routes/blockchain.js";
 dotenv.config();
 
 // Validate critical environment variables
-const requiredEnvVars = [
-  "DATABASE_URL",
-  "JWT_SECRET",
-  "PAYPAL_CLIENT_ID",
-  "PAYPAL_SECRET",
-];
+const requiredEnvVars = ["DATABASE_URL", "JWT_SECRET"];
+const enabledGateways = (
+  process.env.ENABLED_PAYMENT_GATEWAYS || "paypal,esewa,khalti"
+)
+  .split(",")
+  .map((value) => value.trim().toLowerCase())
+  .filter(Boolean);
+
+if (enabledGateways.includes("paypal")) {
+  requiredEnvVars.push("PAYPAL_CLIENT_ID", "PAYPAL_SECRET");
+}
+
+if (enabledGateways.includes("esewa")) {
+  requiredEnvVars.push(
+    "ESEWA_MERCHANT_ID",
+    "ESEWA_SECRET",
+    "ESEWA_PAYMENT_URL",
+    "ESEWA_PAYMENT_STATUS_CHECK_URL",
+    "ESEWA_RETURN_URL",
+    "ESEWA_CANCEL_URL",
+  );
+}
+
+if (enabledGateways.includes("khalti")) {
+  requiredEnvVars.push(
+    "KHALTI_PUBLIC_KEY",
+    "KHALTI_SECRET_KEY",
+    "KHALTI_PAYMENT_URL",
+    "KHALTI_VERIFICATION_URL",
+    "KHALTI_RETURN_URL",
+    "KHALTI_CANCEL_URL",
+  );
+}
 
 for (const envVar of requiredEnvVars) {
   if (!process.env[envVar]) {
@@ -107,6 +135,8 @@ app.use(
       }
     },
     credentials: true,
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization", "Idempotency-Key"],
     maxAge: 86400, // 24 hours
   }),
 );
@@ -150,6 +180,7 @@ app.use(
 app.use("/api/auth", authRouter);
 app.use("/api/campaigns", campaignRouter);
 app.use("/api/donations", donationRouter);
+app.use("/api", paymentRouter);
 app.use("/api", paypalrouter);
 app.use("/api", organizerRouter);
 app.use("/api", withdrawalRouter);

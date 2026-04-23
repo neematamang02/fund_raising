@@ -78,7 +78,11 @@ function trimHash(value) {
 }
 
 function formatMoney(value) {
-  return `$${Number(value || 0).toLocaleString()}`;
+  return new Intl.NumberFormat("en-NP", {
+    style: "currency",
+    currency: "NPR",
+    maximumFractionDigits: 2,
+  }).format(Number(value || 0));
 }
 
 function asNumber(value) {
@@ -160,7 +164,9 @@ export default function BlockchainTransparency() {
       totalDonated,
       totalPaidOut,
       pendingAmount: Math.max(totalDonated - totalPaidOut, 0),
-      latestActivity: blocks.length ? blocks[blocks.length - 1].timestamp : null,
+      latestActivity: blocks.length
+        ? blocks[blocks.length - 1].timestamp
+        : null,
     };
   }, [blocks]);
 
@@ -191,7 +197,9 @@ export default function BlockchainTransparency() {
         item.campaignTitle = block.data.campaignTitle;
       }
       item.lastActivity =
-        block.timestamp > item.lastActivity ? block.timestamp : item.lastActivity;
+        block.timestamp > item.lastActivity
+          ? block.timestamp
+          : item.lastActivity;
 
       if (block.type === "DONATION") {
         item.donated += amount;
@@ -374,9 +382,14 @@ export default function BlockchainTransparency() {
             </CardHeader>
             <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-2.5">
               {legendItems.map((item) => (
-                <div key={item.key} className="rounded-md border bg-muted/30 p-3">
+                <div
+                  key={item.key}
+                  className="rounded-md border bg-muted/30 p-3"
+                >
                   <Badge className={item.color}>{item.label}</Badge>
-                  <p className="text-xs text-muted-foreground mt-2">{item.detail}</p>
+                  <p className="text-xs text-muted-foreground mt-2">
+                    {item.detail}
+                  </p>
                 </div>
               ))}
             </CardContent>
@@ -421,7 +434,9 @@ export default function BlockchainTransparency() {
                   <CardContent className="p-5 space-y-4">
                     <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
                       <div>
-                        <p className="text-xs text-muted-foreground">Campaign</p>
+                        <p className="text-xs text-muted-foreground">
+                          Campaign
+                        </p>
                         <p className="text-base font-semibold text-foreground break-all">
                           {flow.campaignTitle || flow.campaignId}
                         </p>
@@ -449,7 +464,9 @@ export default function BlockchainTransparency() {
                         </p>
                       </div>
                       <div className="rounded-md border bg-muted/40 p-3">
-                        <p className="text-xs text-muted-foreground">Paid Out</p>
+                        <p className="text-xs text-muted-foreground">
+                          Paid Out
+                        </p>
                         <p className="font-semibold text-foreground">
                           {formatMoney(flow.paidOut)}
                         </p>
@@ -488,7 +505,9 @@ export default function BlockchainTransparency() {
                     </div>
 
                     <div className="rounded-md border bg-muted/40 p-3">
-                      <p className="text-xs text-muted-foreground mb-1">Traceability</p>
+                      <p className="text-xs text-muted-foreground mb-1">
+                        Traceability
+                      </p>
                       <div className="flex flex-wrap items-center gap-2 text-sm text-foreground">
                         <span className="font-mono">
                           {trimHash(flow.lastDonationHash || "-")}
@@ -554,13 +573,17 @@ export default function BlockchainTransparency() {
                     <CardContent className="space-y-3 text-sm">
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                         <div className="rounded-md border bg-muted/40 p-3">
-                          <p className="text-xs text-muted-foreground">Timestamp</p>
+                          <p className="text-xs text-muted-foreground">
+                            Timestamp
+                          </p>
                           <p className="font-medium text-foreground">
                             {formatDate(block.timestamp)}
                           </p>
                         </div>
                         <div className="rounded-md border bg-muted/40 p-3">
-                          <p className="text-xs text-muted-foreground">campaignId</p>
+                          <p className="text-xs text-muted-foreground">
+                            campaignId
+                          </p>
                           <p className="font-medium text-foreground break-all">
                             {block.data?.campaignId || "-"}
                           </p>
@@ -568,7 +591,9 @@ export default function BlockchainTransparency() {
                       </div>
 
                       <div className="rounded-md border bg-muted/40 p-3">
-                        <p className="text-xs text-muted-foreground mb-1">Data</p>
+                        <p className="text-xs text-muted-foreground mb-1">
+                          Data
+                        </p>
                         <pre className="text-xs whitespace-pre-wrap break-all text-foreground">
                           {JSON.stringify(block.data, null, 2)}
                         </pre>
@@ -636,7 +661,9 @@ export default function BlockchainTransparency() {
                               variant="ghost"
                               size="icon"
                               className="h-7 w-7"
-                              onClick={() => copyToClipboard(block.previousHash)}
+                              onClick={() =>
+                                copyToClipboard(block.previousHash)
+                              }
                             >
                               {copiedHash === block.previousHash ? (
                                 <Check className="h-3.5 w-3.5" />
@@ -680,9 +707,10 @@ export default function BlockchainTransparency() {
               <ShieldAlert className="h-4 w-4 text-destructive mt-0.5" />
             )}
             <p>
-              Current chain result: {isValid ? "Chain Valid" : "Tampered"}.
-              This demo uses SHA-256 linked hashes for transparency only and
-              does not use cryptocurrency or a distributed blockchain network.
+              Current chain result: {isValid ? "Chain Valid" : "Tampered"}. This
+              is an internal SHA-256 hash-linked audit ledger for donation
+              transparency. It is separate from payment gateways and does not
+              require cryptocurrency or a distributed blockchain network.
             </p>
           </CardContent>
         </Card>
