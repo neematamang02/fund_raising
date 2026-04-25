@@ -20,6 +20,7 @@ import {
   Clock,
   DollarSign,
   Sparkles,
+  Loader2,
 } from "lucide-react";
 import { generateUniqueId } from "@/utils/helpers";
 import { initiatePayment } from "@/services/paymentApi";
@@ -175,6 +176,8 @@ export default function Donate() {
       );
     },
   });
+
+  const isGatewayRedirecting = initiateGatewayPaymentMutation.isPending;
 
   const handleValidateBeforePayPal = () => {
     if (!user) {
@@ -712,6 +715,7 @@ export default function Donate() {
                           placeholder="Enter amount"
                           value={amount}
                           onChange={(e) => handleCustomAmount(e.target.value)}
+                          disabled={isGatewayRedirecting}
                           className="h-12 rounded-lg pl-10 text-lg"
                         />
                       </div>
@@ -726,6 +730,7 @@ export default function Donate() {
                         onChange={(event) =>
                           setPaymentGateway(event.target.value)
                         }
+                        disabled={isGatewayRedirecting}
                         className="h-12 w-full rounded-lg border border-border bg-background px-3 text-sm"
                       >
                         <option value="esewa">eSewa</option>
@@ -843,13 +848,29 @@ export default function Donate() {
                           className="w-full h-12"
                           size="lg"
                           onClick={handleGatewayRedirectPayment}
-                          disabled={initiateGatewayPaymentMutation.isPending}
+                          disabled={isGatewayRedirecting}
                         >
-                          {initiateGatewayPaymentMutation.isPending
-                            ? "Redirecting..."
-                            : `Pay with ${paymentGateway === "esewa" ? "eSewa" : "Khalti"}`}
+                          {isGatewayRedirecting ? (
+                            <span className="inline-flex items-center gap-2">
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                              Redirecting to payment gateway...
+                            </span>
+                          ) : (
+                            `Pay with ${paymentGateway === "esewa" ? "eSewa" : "Khalti"}`
+                          )}
                         </Button>
                       )}
+
+                      {isGatewayRedirecting ? (
+                        <div className="rounded-xl border border-primary/20 bg-primary/10 p-4">
+                          <div className="flex items-center gap-3 text-primary">
+                            <Loader2 className="h-5 w-5 animate-spin" />
+                            <p className="text-sm font-medium">
+                              Preparing secure checkout. Please wait...
+                            </p>
+                          </div>
+                        </div>
+                      ) : null}
                     </div>
 
                     {!user && (

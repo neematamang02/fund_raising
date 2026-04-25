@@ -1,5 +1,6 @@
 import axios from "axios";
 import ActivityLog from "../Models/ActivityLog.js";
+import BlockchainBlock from "../Models/BlockchainBlock.js";
 import Campaign from "../Models/Campaign.js";
 import Donation from "../Models/Donation.js";
 import { recordDonationBlock } from "../services/blockchainService.js";
@@ -62,6 +63,18 @@ function normalizeGateway(value) {
   }
 
   return null;
+}
+
+function normalizeEntityId(value) {
+  if (!value) {
+    return null;
+  }
+
+  if (typeof value === "object" && value._id) {
+    return String(value._id);
+  }
+
+  return String(value);
 }
 
 async function createEsewaPaymentUrl({
@@ -350,10 +363,14 @@ async function writeDonationFinalizationArtifacts({ donation, campaign }) {
 
   let transparencyBlock = null;
   try {
+    const normalizedCampaignId = normalizeEntityId(
+      donation.campaign || campaign?._id,
+    );
+
     transparencyBlock = await recordDonationBlock({
       donorName: donation.payerName || "Anonymous Donor",
       amount: donation.amount,
-      campaignId: donation.campaign,
+      campaignId: normalizedCampaignId,
       donationId: donation._id,
       transactionId: donation.transactionId,
       donatedAt:
@@ -364,6 +381,29 @@ async function writeDonationFinalizationArtifacts({ donation, campaign }) {
   }
 
   return transparencyBlock;
+}
+
+async function ensureDonationTransparencyBlock(donation) {
+  const existingBlock = await BlockchainBlock.findOne({
+    type: "DONATION",
+    $or: [
+      { "data.donationId": String(donation._id) },
+      { "data.transactionId": donation.transactionId },
+    ],
+  }).lean();
+
+  if (existingBlock) {
+    return existingBlock;
+  }
+
+  return recordDonationBlock({
+    donorName: donation.payerName || "Anonymous Donor",
+    amount: donation.amount,
+    campaignId: normalizeEntityId(donation.campaign),
+    donationId: donation._id,
+    transactionId: donation.transactionId,
+    donatedAt: donation.updatedAt?.toISOString?.() || new Date().toISOString(),
+  });
 }
 
 export async function paymentStatus(req, res) {
@@ -383,9 +423,12 @@ export async function paymentStatus(req, res) {
       return res.status(404).json({ message: "Transaction not found" });
     }
 
-    const campaignId = donation.campaign?._id || donation.campaign;
+    const campaignId = normalizeEntityId(donation.campaign);
 
     if (donation.status === "COMPLETED") {
+      const existingOrCreatedBlock =
+        await ensureDonationTransparencyBlock(donation);
+
       return res.json({
         message: "Transaction already completed",
         status: donation.status,
@@ -397,7 +440,8 @@ export async function paymentStatus(req, res) {
           amount: Number.parseFloat(donation.amount).toFixed(2),
           currency: donation.currency || "NPR",
           transactionId: donation.transactionId,
-          transactionHash: donation.transactionId,
+          transactionHash:
+            existingOrCreatedBlock?.hash || donation.transactionId,
           payerName: donation.payerName,
           payerEmail: donation.payerEmail,
           timestamp: donation.updatedAt,
