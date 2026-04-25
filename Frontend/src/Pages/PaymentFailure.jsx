@@ -9,7 +9,7 @@ import { base64Decode } from "@/utils/helpers";
 import { verifyPaymentStatus } from "@/services/paymentApi";
 
 export default function PaymentFailure() {
-  const { token } = useContext(AuthContext);
+  const { token, loading: authLoading } = useContext(AuthContext);
   const location = useLocation();
   const navigate = useNavigate();
   const [transactionId, setTransactionId] = useState("");
@@ -24,13 +24,6 @@ export default function PaymentFailure() {
 
     async function markFailed() {
       try {
-        if (!token) {
-          navigate(
-            `${ROUTES.LOGIN}?redirect=${encodeURIComponent(location.pathname + location.search)}`,
-          );
-          return;
-        }
-
         let productId = "";
 
         if (query.get("data")) {
@@ -68,12 +61,16 @@ export default function PaymentFailure() {
       }
     }
 
+    if (authLoading) {
+      return;
+    }
+
     markFailed();
 
     return () => {
       cancelled = true;
     };
-  }, [location.pathname, location.search, navigate, query, token]);
+  }, [authLoading, location.pathname, location.search, navigate, query, token]);
 
   return (
     <div className="surface-page flex min-h-screen items-center justify-center px-4 py-12">

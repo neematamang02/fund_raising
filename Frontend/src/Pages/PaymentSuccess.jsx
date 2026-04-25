@@ -22,7 +22,7 @@ function formatCurrencyAmount(amount, currency) {
 }
 
 export default function PaymentSuccess() {
-  const { token } = useContext(AuthContext);
+  const { token, loading: authLoading } = useContext(AuthContext);
   const location = useLocation();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
@@ -39,13 +39,6 @@ export default function PaymentSuccess() {
 
     async function runVerification() {
       try {
-        if (!token) {
-          navigate(
-            `${ROUTES.LOGIN}?redirect=${encodeURIComponent(location.pathname + location.search)}`,
-          );
-          return;
-        }
-
         let productId = "";
         let pidx = "";
 
@@ -90,6 +83,35 @@ export default function PaymentSuccess() {
           return;
         }
 
+        const campaignId =
+          result?.campaignId ||
+          result?.billReceipt?.campaignId ||
+          sessionStorage.getItem("current_campaign_id") ||
+          "";
+
+        if (campaignId) {
+          const donateDetailPath = ROUTES.DONATE_DETAIL.replace(
+            ":campaignId",
+            encodeURIComponent(campaignId),
+          );
+
+          sessionStorage.removeItem("current_transaction_id");
+          sessionStorage.removeItem("current_payment_gateway");
+          sessionStorage.removeItem("current_campaign_id");
+
+          navigate(donateDetailPath, {
+            replace: true,
+            state: {
+              paymentSuccess: {
+                amount: result?.billReceipt?.amount,
+                currency: result?.billReceipt?.currency,
+                transactionId: result?.billReceipt?.transactionId,
+              },
+            },
+          });
+          return;
+        }
+
         setBill(result.billReceipt || null);
       } catch (error) {
         if (cancelled) {
@@ -104,12 +126,16 @@ export default function PaymentSuccess() {
       }
     }
 
+    if (authLoading) {
+      return;
+    }
+
     runVerification();
 
     return () => {
       cancelled = true;
     };
-  }, [location.pathname, location.search, navigate, query, token]);
+  }, [authLoading, location.pathname, location.search, navigate, query, token]);
 
   if (loading) {
     return (

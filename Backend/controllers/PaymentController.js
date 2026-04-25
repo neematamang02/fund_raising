@@ -383,10 +383,25 @@ export async function paymentStatus(req, res) {
       return res.status(404).json({ message: "Transaction not found" });
     }
 
+    const campaignId = donation.campaign?._id || donation.campaign;
+
     if (donation.status === "COMPLETED") {
       return res.json({
         message: "Transaction already completed",
         status: donation.status,
+        campaignId,
+        billReceipt: {
+          donationId: donation._id,
+          campaignId,
+          campaignTitle: donation.campaign?.title || "Campaign Donation",
+          amount: Number.parseFloat(donation.amount).toFixed(2),
+          currency: donation.currency || "NPR",
+          transactionId: donation.transactionId,
+          transactionHash: donation.transactionId,
+          payerName: donation.payerName,
+          payerEmail: donation.payerEmail,
+          timestamp: donation.updatedAt,
+        },
       });
     }
 
@@ -561,8 +576,10 @@ export async function paymentStatus(req, res) {
     const responseBody = {
       message: "Payment verified successfully",
       status: "COMPLETED",
+      campaignId,
       billReceipt: {
         donationId: refreshedDonation._id,
+        campaignId,
         campaignTitle: refreshedDonation.campaign?.title || "Campaign Donation",
         amount: Number.parseFloat(refreshedDonation.amount).toFixed(2),
         currency: refreshedDonation.currency || "NPR",

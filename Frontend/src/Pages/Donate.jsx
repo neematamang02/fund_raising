@@ -1,5 +1,5 @@
 import { useContext, useState, useMemo } from "react";
-import { useParams, useNavigate, Link } from "react-router-dom";
+import { useParams, useNavigate, Link, useLocation } from "react-router-dom";
 import { AuthContext } from "@/Context/AuthContext";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Input } from "@/components/ui/input";
@@ -32,6 +32,7 @@ export default function Donate() {
   const { campaignId } = useParams();
   const { user, token } = useContext(AuthContext);
   const navigate = useNavigate();
+  const location = useLocation();
   const [amount, setAmount] = useState("");
   const [bill, setBill] = useState(null);
   const [errorMsg, setErrorMsg] = useState("");
@@ -41,6 +42,7 @@ export default function Donate() {
   const [paymentGateway, setPaymentGateway] = useState("esewa");
   const activeCurrency = paymentGateway === "paypal" ? "USD" : "NPR";
   const activeCurrencySymbol = paymentGateway === "paypal" ? "$" : "Rs ";
+  const paymentSuccessMessage = location.state?.paymentSuccess;
 
   // Preset donation amounts
   const presetAmounts = [25, 50, 100, 250, 500, 1000];
@@ -226,6 +228,7 @@ export default function Donate() {
 
     sessionStorage.setItem("current_transaction_id", productId);
     sessionStorage.setItem("current_payment_gateway", paymentGateway);
+    sessionStorage.setItem("current_campaign_id", campaignId || "");
 
     try {
       const response = await initiateGatewayPaymentMutation.mutateAsync({
@@ -443,6 +446,29 @@ export default function Donate() {
       </div>
 
       <div className="max-w-4xl mx-auto py-8 px-4">
+        {paymentSuccessMessage && (
+          <div className="mb-6 rounded-xl border border-primary/25 bg-primary/10 p-4">
+            <div className="flex items-start gap-3">
+              <CheckCircle className="mt-0.5 h-5 w-5 text-primary" />
+              <div>
+                <p className="font-semibold text-foreground">
+                  Donation successful
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  Your contribution has been verified for this campaign.
+                  {paymentSuccessMessage.amount && (
+                    <>
+                      {" "}
+                      Amount: {paymentSuccessMessage.amount}{" "}
+                      {paymentSuccessMessage.currency || "NPR"}.
+                    </>
+                  )}
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
         <div className="grid lg:grid-cols-2 gap-8">
           <div className="space-y-6">
             <div>
