@@ -656,7 +656,7 @@ export default function MyDonations() {
             return (
               <Card
                 key={donation._id}
-                className="border bg-card hover:bg-accent/20 transition-colors"
+                className="border bg-card hover:bg-primary/10 hover:border-primary/30 transition-colors"
               >
                 <CardContent className="p-5">
                   <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
