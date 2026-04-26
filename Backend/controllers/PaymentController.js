@@ -77,6 +77,56 @@ function normalizeEntityId(value) {
   return String(value);
 }
 
+async function waitForDonationSettlement(donationId) {
+  const maxAttempts = 12;
+  const delayMs = 150;
+
+  for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+    const latest = await Donation.findById(donationId).populate(
+      "campaign",
+      "title",
+    );
+
+    if (!latest) {
+      return null;
+    }
+
+    if (["COMPLETED", "REFUNDED", "FAILED"].includes(latest.status)) {
+      return latest;
+    }
+
+    await new Promise((resolve) => {
+      setTimeout(resolve, delayMs);
+    });
+  }
+
+  return Donation.findById(donationId).populate("campaign", "title");
+}
+
+function buildCompletedResponseBody({
+  donation,
+  campaignId,
+  transparencyBlock,
+}) {
+  return {
+    message: "Payment verified successfully",
+    status: "COMPLETED",
+    campaignId,
+    billReceipt: {
+      donationId: donation._id,
+      campaignId,
+      campaignTitle: donation.campaign?.title || "Campaign Donation",
+      amount: Number.parseFloat(donation.amount).toFixed(2),
+      currency: donation.currency || "NPR",
+      transactionId: donation.transactionId,
+      transactionHash: transparencyBlock?.hash || donation.transactionId,
+      payerName: donation.payerName,
+      payerEmail: donation.payerEmail,
+      timestamp: donation.updatedAt,
+    },
+  };
+}
+
 async function createEsewaPaymentUrl({
   amount,
   productId,
@@ -430,22 +480,12 @@ export async function paymentStatus(req, res) {
         await ensureDonationTransparencyBlock(donation);
 
       return res.json({
-        message: "Transaction already completed",
-        status: donation.status,
-        campaignId,
-        billReceipt: {
-          donationId: donation._id,
+        ...buildCompletedResponseBody({
+          donation,
           campaignId,
-          campaignTitle: donation.campaign?.title || "Campaign Donation",
-          amount: Number.parseFloat(donation.amount).toFixed(2),
-          currency: donation.currency || "NPR",
-          transactionId: donation.transactionId,
-          transactionHash:
-            existingOrCreatedBlock?.hash || donation.transactionId,
-          payerName: donation.payerName,
-          payerEmail: donation.payerEmail,
-          timestamp: donation.updatedAt,
-        },
+          transparencyBlock: existingOrCreatedBlock,
+        }),
+        message: "Transaction already completed",
       });
     }
 
@@ -565,6 +605,56 @@ export async function paymentStatus(req, res) {
       return res.json(failedResponse);
     }
 
+    const finalizationToken = generateUniqueId();
+    const claimResult = await Donation.updateOne(
+      {
+        _id: donation._id,
+        status: { $in: ["PENDING", "FAILED"] },
+        "captureDetails.finalizationToken": { $exists: false },
+      },
+      {
+        $set: {
+          "captureDetails.finalizationToken": finalizationToken,
+          "captureDetails.finalizationClaimedAt": new Date().toISOString(),
+        },
+      },
+    );
+
+    if (claimResult.modifiedCount !== 1) {
+      const settledDonation = await waitForDonationSettlement(donation._id);
+      if (!settledDonation) {
+        return res.status(404).json({ message: "Transaction not found" });
+      }
+
+      const settledCampaignId = normalizeEntityId(settledDonation.campaign);
+
+      if (settledDonation.status === "COMPLETED") {
+        const existingOrCreatedBlock =
+          await ensureDonationTransparencyBlock(settledDonation);
+        return res.json({
+          ...buildCompletedResponseBody({
+            donation: settledDonation,
+            campaignId: settledCampaignId,
+            transparencyBlock: existingOrCreatedBlock,
+          }),
+          message: "Transaction already completed",
+        });
+      }
+
+      if (settledDonation.status === "REFUNDED") {
+        return res.status(409).json({
+          message:
+            "Payment completed but campaign capacity was reached. Please process a refund from gateway dashboard.",
+          status: "REFUNDED",
+        });
+      }
+
+      return res.json({
+        message: "Payment verification failed",
+        status: "FAILED",
+      });
+    }
+
     const incrementResult = await tryIncrementCampaignRaisedWithinTarget({
       campaignId: donation.campaign?._id || donation.campaign,
       amount: donation.amount,
@@ -572,15 +662,18 @@ export async function paymentStatus(req, res) {
 
     if (!incrementResult.ok) {
       await Donation.updateOne(
-        { _id: donation._id },
+        {
+          _id: donation._id,
+          status: { $in: ["PENDING", "FAILED"] },
+          "captureDetails.finalizationToken": finalizationToken,
+        },
         {
           $set: {
             status: "REFUNDED",
-            captureDetails: {
-              ...(donation.captureDetails || {}),
-              gatewayVerification: gatewayResponse,
-              note: "Payment completed at gateway but campaign capacity update failed",
-            },
+            "captureDetails.gatewayVerification": gatewayResponse,
+            "captureDetails.note":
+              "Payment completed at gateway but campaign capacity update failed",
+            "captureDetails.refundedAt": new Date().toISOString(),
           },
         },
       );
@@ -592,20 +685,56 @@ export async function paymentStatus(req, res) {
       });
     }
 
-    await Donation.updateOne(
-      { _id: donation._id, status: { $in: ["PENDING", "FAILED"] } },
+    const completionUpdate = await Donation.updateOne(
+      {
+        _id: donation._id,
+        status: { $in: ["PENDING", "FAILED"] },
+        "captureDetails.finalizationToken": finalizationToken,
+      },
       {
         $set: {
           status: "COMPLETED",
           khaltiPidx: pidx || donation.khaltiPidx,
-          captureDetails: {
-            ...(donation.captureDetails || {}),
-            gatewayVerification: gatewayResponse,
-            completedAt: new Date().toISOString(),
-          },
+          "captureDetails.gatewayVerification": gatewayResponse,
+          "captureDetails.completedAt": new Date().toISOString(),
         },
       },
     );
+
+    if (completionUpdate.modifiedCount !== 1) {
+      const settledDonation = await waitForDonationSettlement(donation._id);
+      if (!settledDonation) {
+        return res.status(404).json({ message: "Transaction not found" });
+      }
+
+      const settledCampaignId = normalizeEntityId(settledDonation.campaign);
+
+      if (settledDonation.status === "COMPLETED") {
+        const existingOrCreatedBlock =
+          await ensureDonationTransparencyBlock(settledDonation);
+        return res.json({
+          ...buildCompletedResponseBody({
+            donation: settledDonation,
+            campaignId: settledCampaignId,
+            transparencyBlock: existingOrCreatedBlock,
+          }),
+          message: "Transaction already completed",
+        });
+      }
+
+      if (settledDonation.status === "REFUNDED") {
+        return res.status(409).json({
+          message:
+            "Payment completed but campaign capacity was reached. Please process a refund from gateway dashboard.",
+          status: "REFUNDED",
+        });
+      }
+
+      return res.json({
+        message: "Payment verification failed",
+        status: "FAILED",
+      });
+    }
 
     const refreshedDonation = await Donation.findById(donation._id).populate(
       "campaign",
@@ -617,24 +746,11 @@ export async function paymentStatus(req, res) {
       campaign: refreshedDonation.campaign,
     });
 
-    const responseBody = {
-      message: "Payment verified successfully",
-      status: "COMPLETED",
+    const responseBody = buildCompletedResponseBody({
+      donation: refreshedDonation,
       campaignId,
-      billReceipt: {
-        donationId: refreshedDonation._id,
-        campaignId,
-        campaignTitle: refreshedDonation.campaign?.title || "Campaign Donation",
-        amount: Number.parseFloat(refreshedDonation.amount).toFixed(2),
-        currency: refreshedDonation.currency || "NPR",
-        transactionId: refreshedDonation.transactionId,
-        transactionHash:
-          transparencyBlock?.hash || refreshedDonation.transactionId,
-        payerName: refreshedDonation.payerName,
-        payerEmail: refreshedDonation.payerEmail,
-        timestamp: refreshedDonation.updatedAt,
-      },
-    };
+      transparencyBlock,
+    });
 
     await storeIdempotentResponse({
       idempotencyKey:
