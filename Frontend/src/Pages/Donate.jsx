@@ -29,6 +29,85 @@ const API_BASE_URL = import.meta.env.VITE_BACKEND_URL
   ? `${import.meta.env.VITE_BACKEND_URL}/api`
   : "/api";
 
+function GatewayMark({ value }) {
+  const markByValue = {
+    esewa: {
+      src: "https://ik.imagekit.io/mdywck7eji/esewa-seeklogo.png",
+      alt: "eSewa logo",
+      wrapperClass: "border-emerald-200 bg-emerald-50",
+    },
+    khalti: {
+      src: "https://ik.imagekit.io/mdywck7eji/khalti-seeklogo.png",
+      alt: "Khalti logo",
+      wrapperClass: "border-violet-200 bg-violet-50",
+    },
+    paypal: {
+      text: "PayPal",
+      wrapperClass: "border-blue-200 bg-blue-50 text-[#253B80]",
+    },
+  };
+
+  const mark = markByValue[value];
+
+  if (mark.src) {
+    return (
+      <div
+        className={`flex h-14 w-full items-center justify-center rounded-2xl border px-3 shadow-sm ${mark.wrapperClass}`}
+      >
+        <img
+          src={mark.src}
+          alt={mark.alt}
+          className="max-h-9 max-w-full object-contain"
+          loading="lazy"
+        />
+      </div>
+    );
+  }
+
+  return (
+    <div
+      className={`flex h-14 w-full items-center justify-center rounded-2xl border px-3 text-sm font-black tracking-tight shadow-sm ${mark.wrapperClass}`}
+      aria-hidden="true"
+    >
+      {mark.text}
+    </div>
+  );
+}
+
+function GatewayChoice({
+  value,
+  ariaLabel,
+  tileClass,
+  selected,
+  disabled,
+  onSelect,
+}) {
+  return (
+    <button
+      type="button"
+      onClick={() => onSelect(value)}
+      disabled={disabled}
+      aria-pressed={selected}
+      aria-label={ariaLabel}
+      className={`group flex w-full items-center justify-center rounded-2xl border px-4 py-4 text-left transition-all duration-200 min-h-[88px] ${
+        selected
+          ? "border-primary shadow-md shadow-primary/10"
+          : "border-border hover:border-primary/40"
+      } ${disabled ? "cursor-not-allowed opacity-60" : "cursor-pointer"}`}
+      style={{ background: tileClass }}
+    >
+      <div className="flex w-full items-center justify-between gap-3">
+        <div className="min-w-0 flex-1">
+          <GatewayMark value={value} />
+        </div>
+        {selected ? (
+          <CheckCircle className="h-5 w-5 shrink-0 text-primary" />
+        ) : null}
+      </div>
+    </button>
+  );
+}
+
 export default function Donate() {
   const { campaignId } = useParams();
   const { user, token } = useContext(AuthContext);
@@ -44,6 +123,29 @@ export default function Donate() {
   const activeCurrency = paymentGateway === "paypal" ? "USD" : "NPR";
   const activeCurrencySymbol = paymentGateway === "paypal" ? "$" : "Rs ";
   const paymentSuccessMessage = location.state?.paymentSuccess;
+  const paymentGatewayOptions = [
+    {
+      value: "esewa",
+      label: "eSewa",
+      ariaLabel: "Select eSewa payment method",
+      tileClass:
+        "linear-gradient(135deg, rgba(16,185,129,0.14), rgba(16,185,129,0.04))",
+    },
+    {
+      value: "khalti",
+      label: "Khalti",
+      ariaLabel: "Select Khalti payment method",
+      tileClass:
+        "linear-gradient(135deg, rgba(124,58,237,0.14), rgba(124,58,237,0.04))",
+    },
+    {
+      value: "paypal",
+      label: "PayPal",
+      ariaLabel: "Select PayPal payment method",
+      tileClass:
+        "linear-gradient(135deg, rgba(37,59,128,0.14), rgba(23,155,215,0.06))",
+    },
+  ];
 
   // Preset donation amounts
   const presetAmounts = [25, 50, 100, 250, 500, 1000];
@@ -725,18 +827,19 @@ export default function Donate() {
                       <Label className="mb-2 block text-sm font-medium text-foreground">
                         Payment Gateway
                       </Label>
-                      <select
-                        value={paymentGateway}
-                        onChange={(event) =>
-                          setPaymentGateway(event.target.value)
-                        }
-                        disabled={isGatewayRedirecting}
-                        className="h-12 w-full rounded-lg border border-border bg-background px-3 text-sm"
-                      >
-                        <option value="esewa">eSewa</option>
-                        <option value="khalti">Khalti</option>
-                        <option value="paypal">PayPal</option>
-                      </select>
+                      <div className="grid gap-3">
+                        {paymentGatewayOptions.map((option) => (
+                          <GatewayChoice
+                            key={option.value}
+                            value={option.value}
+                            ariaLabel={option.ariaLabel}
+                            tileClass={option.tileClass}
+                            selected={paymentGateway === option.value}
+                            disabled={isGatewayRedirecting}
+                            onSelect={setPaymentGateway}
+                          />
+                        ))}
+                      </div>
                     </div>
 
                     <div className="rounded-xl border border-chart-2/20 bg-chart-2/8 p-4">
