@@ -82,6 +82,12 @@ router.post("/", requireAuth, requireRole("donor"), async (req, res) => {
     if (Number.isNaN(parsedAmount) || parsedAmount <= 0) {
       return res.status(400).json({ message: "Amount must be positive." });
     }
+    if (parsedAmount >= 10000) {
+      return res.status(400).json({
+        message:
+          "Donation amount is maximum 10000 more than that is not allowed",
+      });
+    }
 
     const incrementResult = await tryIncrementCampaignRaisedWithinTarget({
       campaignId,
@@ -110,7 +116,10 @@ router.post("/", requireAuth, requireRole("donor"), async (req, res) => {
         payerName: req.user.name || "Direct Donor",
       });
     } catch (createError) {
-      await Campaign.updateOne({ _id: campaignId }, { $inc: { raised: -parsedAmount } });
+      await Campaign.updateOne(
+        { _id: campaignId },
+        { $inc: { raised: -parsedAmount } },
+      );
       throw createError;
     }
 
