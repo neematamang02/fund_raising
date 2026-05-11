@@ -4,38 +4,30 @@ import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 
 export default defineConfig({
-  plugins: [react(), tailwindcss()],
+  plugins: [react({ jsxRuntime: "automatic" }), tailwindcss()],
   build: {
     rollupOptions: {
       output: {
         manualChunks(id) {
-          if (!id.includes("node_modules")) return;
-
-          if (id.includes("react-router")) {
-            return "router-vendor";
-          }
-
-          if (id.includes("@tanstack/react-query")) {
-            return "query-vendor";
-          }
-
+          // Don't split React/ReactDOM - keep them in main bundle
           if (
-            id.includes("@radix-ui") ||
-            id.includes("lucide-react") ||
-            id.includes("iconsax-reactjs") ||
-            id.includes("sonner")
+            id.includes("node_modules/react") ||
+            id.includes("node_modules/scheduler")
           ) {
-            return "ui-vendor";
+            return;
           }
 
-          if (id.includes("@paypal")) {
-            return "paypal-vendor";
+          // Split other vendor chunks
+          if (id.includes("node_modules")) {
+            if (id.includes("@paypal")) return "paypal-vendor";
+            if (id.includes("@tanstack/react-query")) return "query-vendor";
+            if (id.includes("react-router")) return "router-vendor";
+            return "vendor";
           }
-
-          return "vendor";
         },
       },
     },
+    chunkSizeWarningLimit: 1500,
   },
   resolve: {
     alias: {
