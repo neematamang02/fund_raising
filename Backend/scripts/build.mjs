@@ -7,7 +7,7 @@ const __dirname = path.dirname(__filename);
 const projectRoot = path.resolve(__dirname, "..");
 const distDir = path.join(projectRoot, "dist");
 
-const runtimeFiles = ["app.js", "server.js", "dbconnection.js"];
+const runtimeFiles = ["app.js", "index.js", "dbconnection.js"];
 const runtimeDirs = [
   "config",
   "controllers",
@@ -43,9 +43,9 @@ async function writeDistPackageJson() {
     private: sourcePackageJson.private ?? true,
     description: sourcePackageJson.description,
     type: sourcePackageJson.type,
-    main: "server.js",
+    main: "index.js",
     scripts: {
-      start: "node server.js",
+      start: "node index.js",
     },
     dependencies: sourcePackageJson.dependencies,
     engines: sourcePackageJson.engines,

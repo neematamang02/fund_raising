@@ -6,9 +6,9 @@
   "scripts": {
     "build": "node ./scripts/build.mjs",
     "test": "node --test --test-concurrency=1 ./tests/*.test.js",
-    "dev": "nodemon server.js",
-    "start": "node server.js",
-    "start:prod": "node dist/server.js"
+    "dev": "nodemon index.js",
+    "start": "node index.js",
+    "start:prod": "node dist/index.js"
   },
   "keywords": [],
   "author": "",
