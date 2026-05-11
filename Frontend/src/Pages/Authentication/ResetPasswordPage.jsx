@@ -10,11 +10,8 @@ import axios from "axios";
 import { useState } from "react";
 import { Lock, ArrowRight, ShieldCheck } from "lucide-react";
 import ROUTES from "@/routes/routes";
+import { API_BASE_URL } from "@/lib/apiBaseUrl";
 import { toast } from "sonner";
-
-const API_BASE_URL = import.meta.env.VITE_BACKEND_URL
-  ? `${import.meta.env.VITE_BACKEND_URL}/api`
-  : "/api";
 
 const passwordSchema = z
   .object({

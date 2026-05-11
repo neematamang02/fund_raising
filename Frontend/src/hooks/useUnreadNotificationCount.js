@@ -1,10 +1,7 @@
 import { useContext } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { AuthContext } from "@/Context/AuthContext";
-
-const API_BASE_URL = import.meta.env.VITE_BACKEND_URL
-  ? `${import.meta.env.VITE_BACKEND_URL}/api`
-  : "/api";
+import { API_BASE_URL } from "@/lib/apiBaseUrl";
 
 export const NOTIFICATION_QUERY_KEYS = {
   list: ["notifications", "me"],

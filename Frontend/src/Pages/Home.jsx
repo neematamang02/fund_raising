@@ -15,10 +15,7 @@ import {
 import { Link } from "react-router-dom";
 import ROUTES from "@/routes/routes";
 import { Button } from "@/components/ui/button";
-
-const API_BASE_URL = import.meta.env.VITE_BACKEND_URL
-  ? `${import.meta.env.VITE_BACKEND_URL}/api`
-  : "/api";
+import { API_BASE_URL } from "@/lib/apiBaseUrl";
 
 export default function Home() {
   const [campaigns, setCampaigns] = useState([]);
@@ -105,7 +102,9 @@ export default function Home() {
                 <p className="text-3xl font-bold text-foreground">
                   {stat.value}
                 </p>
-                <p className="mt-1 font-medium text-muted-foreground">{stat.label}</p>
+                <p className="mt-1 font-medium text-muted-foreground">
+                  {stat.label}
+                </p>
               </article>
             ))}
           </div>

@@ -115,11 +115,16 @@ app.use(
 );
 
 // CORS configuration
+function normalizeOrigin(value) {
+  return typeof value === "string" ? value.trim().replace(/\/+$/, "") : value;
+}
+
 const allowedOrigins = [
   "http://localhost:5173",
   "http://localhost:3000",
-  process.env.FRONTEND_URL,
-  "https://hopeon.vercel.app/",
+  "http://localhost:3001",
+  normalizeOrigin(process.env.FRONTEND_URL),
+  normalizeOrigin(process.env.BACKREND_URL),
 ].filter(Boolean);
 
 app.use(

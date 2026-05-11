@@ -12,10 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import { Calendar, HandCoins, Search, Settings, UserRound } from "lucide-react";
-
-const API_BASE_URL = import.meta.env.VITE_BACKEND_URL
-  ? `${import.meta.env.VITE_BACKEND_URL}/api`
-  : "/api";
+import { API_BASE_URL } from "@/lib/apiBaseUrl";
 
 const profileSchema = z
   .object({

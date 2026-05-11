@@ -7,15 +7,12 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ShieldCheck } from "lucide-react";
+import { API_BASE_URL } from "@/lib/apiBaseUrl";
 
 const OtpVerification = () => {
   const [otp, setOtp] = useState(new Array(6).fill(""));
   const inputRefs = useRef([]);
   const navigate = useNavigate();
-
-  const API_BASE_URL = import.meta.env.VITE_BACKEND_URL
-    ? `${import.meta.env.VITE_BACKEND_URL}/api`
-    : "/api";
 
   const verifyOtpMutation = useMutation({
     mutationFn: async ({ name, email, password, otp }) => {
@@ -49,7 +46,9 @@ const OtpVerification = () => {
       }
 
       if (code === "EMAIL_ALREADY_IN_USE") {
-        toast.error("This email is already registered. Please sign in instead.");
+        toast.error(
+          "This email is already registered. Please sign in instead.",
+        );
         navigate(ROUTES.LOGIN);
         return;
       }

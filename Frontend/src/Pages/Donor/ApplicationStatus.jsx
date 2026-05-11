@@ -6,10 +6,7 @@ import ROUTES from "@/routes/routes";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { FundraisingButton } from "@/components/ui/fundraising-button";
-
-const API_BASE_URL = import.meta.env.VITE_BACKEND_URL
-  ? `${import.meta.env.VITE_BACKEND_URL}/api`
-  : "/api";
+import { API_BASE_URL } from "@/lib/apiBaseUrl";
 
 function statusBadgeClass(status) {
   if (status === "approved") return "bg-emerald-100 text-emerald-800";

@@ -9,10 +9,7 @@ import {
   Image as ImageIcon,
   Upload,
 } from "lucide-react";
-
-const API_BASE_URL = import.meta.env.VITE_BACKEND_URL
-  ? `${import.meta.env.VITE_BACKEND_URL}/api`
-  : "/api";
+import { API_BASE_URL } from "@/lib/apiBaseUrl";
 
 export default function ImageUploadDemo() {
   const [selectedFile, setSelectedFile] = useState(null);

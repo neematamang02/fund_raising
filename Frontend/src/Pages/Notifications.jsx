@@ -7,11 +7,14 @@ import { Button } from "@/components/ui/button";
 import ROUTES from "@/routes/routes";
 import { NOTIFICATION_QUERY_KEYS } from "@/hooks/useUnreadNotificationCount";
 import { EmptyState } from "@/components/admin/AdminUtils";
-import { Bell, CheckCheck, Loader2, RefreshCw, AlertTriangle } from "lucide-react";
-
-const API_BASE_URL = import.meta.env.VITE_BACKEND_URL
-  ? `${import.meta.env.VITE_BACKEND_URL}/api`
-  : "/api";
+import { API_BASE_URL } from "@/lib/apiBaseUrl";
+import {
+  Bell,
+  CheckCheck,
+  Loader2,
+  RefreshCw,
+  AlertTriangle,
+} from "lucide-react";
 
 // ─── NotificationCard ─────────────────────────────────────────────────────────
 
@@ -21,17 +24,20 @@ function NotificationCard({ item, onMarkRead, isPending }) {
     <div
       className={[
         "relative rounded-lg border bg-card px-4 py-3.5 transition-colors hover:bg-accent/20",
-        isUnread
-          ? "border-primary/30 shadow-sm"
-          : "border-border",
+        isUnread ? "border-primary/30 shadow-sm" : "border-border",
       ].join(" ")}
     >
       {isUnread && (
-        <span className="absolute right-3 top-3.5 h-2 w-2 rounded-full bg-primary" aria-hidden="true" />
+        <span
+          className="absolute right-3 top-3.5 h-2 w-2 rounded-full bg-primary"
+          aria-hidden="true"
+        />
       )}
       <div className="flex items-start justify-between gap-4 pr-4">
         <div className="min-w-0 flex-1 space-y-1">
-          <p className={`text-sm font-semibold ${isUnread ? "text-foreground" : "text-muted-foreground"}`}>
+          <p
+            className={`text-sm font-semibold ${isUnread ? "text-foreground" : "text-muted-foreground"}`}
+          >
             {item.title}
           </p>
           <p className="text-sm text-muted-foreground">{item.message}</p>
@@ -75,7 +81,8 @@ export default function Notifications() {
         headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
       });
       const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data.message ?? "Failed to fetch notifications");
+      if (!res.ok)
+        throw new Error(data.message ?? "Failed to fetch notifications");
       return data;
     },
     refetchInterval: 15_000,
@@ -84,37 +91,59 @@ export default function Notifications() {
 
   const markReadMutation = useMutation({
     mutationFn: async (notificationId) => {
-      const res = await fetch(`${API_BASE_URL}/notifications/${notificationId}/read`, {
-        method: "PATCH",
-        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-      });
+      const res = await fetch(
+        `${API_BASE_URL}/notifications/${notificationId}/read`,
+        {
+          method: "PATCH",
+          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+        },
+      );
       const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data.message ?? "Failed to mark notification as read");
+      if (!res.ok)
+        throw new Error(data.message ?? "Failed to mark notification as read");
       return data;
     },
     onMutate: async (notificationId) => {
-      await queryClient.cancelQueries({ queryKey: NOTIFICATION_QUERY_KEYS.list });
-      await queryClient.cancelQueries({ queryKey: NOTIFICATION_QUERY_KEYS.unreadCount });
+      await queryClient.cancelQueries({
+        queryKey: NOTIFICATION_QUERY_KEYS.list,
+      });
+      await queryClient.cancelQueries({
+        queryKey: NOTIFICATION_QUERY_KEYS.unreadCount,
+      });
 
-      const previousListData = queryClient.getQueryData(NOTIFICATION_QUERY_KEYS.list);
-      const previousUnreadCount = queryClient.getQueryData(NOTIFICATION_QUERY_KEYS.unreadCount);
+      const previousListData = queryClient.getQueryData(
+        NOTIFICATION_QUERY_KEYS.list,
+      );
+      const previousUnreadCount = queryClient.getQueryData(
+        NOTIFICATION_QUERY_KEYS.unreadCount,
+      );
 
       const wasUnread =
-        previousListData?.notifications?.find((item) => item._id === notificationId)?.readAt == null;
+        previousListData?.notifications?.find(
+          (item) => item._id === notificationId,
+        )?.readAt == null;
 
       if (previousListData?.notifications) {
-        queryClient.setQueryData(NOTIFICATION_QUERY_KEYS.list, (current = {}) => {
-          const notifications = Array.isArray(current.notifications) ? current.notifications : [];
-          return {
-            ...current,
-            notifications: notifications.map((item) =>
-              item._id !== notificationId || item.readAt
-                ? item
-                : { ...item, readAt: new Date().toISOString() },
-            ),
-            unreadCount: Math.max(0, Number(current.unreadCount ?? 0) - (wasUnread ? 1 : 0)),
-          };
-        });
+        queryClient.setQueryData(
+          NOTIFICATION_QUERY_KEYS.list,
+          (current = {}) => {
+            const notifications = Array.isArray(current.notifications)
+              ? current.notifications
+              : [];
+            return {
+              ...current,
+              notifications: notifications.map((item) =>
+                item._id !== notificationId || item.readAt
+                  ? item
+                  : { ...item, readAt: new Date().toISOString() },
+              ),
+              unreadCount: Math.max(
+                0,
+                Number(current.unreadCount ?? 0) - (wasUnread ? 1 : 0),
+              ),
+            };
+          },
+        );
       }
 
       if (wasUnread) {
@@ -128,21 +157,31 @@ export default function Notifications() {
     },
     onError: (_error, _id, context) => {
       if (context?.previousListData) {
-        queryClient.setQueryData(NOTIFICATION_QUERY_KEYS.list, context.previousListData);
+        queryClient.setQueryData(
+          NOTIFICATION_QUERY_KEYS.list,
+          context.previousListData,
+        );
       }
       if (typeof context?.previousUnreadCount !== "undefined") {
-        queryClient.setQueryData(NOTIFICATION_QUERY_KEYS.unreadCount, context.previousUnreadCount);
+        queryClient.setQueryData(
+          NOTIFICATION_QUERY_KEYS.unreadCount,
+          context.previousUnreadCount,
+        );
       }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: NOTIFICATION_QUERY_KEYS.list });
-      queryClient.invalidateQueries({ queryKey: NOTIFICATION_QUERY_KEYS.unreadCount });
+      queryClient.invalidateQueries({
+        queryKey: NOTIFICATION_QUERY_KEYS.unreadCount,
+      });
     },
   });
 
   useEffect(() => {
     if (!loading && !user) {
-      navigate(`${ROUTES.LOGIN}?redirect=${encodeURIComponent(ROUTES.NOTIFICATIONS)}`);
+      navigate(
+        `${ROUTES.LOGIN}?redirect=${encodeURIComponent(ROUTES.NOTIFICATIONS)}`,
+      );
     }
   }, [loading, user, navigate]);
 
@@ -154,7 +193,9 @@ export default function Notifications() {
       <div className="surface-page min-h-screen flex items-center justify-center">
         <div className="flex flex-col items-center gap-3">
           <div className="h-8 w-8 rounded-full border-2 border-border border-t-foreground animate-spin" />
-          <p className="text-sm text-muted-foreground">Loading notifications…</p>
+          <p className="text-sm text-muted-foreground">
+            Loading notifications…
+          </p>
         </div>
       </div>
     );
@@ -168,9 +209,17 @@ export default function Notifications() {
           <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-destructive/10">
             <AlertTriangle className="h-6 w-6 text-destructive" />
           </div>
-          <h2 className="text-lg font-semibold text-foreground">Unable to load notifications</h2>
-          <p className="text-sm text-muted-foreground">{notificationsQuery.error.message}</p>
-          <Button variant="outline" size="sm" onClick={() => notificationsQuery.refetch()}>
+          <h2 className="text-lg font-semibold text-foreground">
+            Unable to load notifications
+          </h2>
+          <p className="text-sm text-muted-foreground">
+            {notificationsQuery.error.message}
+          </p>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => notificationsQuery.refetch()}
+          >
             <RefreshCw className="h-4 w-4 mr-2" />
             Try again
           </Button>
@@ -185,17 +234,21 @@ export default function Notifications() {
   return (
     <div className="surface-page min-h-screen px-4 py-8">
       <div className="max-w-2xl mx-auto space-y-6 animate-fadeIn">
-
         {/* Header */}
         <div className="flex items-start justify-between gap-4">
           <div className="space-y-1">
             <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
               Inbox
             </p>
-            <h1 className="text-xl font-bold text-foreground tracking-tight">Notifications</h1>
+            <h1 className="text-xl font-bold text-foreground tracking-tight">
+              Notifications
+            </h1>
             {unreadCount > 0 && (
               <p className="text-sm text-muted-foreground">
-                <span className="font-semibold text-primary">{unreadCount}</span> unread
+                <span className="font-semibold text-primary">
+                  {unreadCount}
+                </span>{" "}
+                unread
               </p>
             )}
           </div>
@@ -205,7 +258,9 @@ export default function Notifications() {
             onClick={() => notificationsQuery.refetch()}
             disabled={notificationsQuery.isFetching}
           >
-            <RefreshCw className={`h-3.5 w-3.5 mr-2 ${notificationsQuery.isFetching ? "animate-spin" : ""}`} />
+            <RefreshCw
+              className={`h-3.5 w-3.5 mr-2 ${notificationsQuery.isFetching ? "animate-spin" : ""}`}
+            />
             Refresh
           </Button>
         </div>
@@ -224,7 +279,10 @@ export default function Notifications() {
                 key={item._id}
                 item={item}
                 onMarkRead={(id) => markReadMutation.mutate(id)}
-                isPending={markReadMutation.isPending && markReadMutation.variables === item._id}
+                isPending={
+                  markReadMutation.isPending &&
+                  markReadMutation.variables === item._id
+                }
               />
             ))}
           </div>

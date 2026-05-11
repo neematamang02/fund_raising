@@ -29,11 +29,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import ROUTES from "@/routes/routes";
+import { API_BASE_URL } from "@/lib/apiBaseUrl";
 import { toast } from "sonner";
-
-const API_BASE_URL = import.meta.env.VITE_BACKEND_URL
-  ? `${import.meta.env.VITE_BACKEND_URL}/api`
-  : "/api";
 
 const registerSchema = z
   .object({
@@ -201,7 +198,9 @@ export default function RegisterPage() {
               className="flex items-center gap-3 rounded-lg border border-background/15 bg-background/10 p-3"
             >
               <item.icon className="h-5 w-5 text-primary" />
-              <span className="text-sm font-medium text-background/85">{item.text}</span>
+              <span className="text-sm font-medium text-background/85">
+                {item.text}
+              </span>
             </div>
           ))}
         </div>
@@ -217,7 +216,9 @@ export default function RegisterPage() {
             <h2 className="text-2xl font-bold text-foreground">
               Create Account
             </h2>
-            <p className="text-muted-foreground">Start making a real difference.</p>
+            <p className="text-muted-foreground">
+              Start making a real difference.
+            </p>
           </div>
 
           <Card className="surface-card shadow-[0_12px_30px_rgba(15,23,42,0.06)]">
@@ -244,7 +245,8 @@ export default function RegisterPage() {
                       <ul className="mt-2 list-disc space-y-1 pl-5 text-destructive/90">
                         {visibleErrorEntries.map(([field, error]) => (
                           <li key={field}>
-                            {fieldLabels[field] || field}: {String(error.message)}
+                            {fieldLabels[field] || field}:{" "}
+                            {String(error.message)}
                           </li>
                         ))}
                       </ul>

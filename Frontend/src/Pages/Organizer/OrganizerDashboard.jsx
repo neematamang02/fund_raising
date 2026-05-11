@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { AuthContext } from "@/Context/AuthContext";
 import ROUTES from "@/routes/routes";
+import { API_BASE_URL } from "@/lib/apiBaseUrl";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { AdminPageSkeleton } from "@/components/admin/AdminSkeletons";
@@ -22,10 +23,6 @@ import {
 } from "lucide-react";
 
 // ─── API ─────────────────────────────────────────────────────────────────────
-
-const API_BASE_URL = import.meta.env.VITE_BACKEND_URL
-  ? `${import.meta.env.VITE_BACKEND_URL}/api`
-  : "/api";
 
 async function fetchOrganizerDashboard(token, userId) {
   const [campaignsRes, withdrawalsRes, profileRes] = await Promise.all([
@@ -107,7 +104,9 @@ function StatCard({ title, value, subtitle, icon: Icon, accent = "blue" }) {
             <p className="mt-1.5 text-xs text-muted-foreground">{subtitle}</p>
           )}
         </div>
-        <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${a.icon}`}>
+        <div
+          className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${a.icon}`}
+        >
           <Icon className={`h-4 w-4 ${a.iconText}`} />
         </div>
       </div>
@@ -125,12 +124,24 @@ function VerificationStatusBadge({ status }) {
   };
   const cls = map[status] ?? "bg-muted text-muted-foreground border-border";
   return (
-    <span className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-semibold ${cls}`}>
-      {status === "verified" && <span className="h-1.5 w-1.5 rounded-full bg-primary" />}
-      {status === "pending" && <span className="h-1.5 w-1.5 rounded-full bg-chart-4 animate-pulse" />}
-      {status === "rejected" && <span className="h-1.5 w-1.5 rounded-full bg-destructive" />}
-      {!status && <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground" />}
-      {status ? status.charAt(0).toUpperCase() + status.slice(1) : "Not submitted"}
+    <span
+      className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-semibold ${cls}`}
+    >
+      {status === "verified" && (
+        <span className="h-1.5 w-1.5 rounded-full bg-primary" />
+      )}
+      {status === "pending" && (
+        <span className="h-1.5 w-1.5 rounded-full bg-chart-4 animate-pulse" />
+      )}
+      {status === "rejected" && (
+        <span className="h-1.5 w-1.5 rounded-full bg-destructive" />
+      )}
+      {!status && (
+        <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground" />
+      )}
+      {status
+        ? status.charAt(0).toUpperCase() + status.slice(1)
+        : "Not submitted"}
     </span>
   );
 }
@@ -146,7 +157,9 @@ function StatusBadge({ status }) {
     cancelled: "bg-destructive/10 text-destructive",
   };
   return (
-    <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold ${map[s] ?? "bg-muted text-muted-foreground"}`}>
+    <span
+      className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold ${map[s] ?? "bg-muted text-muted-foreground"}`}
+    >
       {s ?? "unknown"}
     </span>
   );
@@ -171,7 +184,8 @@ function EmptyState({ icon: Icon = Target, message, action }) {
 function CampaignProgressRow({ campaign }) {
   const raised = Number(campaign.raised ?? 0);
   const target = Number(campaign.target ?? 0);
-  const pct = target > 0 ? Math.min(100, Math.round((raised / target) * 100)) : 0;
+  const pct =
+    target > 0 ? Math.min(100, Math.round((raised / target) * 100)) : 0;
 
   return (
     <div className="space-y-2">
@@ -203,7 +217,8 @@ function CampaignProgressRow({ campaign }) {
         </span>
       </div>
       <p className="text-xs text-muted-foreground">
-        {currency.format(raised)} raised of {target > 0 ? currency.format(target) : "—"} goal
+        {currency.format(raised)} raised of{" "}
+        {target > 0 ? currency.format(target) : "—"} goal
       </p>
     </div>
   );
@@ -211,17 +226,27 @@ function CampaignProgressRow({ campaign }) {
 
 // ─── QuickActionCard ──────────────────────────────────────────────────────────
 
-function QuickActionCard({ to, icon: Icon, title, description, accent = "blue" }) {
+function QuickActionCard({
+  to,
+  icon: Icon,
+  title,
+  description,
+  accent = "blue",
+}) {
   const a = ACCENT[accent] ?? ACCENT.blue;
   return (
     <Link to={to} className="group block">
       <div className="flex items-center gap-3 bg-card border border-border rounded-lg px-4 py-3.5 transition-all hover:border-ring/40 hover:shadow-sm hover:bg-accent/30">
-        <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${a.icon}`}>
+        <div
+          className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${a.icon}`}
+        >
           <Icon className={`h-4 w-4 ${a.iconText}`} />
         </div>
         <div className="min-w-0 flex-1">
           <p className="text-sm font-semibold text-foreground">{title}</p>
-          <p className="text-xs text-muted-foreground truncate">{description}</p>
+          <p className="text-xs text-muted-foreground truncate">
+            {description}
+          </p>
         </div>
         <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:text-foreground transition-colors shrink-0" />
       </div>
@@ -244,15 +269,28 @@ export default function OrganizerDashboard() {
 
   const campaigns = dashboardQuery.data?.campaigns ?? [];
   const withdrawals = dashboardQuery.data?.withdrawals ?? [];
-  const profile = dashboardQuery.data?.profile ?? { hasProfile: false, verificationStatus: null };
+  const profile = dashboardQuery.data?.profile ?? {
+    hasProfile: false,
+    verificationStatus: null,
+  };
 
   const stats = useMemo(() => {
-    const totalRaised = campaigns.reduce((s, c) => s + Number(c?.raised ?? 0), 0);
-    const activeCampaigns = campaigns.filter((c) => c?.status === "active").length;
+    const totalRaised = campaigns.reduce(
+      (s, c) => s + Number(c?.raised ?? 0),
+      0,
+    );
+    const activeCampaigns = campaigns.filter(
+      (c) => c?.status === "active",
+    ).length;
     const pendingWithdrawals = withdrawals.filter(
       (w) => w?.status === "pending" || w?.status === "under_review",
     ).length;
-    return { totalCampaigns: campaigns.length, totalRaised, activeCampaigns, pendingWithdrawals };
+    return {
+      totalCampaigns: campaigns.length,
+      totalRaised,
+      activeCampaigns,
+      pendingWithdrawals,
+    };
   }, [campaigns, withdrawals]);
 
   const topCampaigns = useMemo(() => {
@@ -273,12 +311,19 @@ export default function OrganizerDashboard() {
             <AlertTriangle className="h-6 w-6 text-destructive" />
           </div>
           <div className="space-y-1">
-            <h2 className="text-lg font-semibold text-foreground">Unable to load dashboard</h2>
+            <h2 className="text-lg font-semibold text-foreground">
+              Unable to load dashboard
+            </h2>
             <p className="text-sm text-muted-foreground">
-              {dashboardQuery.error?.message || "Something went wrong. Please try again."}
+              {dashboardQuery.error?.message ||
+                "Something went wrong. Please try again."}
             </p>
           </div>
-          <Button variant="outline" size="sm" onClick={() => dashboardQuery.refetch()}>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => dashboardQuery.refetch()}
+          >
             <RefreshCw className="h-4 w-4 mr-2" />
             Try again
           </Button>
@@ -290,7 +335,6 @@ export default function OrganizerDashboard() {
   return (
     <div className="surface-page min-h-screen py-8 px-4">
       <div className="max-w-6xl mx-auto space-y-8 animate-fadeIn">
-
         {/* ── Welcome header ────────────────────────────────────────────── */}
         <div className="bg-card border border-border rounded-lg shadow-sm p-6 md:p-7">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-5">
@@ -406,7 +450,6 @@ export default function OrganizerDashboard() {
 
         {/* ── Two-column: verification + recent campaigns ───────────────── */}
         <section className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-
           {/* Verification & payout readiness */}
           <Card className="surface-card shadow-sm">
             <CardHeader className="pb-3 px-5 pt-5">
@@ -421,15 +464,17 @@ export default function OrganizerDashboard() {
             <CardContent className="px-5 pb-5 space-y-4">
               <div className="flex items-center justify-between rounded-lg border border-border bg-background px-4 py-3">
                 <div>
-                  <p className="text-sm font-medium text-foreground">Profile status</p>
+                  <p className="text-sm font-medium text-foreground">
+                    Profile status
+                  </p>
                   <p className="text-xs text-muted-foreground mt-0.5">
                     {profile?.verificationStatus === "verified"
                       ? "Your profile is verified. Withdrawals are enabled."
                       : profile?.verificationStatus === "pending"
-                      ? "Your profile is under review. Withdrawals are paused."
-                      : profile?.verificationStatus === "rejected"
-                      ? "Your profile was rejected. Please update and resubmit."
-                      : "Submit your organizer profile to enable withdrawals."}
+                        ? "Your profile is under review. Withdrawals are paused."
+                        : profile?.verificationStatus === "rejected"
+                          ? "Your profile was rejected. Please update and resubmit."
+                          : "Submit your organizer profile to enable withdrawals."}
                   </p>
                 </div>
                 <VerificationStatusBadge status={profile?.verificationStatus} />
@@ -451,7 +496,8 @@ export default function OrganizerDashboard() {
                 <div className="flex items-center gap-2 rounded-lg bg-chart-4/10 border border-chart-4/20 px-3 py-2.5">
                   <span className="h-1.5 w-1.5 rounded-full bg-chart-4 animate-pulse shrink-0" />
                   <p className="text-xs text-chart-4 font-medium">
-                    {stats.pendingWithdrawals} withdrawal{stats.pendingWithdrawals !== 1 ? "s" : ""} pending review
+                    {stats.pendingWithdrawals} withdrawal
+                    {stats.pendingWithdrawals !== 1 ? "s" : ""} pending review
                   </p>
                 </div>
               )}
@@ -535,7 +581,6 @@ export default function OrganizerDashboard() {
             accent="green"
           />
         </section>
-
       </div>
     </div>
   );

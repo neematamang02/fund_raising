@@ -1045,10 +1045,7 @@ import {
 } from "lucide-react";
 import { generateUniqueId } from "@/utils/helpers";
 import { initiatePayment } from "@/services/paymentApi";
-
-const API_BASE_URL = import.meta.env.VITE_BACKEND_URL
-  ? `${import.meta.env.VITE_BACKEND_URL}/api`
-  : "/api";
+import { API_BASE_URL } from "@/lib/apiBaseUrl";
 
 // ─── GatewayMark ────────────────────────────────────────────────────────────
 // FIX: Removed fixed heights (h-12 sm:h-14). Now uses padding-driven height

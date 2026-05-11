@@ -26,6 +26,7 @@ import {
 import { useNavigate } from "react-router-dom";
 import ROUTES from "@/routes/routes";
 import { AuthContext } from "@/Context/AuthContext";
+import { API_BASE_URL } from "@/lib/apiBaseUrl";
 import {
   Target,
   ImageIcon,
@@ -41,10 +42,6 @@ import {
   Globe,
 } from "lucide-react";
 import { toast } from "sonner";
-
-const API_BASE_URL = import.meta.env.VITE_BACKEND_URL
-  ? `${import.meta.env.VITE_BACKEND_URL}/api`
-  : "/api";
 
 const campaignSchema = z.object({
   title: z
@@ -254,9 +251,16 @@ export default function CreateCampaign() {
           <div className="w-16 h-16 bg-chart-4/10 rounded-full flex items-center justify-center mx-auto mb-4">
             <Users className="h-8 w-8 text-chart-4" />
           </div>
-          <h2 className="text-2xl font-bold text-foreground mb-2">Organizer Access Required</h2>
-          <p className="text-muted-foreground mb-6">You need to be an organizer to create campaigns.</p>
-          <Button className="bg-primary hover:bg-primary/90" onClick={() => navigate(ROUTES.APPLY_ORGANIZER)}>
+          <h2 className="text-2xl font-bold text-foreground mb-2">
+            Organizer Access Required
+          </h2>
+          <p className="text-muted-foreground mb-6">
+            You need to be an organizer to create campaigns.
+          </p>
+          <Button
+            className="bg-primary hover:bg-primary/90"
+            onClick={() => navigate(ROUTES.APPLY_ORGANIZER)}
+          >
             Apply to Become Organizer
           </Button>
         </div>
@@ -269,10 +273,15 @@ export default function CreateCampaign() {
       <div className="max-w-6xl mx-auto space-y-8">
         {/* Header */}
         <div>
-          <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-1">Organizer</p>
-          <h1 className="text-2xl font-bold text-foreground">Create New Campaign</h1>
+          <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-1">
+            Organizer
+          </p>
+          <h1 className="text-2xl font-bold text-foreground">
+            Create New Campaign
+          </h1>
           <p className="text-sm text-muted-foreground mt-0.5">
-            Launch a compelling campaign that inspires donors and drives meaningful change.
+            Launch a compelling campaign that inspires donors and drives
+            meaningful change.
           </p>
         </div>
 
@@ -378,11 +387,13 @@ export default function CreateCampaign() {
                                 </p>
                               </div>
 
-                                <div className="flex items-center gap-2 my-2">
-                                  <div className="h-px flex-1 bg-border" />
-                                  <span className="text-xs font-semibold text-muted-foreground uppercase">or</span>
-                                  <div className="h-px flex-1 bg-border" />
-                                </div>
+                              <div className="flex items-center gap-2 my-2">
+                                <div className="h-px flex-1 bg-border" />
+                                <span className="text-xs font-semibold text-muted-foreground uppercase">
+                                  or
+                                </span>
+                                <div className="h-px flex-1 bg-border" />
+                              </div>
 
                               <div className="space-y-2">
                                 <p className="text-sm font-medium text-gray-700">
@@ -470,7 +481,9 @@ export default function CreateCampaign() {
                             name="duration"
                             render={({ field }) => (
                               <FormItem>
-                                <FormLabel>Campaign Duration (Days) *</FormLabel>
+                                <FormLabel>
+                                  Campaign Duration (Days) *
+                                </FormLabel>
                                 <FormControl>
                                   <Input
                                     {...field}
@@ -531,9 +544,15 @@ export default function CreateCampaign() {
                         disabled={isSubmitting}
                       >
                         {isSubmitting ? (
-                          <><span className="animate-spin mr-2">⏳</span>Creating Campaign...</>
+                          <>
+                            <span className="animate-spin mr-2">⏳</span>
+                            Creating Campaign...
+                          </>
                         ) : (
-                          <><Target className="h-4 w-4 mr-2" />Launch Campaign</>
+                          <>
+                            <Target className="h-4 w-4 mr-2" />
+                            Launch Campaign
+                          </>
                         )}
                       </Button>
                     </div>
@@ -590,17 +609,35 @@ export default function CreateCampaign() {
               </CardHeader>
               <CardContent className="space-y-4">
                 {[
-                  { icon: Heart, title: "Tell Your Story", desc: "Share personal experiences and emotional connections to your cause" },
-                  { icon: ImageIcon, title: "Use Quality Images", desc: "High-resolution photos that show the impact of your work" },
-                  { icon: Target, title: "Set Realistic Goals", desc: "Research similar campaigns and set achievable funding targets" },
-                  { icon: TrendingUp, title: "Share Regularly", desc: "Post updates and engage with your supporters throughout the campaign" },
+                  {
+                    icon: Heart,
+                    title: "Tell Your Story",
+                    desc: "Share personal experiences and emotional connections to your cause",
+                  },
+                  {
+                    icon: ImageIcon,
+                    title: "Use Quality Images",
+                    desc: "High-resolution photos that show the impact of your work",
+                  },
+                  {
+                    icon: Target,
+                    title: "Set Realistic Goals",
+                    desc: "Research similar campaigns and set achievable funding targets",
+                  },
+                  {
+                    icon: TrendingUp,
+                    title: "Share Regularly",
+                    desc: "Post updates and engage with your supporters throughout the campaign",
+                  },
                 ].map((tip, i) => (
                   <div key={i} className="flex items-start gap-3">
                     <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center shrink-0">
                       <tip.icon className="h-4 w-4 text-primary" />
                     </div>
                     <div>
-                      <h4 className="font-semibold text-primary text-sm">{tip.title}</h4>
+                      <h4 className="font-semibold text-primary text-sm">
+                        {tip.title}
+                      </h4>
                       <p className="text-primary/70 text-xs">{tip.desc}</p>
                     </div>
                   </div>

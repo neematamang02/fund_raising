@@ -14,10 +14,7 @@ import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { Loader2, ShieldCheck } from "lucide-react";
 import ROUTES from "@/routes/routes";
-
-const API_BASE_URL = import.meta.env.VITE_BACKEND_URL
-  ? `${import.meta.env.VITE_BACKEND_URL}/api`
-  : "/api";
+import { API_BASE_URL } from "@/lib/apiBaseUrl";
 
 const WithdrawalRequest = () => {
   const { campaignId } = useParams();

@@ -36,11 +36,8 @@ import {
   ArrowLeft,
   AlertCircle,
 } from "lucide-react";
+import { API_BASE_URL } from "@/lib/apiBaseUrl";
 import { toast } from "sonner";
-
-const API_BASE_URL = import.meta.env.VITE_BACKEND_URL
-  ? `${import.meta.env.VITE_BACKEND_URL}/api`
-  : "/api";
 
 // Enhanced Zod schema
 const applicationSchema = z.object({
