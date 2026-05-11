@@ -113,7 +113,7 @@ export default function PaymentSuccess() {
         }
 
         setBill(result.billReceipt || null);
-      } catch (error) {
+      } catch {
         if (cancelled) {
           return;
         }
@@ -172,13 +172,13 @@ export default function PaymentSuccess() {
   }
 
   return (
-    <div className="surface-page px-4 py-12">
+    <div className="surface-page px-4 py-8 sm:py-12">
       <div className="max-w-2xl mx-auto">
         <div className="text-center mb-8">
           <div className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-primary/15">
             <CheckCircle className="h-12 w-12 text-primary" />
           </div>
-          <h1 className="mb-2 text-4xl font-bold text-foreground">
+          <h1 className="mb-2 text-3xl font-bold text-foreground sm:text-4xl">
             Payment Successful
           </h1>
           <p className="text-lg text-muted-foreground">
@@ -190,7 +190,7 @@ export default function PaymentSuccess() {
           <CardHeader className="bg-primary text-primary-foreground">
             <CardTitle>Donation Receipt</CardTitle>
           </CardHeader>
-          <CardContent className="p-8 space-y-6">
+          <CardContent className="space-y-6 p-5 sm:p-8">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
                 <Label className="text-sm font-medium text-muted-foreground">
@@ -212,7 +212,7 @@ export default function PaymentSuccess() {
                 <Label className="text-sm font-medium text-muted-foreground">
                   Transaction ID
                 </Label>
-                <p className="rounded bg-muted px-3 py-1 font-mono text-sm text-foreground">
+                <p className="break-all rounded bg-muted px-3 py-1 font-mono text-sm text-foreground">
                   {bill.transactionId}
                 </p>
               </div>

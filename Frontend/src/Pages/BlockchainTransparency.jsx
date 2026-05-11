@@ -125,7 +125,7 @@ export default function BlockchainTransparency() {
       await navigator.clipboard.writeText(value);
       setCopiedHash(value);
       window.setTimeout(() => setCopiedHash(""), 1200);
-    } catch (_err) {
+    } catch {
       // Ignore clipboard failures in unsupported environments.
     }
   };
@@ -281,7 +281,7 @@ export default function BlockchainTransparency() {
   };
 
   return (
-    <div className="min-h-screen surface-page py-10 px-4">
+    <div className="min-h-screen surface-page px-4 py-6 sm:py-10">
       <div className="max-w-6xl mx-auto space-y-6">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
           <div>
@@ -298,7 +298,7 @@ export default function BlockchainTransparency() {
 
         <Card className="border">
           <CardContent className="p-5 space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
               <div>
                 <label className="text-sm font-medium text-foreground mb-1 block">
                   Filter by campaignId
@@ -315,14 +315,26 @@ export default function BlockchainTransparency() {
                   ))}
                 </datalist>
               </div>
-              <div className="flex items-end gap-2">
-                <Button onClick={() => refetch()} disabled={isFetching}>
+              <div className="flex flex-wrap items-end gap-2 md:justify-end">
+                <Button
+                  onClick={() => refetch()}
+                  disabled={isFetching}
+                  className="w-full sm:w-auto"
+                >
                   Reload
                 </Button>
-                <Button variant="outline" onClick={handleVerify}>
+                <Button
+                  variant="outline"
+                  onClick={handleVerify}
+                  className="w-full sm:w-auto"
+                >
                   Verify Chain
                 </Button>
-                <Button variant="destructive" onClick={handleTamper}>
+                <Button
+                  variant="destructive"
+                  onClick={handleTamper}
+                  className="w-full sm:w-auto"
+                >
                   Simulate Tampering
                 </Button>
               </div>
@@ -446,7 +458,7 @@ export default function BlockchainTransparency() {
                           </p>
                         ) : null}
                       </div>
-                      <div className="flex items-center gap-2">
+                      <div className="flex flex-wrap items-center gap-2">
                         <Badge className="bg-chart-2/15 text-chart-2 border-chart-2/25">
                           {flow.donationCount} donations
                         </Badge>
@@ -594,7 +606,7 @@ export default function BlockchainTransparency() {
                         <p className="text-xs text-muted-foreground mb-1">
                           Data
                         </p>
-                        <pre className="text-xs whitespace-pre-wrap break-all text-foreground">
+                        <pre className="max-h-64 overflow-auto text-xs whitespace-pre-wrap break-all text-foreground">
                           {JSON.stringify(block.data, null, 2)}
                         </pre>
                       </div>

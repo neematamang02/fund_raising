@@ -115,7 +115,7 @@ export default function ApplicationStatus() {
     <div className="max-w-3xl mx-auto py-12 px-4">
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center justify-between gap-4">
+          <CardTitle className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
             <span>Organizer Application Status</span>
             <Badge className={statusBadgeClass(application.status)}>
               {(application.status || "unknown").toUpperCase()}
@@ -139,10 +139,11 @@ export default function ApplicationStatus() {
             </div>
           )}
 
-          <div className="flex flex-wrap gap-3">
+          <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
             {canResubmit && (
               <FundraisingButton
                 variant="trust"
+                className="w-full sm:w-auto"
                 onClick={() =>
                   navigate(
                     `${ROUTES.APPLY_ORGANIZER}?resubmit=${application._id}`,
@@ -155,6 +156,7 @@ export default function ApplicationStatus() {
 
             <FundraisingButton
               variant="warm"
+              className="w-full sm:w-auto"
               onClick={() => statusQuery.refetch()}
             >
               Refresh

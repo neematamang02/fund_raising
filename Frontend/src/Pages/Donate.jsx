@@ -443,13 +443,13 @@ export default function Donate() {
   // If donation is successful
   if (bill) {
     return (
-      <div className="surface-page px-4 py-12">
+      <div className="surface-page px-4 py-8 sm:py-12">
         <div className="max-w-2xl mx-auto">
           <div className="text-center mb-8">
             <div className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-primary/15">
               <CheckCircle className="h-12 w-12 text-primary" />
             </div>
-            <h1 className="mb-2 text-4xl font-bold text-foreground">
+            <h1 className="mb-2 text-3xl font-bold text-foreground sm:text-4xl">
               Thank You!
             </h1>
             <p className="text-lg text-muted-foreground">
@@ -464,7 +464,7 @@ export default function Donate() {
                 Donation Receipt
               </CardTitle>
             </CardHeader>
-            <CardContent className="p-8 space-y-6">
+            <CardContent className="space-y-6 p-5 sm:p-8">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                   <Label className="text-sm font-medium text-muted-foreground">
@@ -486,7 +486,7 @@ export default function Donate() {
                   <Label className="text-sm font-medium text-muted-foreground">
                     Transaction ID
                   </Label>
-                  <p className="rounded bg-muted px-3 py-1 font-mono text-sm text-foreground">
+                  <p className="break-all rounded bg-muted px-3 py-1 font-mono text-sm text-foreground">
                     {bill.transactionId}
                   </p>
                 </div>
@@ -574,7 +574,7 @@ export default function Donate() {
           </div>
         )}
 
-        <div className="grid lg:grid-cols-2 gap-8">
+        <div className="grid gap-8 lg:grid-cols-2">
           <div className="space-y-6">
             <div>
               <Badge
@@ -596,7 +596,7 @@ export default function Donate() {
               <img
                 src={campaign.imageURL || "/placeholder.svg"}
                 alt={campaign.title}
-                className="h-64 w-full rounded-xl border border-border object-cover transition-transform duration-300 group-hover:scale-[1.01]"
+                className="h-52 w-full rounded-xl border border-border object-cover transition-transform duration-300 group-hover:scale-[1.01] sm:h-64"
               />
               <div className="absolute inset-0 rounded-xl bg-gradient-to-t from-black/20 to-transparent"></div>
             </div>
@@ -684,7 +684,7 @@ export default function Donate() {
                   </p>
                 ) : (
                   <>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
+                    <div className="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
                       <div className="rounded-xl bg-muted/50 border border-border/50 p-4">
                         <p className="text-xs uppercase tracking-wide text-muted-foreground">
                           Raised
@@ -781,7 +781,7 @@ export default function Donate() {
                       <Label className="mb-3 block text-sm font-medium text-foreground">
                         Choose an amount or enter custom
                       </Label>
-                      <div className="grid grid-cols-3 gap-3 mb-4">
+                      <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
                         {presetAmounts.map((preset) => (
                           <button
                             key={preset}

@@ -231,7 +231,7 @@ export default function MyDonations() {
       await navigator.clipboard.writeText(value);
       setCopiedHash(value);
       window.setTimeout(() => setCopiedHash(""), 1200);
-    } catch (_err) {
+    } catch {
       // Ignore clipboard failures in unsupported environments.
     }
   };
@@ -633,7 +633,7 @@ export default function MyDonations() {
               </Select>
             </div>
 
-            <div className="flex items-center justify-between text-sm text-muted-foreground">
+            <div className="flex flex-col gap-2 text-sm text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
               <span>
                 Showing {filteredDonations.length} of {donations.length}{" "}
                 donations
@@ -641,7 +641,7 @@ export default function MyDonations() {
               <Button
                 variant="ghost"
                 size="sm"
-                className="text-muted-foreground"
+                className="w-full text-muted-foreground sm:w-auto"
               >
                 <Download className="h-4 w-4 mr-2" />
                 Export History
@@ -704,18 +704,18 @@ export default function MyDonations() {
                     </div>
 
                     {/* Amount + status */}
-                    <div className="flex flex-col lg:flex-row lg:items-center gap-4">
-                      <div className="text-center lg:text-right">
+                    <div className="flex flex-col gap-4 lg:flex-row lg:items-center">
+                      <div className="text-left lg:text-right">
                         <div className="text-xl font-bold text-foreground">
                           {formatDonationAmount(
                             donation.amount,
                             donation.currency,
                           )}
                         </div>
-                        <div className="text-xs text-muted-foreground mt-0.5">
+                        <div className="mt-0.5 break-all text-xs text-muted-foreground">
                           ID: {donation.transactionId || "N/A"}
                         </div>
-                        <div className="text-xs text-muted-foreground mt-0.5 flex items-center justify-center lg:justify-end gap-1.5">
+                        <div className="mt-0.5 flex items-center gap-1.5 text-xs text-muted-foreground lg:justify-end">
                           <span>
                             Hash:{" "}
                             {shortenHash(
@@ -746,7 +746,7 @@ export default function MyDonations() {
                         </div>
                       </div>
 
-                      <div className="flex flex-col items-center lg:items-end gap-2">
+                      <div className="flex flex-col items-start gap-2 lg:items-end">
                         <DonationStatusBadge status={donation.status} />
                         <CampaignEndedBadge campaign={donation.campaign} />
                         {donation.campaign?._id && (

@@ -198,10 +198,7 @@ export default function Dashboard() {
             >
               <div className="space-y-2">
                 <Label htmlFor="dashboard-name">Name</Label>
-                <Input
-                  id="dashboard-name"
-                  {...register("name")}
-                />
+                <Input id="dashboard-name" {...register("name")} />
                 {errors.name ? (
                   <p className="text-sm text-red-500">{errors.name.message}</p>
                 ) : null}
@@ -328,7 +325,7 @@ export default function Dashboard() {
                         {donation.method || "N/A"}
                       </p>
                     </div>
-                    <div className="text-right">
+                    <div className="text-left sm:text-right">
                       <p className="font-bold text-primary">
                         ${(donation.amount || 0).toLocaleString()}
                       </p>

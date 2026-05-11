@@ -319,7 +319,7 @@ export function CampaignList() {
               </div>
             </div>
 
-            <div className="flex items-center justify-between text-sm text-slate-600">
+            <div className="flex flex-col gap-1 text-sm text-slate-600 sm:flex-row sm:items-center sm:justify-between">
               <span>
                 Showing {paginatedCampaigns.length} of{" "}
                 {filteredAndSortedCampaigns.length} campaigns
@@ -496,12 +496,12 @@ export function CampaignList() {
         {totalPages > 1 && (
           <Card className="surface-card rounded-xl">
             <CardContent className="p-6">
-              <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+              <div className="flex flex-col items-center justify-between gap-4 sm:flex-row">
                 <div className="text-sm text-slate-600">
                   Page {currentPage} of {totalPages}
                 </div>
 
-                <div className="flex items-center gap-2">
+                <div className="flex w-full items-center justify-between gap-2 sm:w-auto sm:justify-start">
                   <FundraisingButton
                     variant="ghost-trust"
                     size="sm"
@@ -512,7 +512,7 @@ export function CampaignList() {
                     Previous
                   </FundraisingButton>
 
-                  <div className="flex gap-1">
+                  <div className="hidden gap-1 sm:flex">
                     {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
                       let pageNum;
                       if (totalPages <= 5) {

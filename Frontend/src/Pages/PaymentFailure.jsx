@@ -89,14 +89,23 @@ export default function PaymentFailure() {
 
           <div className="rounded bg-muted px-3 py-2 text-sm">
             Transaction Reference:{" "}
-            <span className="font-mono">{transactionId || "N/A"}</span>
+            <span className="font-mono break-all">
+              {transactionId || "N/A"}
+            </span>
           </div>
 
-          <div className="flex gap-3">
-            <Button onClick={() => navigate(ROUTES.DONATE)}>
+          <div className="flex flex-col gap-3 sm:flex-row">
+            <Button
+              className="w-full sm:w-auto"
+              onClick={() => navigate(ROUTES.DONATE)}
+            >
               Back to Campaigns
             </Button>
-            <Button variant="outline" onClick={() => navigate(-1)}>
+            <Button
+              className="w-full sm:w-auto"
+              variant="outline"
+              onClick={() => navigate(-1)}
+            >
               Try Again
             </Button>
           </div>
